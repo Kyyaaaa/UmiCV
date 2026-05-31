@@ -260,29 +260,46 @@ Hệ thống hỗ trợ tìm theo:
 )
 
 #let render_usecase_list(ucs) = {
-  for uc in ucs [
-    - *#uc.id:* #uc.name
-  ]
+  let rows = ()
+  for uc in ucs {
+    rows.push([#uc.id])
+    rows.push([#uc.name])
+  }
+  table(
+    columns: (auto, 1fr),
+    stroke: 0.5pt + luma(150),
+    fill: (col, row) => if row == 0 { luma(240) } else { white },
+    inset: 8pt,
+    [*Mã UC*], [*Tên Use Case*],
+    ..rows
+  )
 }
 
 #let render_usecase_spec(uc) = [
   === #uc.id: #uc.name
-  - *Actor:* #uc.actor
-  - *Trigger:* #uc.trigger
-  - *Precondition:* #uc.precondition
-  - *Main Flow:*
-    #for step in uc.main_flow [
-      + #step
-    ]
-  - *Alternative Flow:*
-    #if uc.alternative_flow.len() == 0 [
-      - Không có
-    ] else [
-      #for step in uc.alternative_flow [
+  #table(
+    columns: (auto, 1fr),
+    stroke: 0.5pt + luma(150),
+    inset: 8pt,
+    [*Actor*], [#uc.actor],
+    [*Trigger*], [#uc.trigger],
+    [*Precondition*], [#uc.precondition],
+    [*Main Flow*], [
+      #for step in uc.main_flow [
         + #step
       ]
-    ]
-  - *Postcondition:* #uc.postcondition
+    ],
+    [*Alternative Flow*], [
+      #if uc.alternative_flow.len() == 0 [
+        - Không có
+      ] else [
+        #for step in uc.alternative_flow [
+          + #step
+        ]
+      ]
+    ],
+    [*Postcondition*], [#uc.postcondition]
+  )
 ]
 
 #let uc01 = usecase(
@@ -334,7 +351,42 @@ Hệ thống hỗ trợ tìm theo:
   (), "File báo cáo được tải về máy"
 )
 
-#let ucs = (uc01, uc02, uc03, uc04, uc05, uc06, uc07)
+#let uc08 = usecase(
+  "UC08", "Quản lý tài khoản và phòng ban", "Admin",
+  "Cần thêm mới, sửa hoặc phân quyền nhân sự", "Đăng nhập quyền Admin",
+  ("Truy cập trang Quản lý hệ thống", "Nhập thông tin nhân sự và phân vai trò/phòng ban", "Lưu thay đổi", "Hệ thống cập nhật CSDL"),
+  ("Thiếu thông tin bắt buộc: Báo lỗi",), "Tài khoản/Phòng ban được cập nhật"
+)
+
+#let uc09 = usecase(
+  "UC09", "Tìm kiếm và tra cứu CV", "HR, Tech Lead, Admin",
+  "Cần tìm ứng viên nội bộ theo tiêu chí dự án", "Có quyền xem danh sách CV",
+  ("Truy cập trang tra cứu", "Nhập bộ lọc (Kỹ năng, Tên, Trạng thái...)", "Nhấn Tìm kiếm", "Hệ thống trả về danh sách kết quả"),
+  ("Không có kết quả: Hiển thị danh sách trống",), "Hiển thị danh sách CV phù hợp"
+)
+
+#let uc10 = usecase(
+  "UC10", "Hủy yêu cầu cập nhật CV", "HR",
+  "Phát hiện Batch Request tạo sai hoặc không cần thiết nữa", "Batch Request đang mở",
+  ("Truy cập danh sách Batch Request", "Chọn yêu cầu cần hủy", "Xác nhận Hủy", "Hệ thống đổi trạng thái các CV liên quan thành 'Hủy yêu cầu'", "Gửi email thông báo hủy"),
+  (), "Yêu cầu bị hủy và ngừng luồng cập nhật"
+)
+
+#let uc11 = usecase(
+  "UC11", "Xem lịch sử thay đổi (Diff Viewer)", "Employee, Tech Lead, HR, Admin",
+  "Cần kiểm tra nội dung thay đổi giữa các phiên bản", "CV có ít nhất 1 lần lưu nháp hoặc cập nhật",
+  ("Mở chi tiết CV", "Chọn tab Lịch sử phiên bản", "Chọn 2 phiên bản để so sánh", "Hệ thống hiển thị màn hình Diff (highlight xanh/đỏ)"),
+  (), "Người dùng xem được chính xác các dòng thay đổi"
+)
+
+#let uc12 = usecase(
+  "UC12", "Quản lý bản dịch đa ngôn ngữ", "Employee, HR",
+  "Cần nộp CV bằng Tiếng Anh/Nhật", "Đã có bản CV gốc (Tiếng Việt)",
+  ("Mở chi tiết CV", "Nhấn Thêm ngôn ngữ", "Hệ thống copy cấu trúc từ bản gốc", "Người dùng nhập nội dung dịch thuật", "Lưu bản dịch"),
+  (), "Bản dịch được lưu và đồng bộ schema với bản gốc"
+)
+
+#let ucs = (uc01, uc02, uc03, uc04, uc05, uc06, uc07, uc08, uc09, uc10, uc11, uc12)
 
 == Danh sách Use Case (Catalog)
 #render_usecase_list(ucs)
