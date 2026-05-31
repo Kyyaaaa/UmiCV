@@ -22,8 +22,7 @@ Phạm vi Release 1 gồm:
 - Thông báo bất đồng bộ qua Email và cronjob nhắc hằng ngày.
 - RBAC theo vai trò và phòng ban.
 - Triển khai đóng gói Docker.
-
-Ngoài phạm vi Release 1 (Phase 2):
+- Tính năng xuất báo cáo cho HR.
 - Version Control và Diff Viewer cho CV.
 - Đa ngôn ngữ CV (VN/EN/JP) và đồng bộ cấu trúc giữa ngôn ngữ.
 
@@ -53,8 +52,7 @@ Ngoài phạm vi Release 1 (Phase 2):
   [*Async Queue*], [Hàng đợi bất đồng bộ dùng xử lý gửi Email thông báo không chặn luồng chính],
   [*Cronjob*], [Tác vụ định kỳ hằng ngày dùng quét và gửi nhắc cập nhật CV gần deadline],
   [*Audit Log*], [Nhật ký truy vết hành động quan trọng: đăng nhập, duyệt, từ chối, hủy yêu cầu, publish],
-  [*PostgreSQL*], [Hệ quản trị cơ sở dữ liệu quan hệ sử dụng cho hệ thống UmiCV trong Release 1],
-  [*Phase 2*], [Giai đoạn sau Release 1; gồm Version Control/Diff Viewer và CV đa ngôn ngữ]
+  [*PostgreSQL*], [Hệ quản trị cơ sở dữ liệu quan hệ sử dụng cho hệ thống UmiCV trong Release 1]
 )
 
 = Mô tả tổng quan (Overall Description)
@@ -175,6 +173,20 @@ Hệ thống hỗ trợ tìm theo:
 - Duyệt thành công đầy đủ cấp -> `Đã cập nhật`.
 - HR hủy yêu cầu -> `Hủy yêu cầu`.
 
+== Báo cáo và xuất dữ liệu (Reporting)
+=== FR-20 Xuất báo cáo danh sách CV
+- HR và Admin có quyền xuất báo cáo danh sách nhân viên chưa cập nhật CV, trễ deadline hoặc vi phạm SLA.
+- Hỗ trợ định dạng xuất ra file Excel/CSV.
+
+== Tính năng nâng cao (Advanced Features)
+=== FR-21 Quản lý phiên bản (Version Control)
+- Khi CV được cập nhật thành bản chính thức, hệ thống tăng số phiên bản thay vì ghi đè (vd: v1.0 -> v2.0).
+- Cung cấp giao diện Diff Viewer để so sánh chi tiết các thay đổi giữa 2 phiên bản.
+
+=== FR-22 Đa ngôn ngữ (Localization)
+- Hỗ trợ tạo các bản dịch (Việt, Anh, Nhật) cho cùng một tài liệu CV.
+- Hệ thống tự động đồng bộ cấu trúc dữ liệu (Schema) giữa các bản dịch khi có sự thay đổi.
+
 = Ma trận phân quyền (RBAC Matrix)
 | Chức năng | Employee | Tech Lead | HR | Admin |
 |---|---|---|---|---|
@@ -249,8 +261,8 @@ Hệ thống hỗ trợ tìm theo:
 | FR-11..FR-16 | Draft và Approval Matrix | E2E Approval Test |
 | FR-17 | Cronjob nhắc việc | Scheduler Test |
 | FR-18..FR-19 | Trạng thái và chuyển trạng thái | State Machine Test |
+| FR-20 | Báo cáo và xuất dữ liệu | Reporting Test |
+| FR-21..FR-22 | Tính năng nâng cao (Bonus) | Advanced Features Test |
 
 = Ngoài phạm vi hiện tại (Out of Scope - Release 1)
-- Version Control CV và Diff Viewer.
-- Quản lý CV đa ngôn ngữ và đồng bộ cấu trúc liên ngôn ngữ.
 - Tích hợp SSO doanh nghiệp.
