@@ -97,8 +97,10 @@ Hệ thống là ứng dụng nội bộ web-based phục vụ VTIT, kết nối
 - Admin gán người dùng vào phòng ban và vai trò.
 
 == Quản lý CV cơ bản (Core CV CRUD & Search)
-=== FR-04 Tạo CV
-- Employee hoặc HR có thể khởi tạo hồ sơ CV theo cấu trúc chuẩn.
+=== FR-04 Tạo CV và Quản lý Cấu trúc
+- Employee hoặc HR có thể khởi tạo hồ sơ CV.
+- Người dùng có thể tự do điều chỉnh, sắp xếp và thêm bớt các mục (sections) trên CV theo ý muốn (tương tự trình tạo CV của TopCV).
+- Hệ thống cung cấp sẵn các Template chuẩn của công ty để người dùng có thể áp dụng nhanh nếu cần một định dạng quy chuẩn.
 
 === FR-05 Sửa CV
 - Employee chỉ sửa CV của chính mình ở bản nháp.
@@ -188,15 +190,26 @@ Hệ thống hỗ trợ tìm theo:
 - Hệ thống tự động đồng bộ cấu trúc dữ liệu (Schema) giữa các bản dịch khi có sự thay đổi.
 
 = Ma trận phân quyền (RBAC Matrix)
-| Chức năng | Employee | Tech Lead | HR | Admin |
-|---|---|---|---|---|
-| Xem CV bản thân | Có | Có | Có | Có |
-| Xem CV toàn bộ | Không | Theo phạm vi quản lý | Có | Có |
-| Sửa CV bản thân (nháp) | Có | Không | Có | Có |
-| Tạo/Hủy Batch Request | Không | Không | Có | Có |
-| Duyệt cấp 1 chuyên môn | Không | Có | Không | Có |
-| Duyệt cấp 2 format/chính tả | Không | Không | Có | Có |
-| Quản trị tài khoản/phòng ban | Không | Không | Không | Có |
+#v(0.5em)
+#table(
+  columns: (auto, auto, auto, auto, auto),
+  stroke: 0.5pt + luma(150),
+  fill: (col, row) => if row == 0 { luma(240) } else { white },
+  inset: 8pt,
+  align: center,
+  align(left)[*Chức năng*], [*Employee*], [*Tech Lead*], [*HR*], [*Admin*],
+
+  align(left)[Xem CV bản thân], [Có], [Có], [Có], [Có],
+  align(left)[Xem toàn bộ CV], [Không], [Theo phạm vi quản lý], [Có], [Có],
+  align(left)[Sửa CV (không gian nháp)], [Bản thân], [Không], [Có], [Có],
+  align(left)[Tạo/Hủy Batch Request], [Không], [Không], [Có], [Có],
+  align(left)[Duyệt cấp 1 chuyên môn], [Không], [Có], [Không], [Có],
+  align(left)[Duyệt cấp 2 format], [Không], [Không], [Có], [Có],
+  align(left)[Xuất báo cáo], [Không], [Không], [Có], [Có],
+  align(left)[Xem lịch sử (Diff Viewer)], [Bản thân], [Theo phạm vi quản lý], [Có], [Có],
+  align(left)[Quản lý bản Đa ngôn ngữ], [Bản thân], [Không], [Có], [Có],
+  align(left)[Quản trị hệ thống], [Không], [Không], [Không], [Có]
+)
 
 = Yêu cầu phi chức năng (Non-Functional Requirements)
 == Hiệu năng và khả dụng
@@ -205,7 +218,10 @@ Hệ thống hỗ trợ tìm theo:
 - Hệ thống hoạt động ổn định trong giờ hành chính với giám sát lỗi và retry gửi Email.
 
 == Bảo mật
-- Local Auth với mật khẩu băm an toàn.
+- Local Auth với mật khẩu băm an toàn (bcrypt/argon2).
+- Cơ chế xác thực sử dụng *JWT (JSON Web Token)* kết hợp:
+  - *Access Token:* Có thời hạn ngắn, truyền qua HTTP Authorization Header (Bearer).
+  - *Refresh Token:* Có thời hạn dài, được lưu trữ an toàn qua HTTP-only Cookie để chống tấn công XSS và CSRF.
 - Mọi kết nối truy cập hệ thống qua HTTPS.
 - Kiểm soát truy cập dữ liệu chặt chẽ theo RBAC và phạm vi tổ chức.
 - Ghi audit log cho các hành động quan trọng: đăng nhập, tạo/hủy request, duyệt/reject, publish.
