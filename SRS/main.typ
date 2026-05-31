@@ -27,7 +27,35 @@ Ngoài phạm vi Release 1 (Phase 2):
 - Version Control và Diff Viewer cho CV.
 - Đa ngôn ngữ CV (VN/EN/JP) và đồng bộ cấu trúc giữa ngôn ngữ.
 
-#include "glossary.typ"
+== Thuật ngữ và viết tắt (Glossary)
+#v(0.5em)
+#table(
+  columns: (auto, 1fr),
+  stroke: 0.5pt + luma(150),
+  fill: (col, row) => if row == 0 { luma(240) } else { white },
+  inset: 8pt,
+  [*Thuật ngữ/Viết tắt*], [*Ý nghĩa*],
+
+  [*CV*], [Curriculum Vitae; hồ sơ năng lực nhân viên trong hệ thống],
+  [*SRS*], [Software Requirements Specification; tài liệu đặc tả yêu cầu phần mềm],
+  [*SDS*], [Software Design Specification; tài liệu thiết kế phần mềm],
+  [*RBAC*], [Role-Based Access Control; phân quyền truy cập theo vai trò],
+  [*Local Auth*], [Xác thực tài khoản nội bộ bằng username/password, không tích hợp SSO],
+  [*Employee*], [Nhân viên; chỉ xem/sửa CV của chính mình trong không gian nháp],
+  [*Tech Lead*], [Quản lý chuyên môn; duyệt CV cấp 1 theo phạm vi quản lý],
+  [*HR*], [Nhân sự; tạo/hủy yêu cầu cập nhật hàng loạt, duyệt cấp 2],
+  [*Admin*], [Quản trị hệ thống; quản lý cấu hình, phòng ban, tài khoản, phân quyền],
+  [*Batch Request*], [Yêu cầu cập nhật CV gửi cho một hoặc nhiều nhân viên cùng lúc],
+  [*Draft Space*], [Không gian lưu bản nháp CV; chưa ảnh hưởng bản CV chính thức],
+  [*Approval Matrix*], [Luồng phê duyệt đa cấp: Employee -> Tech Lead -> HR -> Published],
+  [*Published*], [Trạng thái CV chính thức sau khi hoàn tất phê duyệt],
+  [*SLA*], [Service Level Agreement; cam kết mức dịch vụ, gồm Email <= 5 phút và mỗi cấp duyệt <= 48 giờ],
+  [*Async Queue*], [Hàng đợi bất đồng bộ dùng xử lý gửi Email thông báo không chặn luồng chính],
+  [*Cronjob*], [Tác vụ định kỳ hằng ngày dùng quét và gửi nhắc cập nhật CV gần deadline],
+  [*Audit Log*], [Nhật ký truy vết hành động quan trọng: đăng nhập, duyệt, từ chối, hủy yêu cầu, publish],
+  [*PostgreSQL*], [Hệ quản trị cơ sở dữ liệu quan hệ sử dụng cho hệ thống UmiCV trong Release 1],
+  [*Phase 2*], [Giai đoạn sau Release 1; gồm Version Control/Diff Viewer và CV đa ngôn ngữ]
+)
 
 = Mô tả tổng quan (Overall Description)
 == Bối cảnh sản phẩm (Product Perspective)
