@@ -29,6 +29,12 @@
     v(1.5em)
   }
 
+  show heading.where(level: 2): it => {
+    v(1.5em)
+    it
+    v(0.5em)
+  }
+
   // 5. CÀI ĐẶT CODE BLOCK (Tương đương package listings + inconsolata)
   show raw.where(block: true): set text(font: "Inconsolata")
   show raw.where(block: true): block.with(
