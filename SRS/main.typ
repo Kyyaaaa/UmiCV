@@ -419,73 +419,113 @@ Hệ thống hỗ trợ tìm theo:
 )
 
 = Yêu cầu phi chức năng (Non-Functional Requirements)
-== Hiệu năng và khả dụng
-- Thời gian phản hồi API thông thường: p95 <= 2 giây (không tính tác vụ async).
-- Hàng đợi thông báo phải hỗ trợ xử lý khối lượng gửi batch mà không chặn luồng chính.
-- Hệ thống hoạt động ổn định trong giờ hành chính với giám sát lỗi và retry gửi Email.
 
-== Bảo mật
-- Local Auth với mật khẩu băm an toàn (bcrypt/argon2).
+== Hiệu năng và khả dụng (Performance & Availability)
+- Thời gian phản hồi API thông thường: p95 <= 2 giây (không tính các tác vụ async như xuất báo cáo hay gửi email).
+- Thời gian tải trang (Page Load Time) trên client: Lần tải đầu tiên (FCP) dưới 1.5s, TTI (Time to Interactive) dưới 3s.
+- Hàng đợi thông báo (Message Queue) phải hỗ trợ xử lý khối lượng gửi batch mà không chặn (block) luồng xử lý chính của ứng dụng.
+- Hệ thống hoạt động ổn định 99.9% (Uptime) trong giờ hành chính, tích hợp cơ chế tự động giám sát lỗi và retry khi thất bại (đặc biệt với gửi Email).
+
+== Bảo mật (Security)
+- Local Auth với mật khẩu băm an toàn (bcrypt/argon2), không lưu mật khẩu dạng plaintext.
 - Cơ chế xác thực sử dụng *JWT (JSON Web Token)* kết hợp:
-  - *Access Token:* Có thời hạn ngắn, truyền qua HTTP Authorization Header (Bearer).
-  - *Refresh Token:* Có thời hạn dài, được lưu trữ an toàn qua HTTP-only Cookie để chống tấn công XSS và CSRF.
-- Mọi kết nối truy cập hệ thống qua HTTPS.
-- Kiểm soát truy cập dữ liệu chặt chẽ theo RBAC và phạm vi tổ chức.
-- Ghi audit log cho các hành động quan trọng: đăng nhập, tạo/hủy request, duyệt/reject, publish.
+  - *Access Token:* Có thời hạn ngắn (ví dụ: 15-30 phút), truyền qua HTTP Authorization Header (Bearer).
+  - *Refresh Token:* Có thời hạn dài, được lưu trữ an toàn qua `HTTP-only`, `Secure`, và `SameSite` Cookie để chống lại các cuộc tấn công XSS và CSRF.
+- Mọi kết nối truy cập hệ thống (từ Client đến Server) bắt buộc phải được mã hóa qua HTTPS (TLS 1.2+).
+- Kiểm soát truy cập dữ liệu chặt chẽ theo phân quyền RBAC và phân luồng dữ liệu dựa trên phạm vi quản lý của phòng ban/dự án.
+- Ghi log hệ thống (Audit Log) cho toàn bộ các hành động quan trọng: đăng nhập, tạo/hủy request, phê duyệt/từ chối CV, publish CV.
 
-== Toàn vẹn dữ liệu
-- Trạng thái CV và workflow phải nhất quán, không bỏ qua bước duyệt.
-- Mọi thay đổi phê duyệt/reject phải lưu dấu vết người thao tác và thời gian thao tác.
+== Trải nghiệm người dùng và Thẩm mỹ (UX/UI & Aesthetics)
+- *Thiết kế hiện đại (Modern Design):* Hệ thống sử dụng phong cách thiết kế hiện đại, cao cấp với các dải màu nổi bật (vibrant colors), chế độ tối (dark mode), và hiệu ứng kính (glassmorphism).
+- *Trải nghiệm tương tác động (Dynamic Interactions):* Giao diện cần phản hồi tốt với người dùng thông qua các vi hiệu ứng (micro-animations), hiệu ứng hover và bộ chuyển động mượt mà (smooth transitions).
+- *Typography:* Sử dụng các font chữ hiện đại (như Inter, Roboto hoặc Outfit) thay vì font mặc định của trình duyệt để tạo cảm giác chuyên nghiệp.
+- *Tính đáp ứng (Responsiveness):* Giao diện phải hiển thị tốt và có thể sử dụng dễ dàng trên màn hình Desktop, Tablet, và Mobile.
 
-== Triển khai
-- Thành phần hệ thống bắt buộc có Dockerfile và docker-compose.yml.
-- Môi trường demo khởi chạy bằng một lệnh docker compose.
+== Khả năng mở rộng và bảo trì (Scalability & Maintainability)
+- Cấu trúc hệ thống tuân thủ thiết kế mô-đun (Modularity), tách biệt rõ ràng các domain nghiệp vụ (Auth, CV Management, Workflow, Notification, Reporting).
+- Cho phép mở rộng tích hợp thêm các kênh thông báo trong tương lai (vd: Slack, Microsoft Teams, Zalo).
+- Codebase Frontend phải xây dựng hệ thống Component tái sử dụng cao, định nghĩa Design Token rõ ràng qua CSS.
 
-== Khả năng bảo trì
-- Thiết kế mô-đun tách biệt domain rõ ràng: Auth, CV, Workflow, Notification, Reporting.
-- Cho phép mở rộng tích hợp thêm kênh thông báo trong tương lai.
+== Triển khai (Deployment)
+- Tất cả các thành phần hệ thống (Frontend, Backend, Database, Queue) bắt buộc phải được đóng gói qua Docker (có Dockerfile riêng).
+- Khởi chạy toàn bộ môi trường nội bộ/demo chỉ bằng một lệnh duy nhất (`docker-compose up`).
 
 = Yêu cầu giao diện ngoài (External Interface Requirements)
-== Giao diện người dùng
-- Dashboard theo vai trò, hiển thị danh sách việc cần xử lý và trạng thái CV.
-- Màn hình chỉnh sửa CV dạng biểu mẫu có validate dữ liệu.
-- Màn hình duyệt hiển thị thông tin CV, quyết định duyệt/từ chối và lý do.
 
-== Giao diện phần mềm
-- Tích hợp SMTP/Email service để gửi thông báo và nhắc việc.
-- API nội bộ phục vụ CRUD CV, workflow phê duyệt, truy vấn báo cáo tiến độ.
+== Giao diện người dùng (User Interface)
+- *Dashboard Tổng quan:* Tùy biến theo vai trò (Employee, Tech Lead, HR). Hiển thị danh sách công việc cần xử lý (To-do list), biểu đồ thống kê trạng thái CV, và tiến độ hoàn thành các Batch Request.
+- *Trình tạo CV thông minh (CV Builder):*
+  - Giao diện kéo thả (Drag & Drop) trực quan để người dùng tự do thêm/bớt và sắp xếp các mục (sections).
+  - Tích hợp thanh công cụ (Toolbar) cho phép định dạng văn bản nâng cao (Rich Text Editor).
+  - Hiển thị bản xem trước (Live Preview) theo thời gian thực mỗi khi có thay đổi.
+  - Cung cấp tính năng chọn Template chuẩn, cho phép thay đổi màu sắc chủ đạo của CV chỉ với 1 click.
+- *Màn hình Phê duyệt (Approval UI):*
+  - Tích hợp tính năng đối chiếu (Diff Viewer) trực tiếp trên màn hình duyệt, highlight màu xanh cho nội dung thêm mới, màu đỏ cho nội dung bị xóa để Tech Lead và HR dễ dàng phát hiện điểm khác biệt.
+  - Khung nhập lý do từ chối (Reject Reason) bắt buộc, có nút gọi ý các lỗi thường gặp (VD: Lỗi định dạng, Sai kỹ năng, Cần làm rõ dự án).
+- *Thông báo (Notifications):* Có menu chuông thông báo hiển thị real-time ngay trên Navbar của giao diện web.
 
-== Giao diện dữ liệu
-- PostgreSQL lưu dữ liệu nghiệp vụ chính: người dùng, phòng ban, CV, request, approval, notification log.
+== Giao diện phần mềm (Software Interfaces)
+- *Email Service (SMTP):* Tích hợp dịch vụ SMTP để gửi thông báo tự động, nhắc việc. Môi trường dev sử dụng Mailhog để giả lập.
+- *Hệ thống hàng đợi (Message Broker):* Tích hợp Redis + BullMQ (hoặc công nghệ tương đương) để xử lý các luồng tác vụ nặng ở nền (như gửi email hàng loạt).
+- *RESTful API:* Các module Backend cung cấp API nội bộ theo chuẩn RESTful cho Frontend, sử dụng chuẩn dữ liệu JSON.
+
+== Giao diện dữ liệu (Data Interfaces)
+- *Hệ quản trị CSDL:* PostgreSQL làm cơ sở dữ liệu chính để lưu trữ dữ liệu nghiệp vụ.
+- *Cấu trúc lưu trữ linh hoạt:* Nội dung chi tiết của CV (chứa các sections linh động do người dùng định nghĩa) sẽ được lưu trữ dưới định dạng `JSONB` trong PostgreSQL, đảm bảo hệ thống có thể đáp ứng được khả năng tùy chỉnh cấu trúc từ trình tạo CV (CV Builder).
 
 = Quy tắc nghiệp vụ (Business Rules)
-- BR-01: Mỗi nhân viên bắt buộc thuộc đúng một phòng ban tại một thời điểm.
-- BR-02: Employee không được truy cập CV nhân viên khác.
-- BR-03: Reject bắt buộc có lý do chi tiết.
-- BR-04: Không publish CV nếu chưa qua đủ 2 cấp duyệt.
-- BR-05: Một yêu cầu cập nhật phải có deadline hợp lệ lớn hơn thời điểm tạo.
-- BR-06: Khi yêu cầu bị hủy, không cho phép tiếp tục duyệt theo yêu cầu đó.
+#table(
+  columns: (auto, auto, 1fr),
+  stroke: 0.5pt + luma(150),
+  fill: (col, row) => if row == 0 { luma(240) } else { white },
+  inset: 8pt,
+  [*Mã BR*], [*Tên Quy tắc*], [*Mô tả chi tiết*],
+  [BR-01], [Định danh Độc bản], [Mỗi nhân viên bắt buộc thuộc đúng một phòng ban tại một thời điểm. Việc phân quyền dữ liệu sẽ dựa trên sơ đồ tổ chức này.],
+  [BR-02], [Quyền Riêng tư CV], [Employee tuyệt đối không được xem, tải xuống hoặc chỉnh sửa CV của nhân viên khác dưới bất kỳ hình thức nào.],
+  [BR-03], [Lý do Từ chối (Reject)], [Hành động Reject ở bất kỳ cấp duyệt nào (Tech Lead hoặc HR) bắt buộc phải kèm theo lý do chi tiết để Employee biết đường chỉnh sửa.],
+  [BR-04], [Nguyên tắc Publish], [CV chỉ được công bố (Publish) thành bản chính thức sau khi đã vượt qua đủ 2 cấp duyệt: Chuyên môn (Tech Lead) và Định dạng (HR).],
+  [BR-05], [Thời hạn Yêu cầu], [Một Batch Request (Yêu cầu cập nhật hàng loạt) phải có deadline hợp lệ và luôn lớn hơn thời điểm tạo tối thiểu 24 giờ.],
+  [BR-06], [Chặn duyệt luồng Hủy], [Khi Batch Request bị HR hủy, mọi quy trình duyệt đang dang dở liên quan đến Batch đó sẽ bị khóa cứng (freeze).],
+  [BR-07], [Cách ly Bản nháp], [Dữ liệu trên không gian nháp (Draft Space) hoàn toàn độc lập và tuyệt đối không ghi đè lên CV bản chính thức đang hiện hành.],
+  [BR-08], [Quản lý Phiên bản (Version)], [Khi một bản nháp được HR Approve, Version của CV tự động tăng lên (VD: v1.0 -> v2.0), snapshot bản cũ bị khóa (Read-only) để phục vụ tra cứu.],
+  [BR-09], [Đồng bộ Đa ngôn ngữ], [Khi cấu trúc bản gốc thay đổi (thêm/xóa section), các bản dịch đa ngôn ngữ tương ứng sẽ tự động bật cảnh báo yêu cầu đồng bộ Schema.],
+  [BR-10], [Phạm vi Phê duyệt], [Tech Lead chỉ có quyền xem và phê duyệt CV của những nhân sự trực thuộc dự án hoặc phòng ban mà Tech Lead đó đang quản lý.]
+)
 
 = Tiêu chí chấp nhận (Acceptance Criteria)
-- AC-01: HR tạo batch request thành công, nhân sự nhận Email trong <= 5 phút.
-- AC-02: Trạng thái CV tự chuyển `Chưa cập nhật` ngay sau khi tạo yêu cầu.
-- AC-03: Employee chỉnh sửa ở Draft không làm thay đổi CV chính thức.
-- AC-04: Tech Lead/HR có thể Approve hoặc Reject; reject bắt buộc lý do.
-- AC-05: Duyệt đủ 2 cấp thì CV chuyển `Đã cập nhật`.
-- AC-06: Cronjob hằng ngày gửi nhắc Email cho CV gần hết hạn nhưng chưa cập nhật.
-- AC-07: Mỗi cấp duyệt vượt 48 giờ được đánh dấu vi phạm SLA trong báo cáo.
+#table(
+  columns: (auto, auto, 1fr),
+  stroke: 0.5pt + luma(150),
+  fill: (col, row) => if row == 0 { luma(240) } else { white },
+  inset: 8pt,
+  [*Mã AC*], [*Nhóm kiểm thử*], [*Mô tả tiêu chí nghiệm thu*],
+  [AC-01], [Luồng Thông báo], [Khi HR tạo Batch Request thành công, toàn bộ nhân sự trong danh sách nhận được Email thông báo qua queue trong thời gian <= 5 phút.],
+  [AC-02], [Chuyển trạng thái CV], [Trạng thái của các CV liên quan tự động chuyển thành `Chưa cập nhật` ngay sau khi Batch Request được khởi tạo.],
+  [AC-03], [Không gian Nháp], [Mọi thay đổi của Employee khi "Lưu nháp" chỉ được ghi nhận ở Draft Space, không ảnh hưởng đến bản CV chính thức đang phục vụ hệ thống.],
+  [AC-04], [Luồng Phê duyệt], [Tech Lead/HR có thể Approve hoặc Reject. Nếu chọn Reject thì form yêu cầu bắt buộc nhập Lý do từ chối, nếu bỏ trống form sẽ báo lỗi hệ thống.],
+  [AC-05], [Hoàn tất Duyệt], [Một CV chỉ chuyển sang trạng thái `Đã cập nhật` và tự động tăng Version nếu có đủ lịch sử phê duyệt của cả 2 cấp: Chuyên môn và Định dạng.],
+  [AC-06], [Cronjob Hệ thống], [Cronjob chạy tự động hằng ngày vào khung giờ quy định, gửi email nhắc nhở chính xác đến những nhân sự có CV sắp quá hạn deadline.],
+  [AC-07], [Đánh giá SLA], [Hành động phê duyệt của Tech Lead hoặc HR nếu vượt quá 48 tiếng kể từ khi nhận được luồng duyệt sẽ bị tự động ghi nhận là "Vi phạm SLA".],
+  [AC-08], [Bảo mật Auth], [Hệ thống từ chối (401 Unauthorized) các request gọi API bằng Access Token đã hết hạn. Đòi hỏi cấp mới thông qua Refresh Token lưu tại Http-Only Cookie.],
+  [AC-09], [Phân quyền RBAC], [Hệ thống chặn truy cập (403 Forbidden) ngay lập tức nếu Employee dùng API để cố tình xem hoặc lấy dữ liệu CV của một nhân viên khác.],
+  [AC-10], [Trình tạo CV (UI)], [Trong CV Builder, người dùng có thể kéo thả đổi vị trí section thành công, màn hình Live Preview phản hồi theo thời gian thực (real-time).],
+  [AC-11], [Diff Viewer], [Khi có yêu cầu duyệt, màn hình duyệt (Approval UI) phải hiển thị được khối Diff rõ ràng: bôi xanh/highlight cho nội dung vừa thêm, gạch ngang màu đỏ cho nội dung xóa đi.]
+)
 
 = Truy vết yêu cầu (Requirements Traceability Matrix - RTM)
-| Mã yêu cầu | Mô tả ngắn | Nhóm kiểm thử |
-|---|---|---|
-| FR-01..FR-03 | Định danh và RBAC | Auth/RBAC Test |
-| FR-04..FR-07 | CRUD và Search CV | CV Service Test |
-| FR-08..FR-10 | Batch Request và Notify | Workflow + Async Test |
-| FR-11..FR-16 | Draft và Approval Matrix | E2E Approval Test |
-| FR-17 | Cronjob nhắc việc | Scheduler Test |
-| FR-18..FR-19 | Trạng thái và chuyển trạng thái | State Machine Test |
-| FR-20 | Báo cáo và xuất dữ liệu | Reporting Test |
-| FR-21..FR-22 | Tính năng nâng cao (Bonus) | Advanced Features Test |
-
-= Ngoài phạm vi hiện tại (Out of Scope - Release 1)
-- Tích hợp SSO doanh nghiệp.
+#table(
+  columns: (auto, 2fr, 1.5fr, 1.5fr, 1.5fr),
+  stroke: 0.5pt + luma(150),
+  fill: (col, row) => if row == 0 { luma(240) } else { white },
+  inset: 8pt,
+  [*Mã FR*], [*Mô tả ngắn*], [*Use Case (UC)*], [*Quy tắc (BR)*], [*Tiêu chí (AC)*],
+  [FR-01..03], [Định danh và RBAC], [UC01, UC08], [BR-01], [AC-08, AC-09],
+  [FR-04..07], [CRUD và Search CV], [UC03, UC09], [BR-02], [AC-03, AC-10],
+  [FR-08..10], [Batch Request và Notify], [UC02, UC10], [BR-05, BR-06], [AC-01, AC-02],
+  [FR-11..16], [Draft và Phê duyệt đa cấp], [UC04, UC05, UC06], [BR-03, BR-04, BR-07, BR-10], [AC-04, AC-05, AC-07],
+  [FR-17], [Cronjob nhắc việc tự động], [-], [BR-05], [AC-06],
+  [FR-18..19], [Quản lý trạng thái], [UC02, UC04, UC05, UC06], [BR-06], [AC-02, AC-05],
+  [FR-20], [Báo cáo và xuất dữ liệu], [UC07], [-], [AC-07],
+  [FR-21], [Quản lý Version & Diff Viewer], [UC11], [BR-08], [AC-11],
+  [FR-22], [Quản lý Đa ngôn ngữ], [UC12], [BR-09], [-]
+)
