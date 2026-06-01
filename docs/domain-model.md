@@ -5,10 +5,16 @@ Tài liệu này cung cấp các Entity và Aggregate Root cho Database Designer
 ## 1. Domain: Identity & Access (Tổ chức & Người dùng)
 - **Entity `User` (Aggregate Root):**
   - Chứa: Id, Username, PasswordHash, Role (Employee, Tech Lead, HR, Admin), DepartmentId.
-  - Quan hệ: Thuộc 1 `Department`. Có 1 hoặc nhiều `CVProfile`.
+  - Quan hệ: Thuộc 1 `Department`. Có 1 hoặc nhiều `CVProfile`. Tham gia nhiều `Project`.
 - **Entity `Department`:**
   - Chứa: Id, Name, Code, ParentDepartmentId.
-  - Thể hiện cấu trúc sơ đồ tổ chức phòng ban/dự án.
+  - Thể hiện cấu trúc sơ đồ tổ chức phòng ban chính quy.
+- **Entity `Project`:**
+  - Chứa: Id, Name, Code, TechLeadId.
+  - Mục đích: Quản lý danh sách các dự án để phục vụ phân quyền Tech Lead chéo phòng ban.
+- **Entity `Project_Members` (Mapping):**
+  - Chứa: ProjectId, UserId.
+  - Mục đích: Liên kết nhiều nhân viên (từ nhiều phòng ban khác nhau) vào một dự án cụ thể. Tech Lead của dự án có quyền duyệt CV của các nhân viên này.
 
 ## 2. Domain: CV Management (Hồ sơ CV)
 - **Entity `CVProfile` (Aggregate Root):**
