@@ -33,3 +33,9 @@ Tài liệu này ghi nhận lại các thiết kế đã được phân tích, g
 ## 3. Các vấn đề còn mở & Rủi ro (Open Questions & Risks)
 - **JSONB Bloat Risk:** Cập nhật liên tục vào một cột JSONB lớn trong PostgreSQL dễ gây ra TOAST bloat, làm phình to database và giảm hiệu năng.
   - **Giải pháp giảm thiểu (Mitigation):** Nhờ cơ chế Draft Space (ADR-04), bản CV nháp có thể được ghi đè bằng PUT nhưng tần suất không quá cao so với insert dạng logs. Khi publish, hệ thống chỉ INSERT bản lưu mới vào bảng History. Điều này hạn chế phần lớn các update heavy trên hệ thống và tránh bloat.
+
+## 4. Prisma Mapping Issue
+
+- **Mô tả vấn đề**: Yêu cầu cấu hình `url = env("DATABASE_URL")` trong `datasource db` không còn được hỗ trợ từ Prisma phiên bản 7.0 trở đi. Việc giữ lại cấu hình này sẽ gây lỗi validation (Mã lỗi: P1012).
+- **File liên quan**: `code/backend/prisma/schema.prisma`
+- **Đề xuất xử lý**: Đã loại bỏ thuộc tính `url` khỏi file `schema.prisma` để vượt qua `npx prisma validate`. Backend Agent sau này cần tạo thêm file `prisma.config.ts` tại thư mục gốc của backend để cấu hình `DATABASE_URL` cho Prisma Migrate và Client theo chuẩn mới của Prisma 7.
