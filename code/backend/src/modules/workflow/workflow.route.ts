@@ -7,16 +7,110 @@ import { approveSchema, rejectSchema, submitDraftSchema } from './workflow.dto';
 const router = Router();
 const workflowController = new WorkflowController();
 
+/**
+ * @openapi
+ * tags:
+ *   name: Workflow
+ *   description: CV approval workflow operations
+ */
+
 // Use authentication
 router.use(authenticate);
 
-// POST /api/cvs/draft/submit
+/**
+ * @openapi
+ * /api/cvs/draft/submit:
+ *   post:
+ *     summary: Submit CV draft for approval
+ *     tags: [Workflow]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               languageCode:
+ *                 type: string
+ *                 enum: [vi, en, jp]
+ *                 default: vi
+ *     responses:
+ *       200:
+ *         description: CV submitted successfully
+ *       400:
+ *         description: Invalid state for submission
+ */
 router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema), workflowController.submitDraft);
 
-// POST /api/cvs/:id/approve
+/**
+ * @openapi
+ * /api/cvs/{id}/approve:
+ *   post:
+ *     summary: Approve a CV
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - level
+ *             properties:
+ *               level:
+ *                 type: integer
+ *                 enum: [1, 2]
+ *     responses:
+ *       200:
+ *         description: CV approved successfully
+ *       403:
+ *         description: Forbidden (Not assigned to this CV)
+ *       404:
+ *         description: CV not found
+ */
 router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchema), workflowController.approveCV);
 
-// POST /api/cvs/:id/reject
+/**
+ * @openapi
+ * /api/cvs/{id}/reject:
+ *   post:
+ *     summary: Reject a CV
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *               sectionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: CV rejected successfully
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: CV not found
+ */
 router.post('/:id/reject', authorize(['TechLead', 'HR']), validate(rejectSchema), workflowController.rejectCV);
 
 export default router;

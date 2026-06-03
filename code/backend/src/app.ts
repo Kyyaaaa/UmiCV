@@ -21,6 +21,12 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'UP', message: 'UmiCV API is running' });
 });
 
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 import authRoutes from './modules/auth/auth.route';
 import cvRoutes from './modules/cv/cv.route';
 import workflowRoutes from './modules/workflow/workflow.route';

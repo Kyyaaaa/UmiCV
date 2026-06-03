@@ -15,13 +15,94 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// POST /api/auth/login
+/**
+ * @openapi
+ * tags:
+ *   name: Auth
+ *   description: Authentication operations
+ */
+
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     summary: Authenticate user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Invalid credentials or validation error
+ *       429:
+ *         description: Too many login attempts
+ */
 router.post('/login', loginLimiter, validate(loginSchema), authController.login);
 
-// POST /api/auth/refresh
+/**
+ * @openapi
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: New access token issued
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized (Invalid or missing refresh token in cookie)
+ */
 router.post('/refresh', authController.refresh);
 
-// POST /api/auth/logout
+/**
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Auth]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
 router.post('/logout', authController.logout);
 
 export default router;

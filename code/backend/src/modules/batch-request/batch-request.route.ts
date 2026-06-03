@@ -7,15 +7,79 @@ import { createBatchRequestSchema, cancelBatchRequestSchema } from './batch-requ
 const router = Router();
 const batchRequestController = new BatchRequestController();
 
+/**
+ * @openapi
+ * tags:
+ *   name: Batch Request
+ *   description: Batch operations for HR
+ */
+
 router.use(authenticate);
 
 // HR Only
 router.use(authorize(['HR']));
 
-// POST /api/batch-requests
+/**
+ * @openapi
+ * /api/batch-requests:
+ *   post:
+ *     summary: Create a batch request
+ *     tags: [Batch Request]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - targetUserIds
+ *               - deadline
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               targetUserIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *               deadline:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       201:
+ *         description: Batch request created
+ *       400:
+ *         description: Invalid input or missing targets
+ *       403:
+ *         description: Forbidden (Not HR)
+ */
 router.post('/', validate(createBatchRequestSchema), batchRequestController.create);
 
-// POST /api/batch-requests/:id/cancel
+/**
+ * @openapi
+ * /api/batch-requests/{id}/cancel:
+ *   post:
+ *     summary: Cancel a batch request
+ *     tags: [Batch Request]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Batch request cancelled successfully
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Batch request not found
+ */
 router.post('/:id/cancel', validate(cancelBatchRequestSchema), batchRequestController.cancel);
 
 export default router;
