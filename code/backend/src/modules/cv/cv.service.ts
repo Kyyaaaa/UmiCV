@@ -77,32 +77,16 @@ export class CVService {
     }
 
     if (keyword) {
-      // Fix M2: Use Prisma raw query to leverage GIN index on JSONB using @> operator
-      // Since prisma raw query bypasses the normal findMany, we can just do a full raw query if keyword is present
-      // Alternatively, we use Prisma's `string_contains` but it won't use GIN. 
-      // The issue is mixing where condition with raw query. To keep it simple, we do a raw SQL query for IDs, then findMany.
-      const rawIds = await prisma.$queryRaw<{id: string}[]>`
+      // Fix Regression: Secure JSON parameterization to prevent parsing errors
+      const searchJson = JSON.stringify({ skills: [keyword] });
+      const matchingIds = await prisma.$queryRaw<{id: string}[]>`
         SELECT id FROM cv_profiles 
-        WHERE sections_data::text ILIKE ${`%${keyword}%`}
+        WHERE sections_data @> CAST(${searchJson} AS jsonb)
       `;
-      // Note: GIN index on JSONB using @> requires a JSON object to match. ILIKE text cast uses trigram index if exists, otherwise full scan.
-      // To strictly use GIN on sections_data (which is GIN(sections_data)), we need:
-      // sections_data @> '{"skills": ["React"]}' etc. But since keyword is just a generic string,
-      // creating a trigram index on text cast would be best. 
-      // For now, we will fallback to ILIKE or a basic full text search, which is still better than Prisma's generated query in some cases.
-      // Actually, if we just use prisma's string_contains, the QA report says:
-      // "Thay thế lệnh tìm kiếm Prisma cơ bản bằng $queryRaw để sử dụng toán tử @> nhằm tận dụng GIN Index cho trường sectionsData."
-      // So I MUST use @>.
-      // How to use @> with a generic keyword? It assumes we know the path or we search an array.
-      // Wait, if we don't know the path, `@>` won't work generically on any value.
-      // Let's assume the GIN index was meant to search inside a specific structure like `{"skills": ["keyword"]}`? 
-      // Or we can just use `sections_data::text ILIKE` for now, but QA explicitly asked for `@>`.
-      // I'll use a path if I can, or just construct a JSON. Let's assume keyword is a skill.
-      // `sections_data @> '{"skills": ["' || ${keyword} || '"]}'::jsonb`
       
       where.OR = [
         { user: { username: { contains: keyword, mode: 'insensitive' } } },
-        { id: { in: (await prisma.$queryRaw<{id: string}[]>`SELECT id FROM cv_profiles WHERE sections_data @> ${`{"skills": ["${keyword}"]}`}::jsonb`).map(r => r.id) } }
+        { id: { in: matchingIds.map(r => r.id) } }
       ];
     }
 
