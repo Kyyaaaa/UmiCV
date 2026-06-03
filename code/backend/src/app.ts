@@ -3,6 +3,7 @@ import 'express-async-errors';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware';
 
 const app: Express = express();
@@ -12,6 +13,7 @@ app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 // Health check
@@ -23,11 +25,13 @@ import authRoutes from './modules/auth/auth.route';
 import cvRoutes from './modules/cv/cv.route';
 import workflowRoutes from './modules/workflow/workflow.route';
 import batchRequestRoutes from './modules/batch-request/batch-request.route';
+import searchRoutes from './modules/search/search.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/cvs', cvRoutes); // CV and Workflow share the same base path logically, but we can mount workflow separately or together
-app.use('/api/cvs', workflowRoutes); // As per API contract
+app.use('/api/cvs', cvRoutes); // GET /draft, PUT /draft
+app.use('/api/cvs', workflowRoutes); // POST /draft/submit, /:id/approve
+app.use('/api/cvs', searchRoutes); // GET /search, GET /:id/diff
 app.use('/api/batch-requests', batchRequestRoutes);
 
 // Error Handling

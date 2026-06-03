@@ -1,11 +1,16 @@
 import app from './app';
 import { env } from './config/env';
+import prisma from './config/db';
+import { setupCronjobs } from './modules/notification/notification.cron';
 
 const startServer = async () => {
   try {
-    // TODO: Connect to DB here when ready
-    // await prisma.$connect();
+    await prisma.$connect();
+    console.log('📦 Connected to PostgreSQL Database');
     
+    // Initialize cron jobs
+    setupCronjobs();
+
     app.listen(env.PORT, () => {
       console.log(`🚀 Server is running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     });
