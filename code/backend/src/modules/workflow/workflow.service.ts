@@ -1,19 +1,16 @@
 import prisma from '../../config/db';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
 import { CVStatus, ApprovalAction } from '@prisma/client';
-import { ApproveInput, RejectInput } from './workflow.dto';
+import { ApproveInput, RejectInput, SubmitDraftInput } from './workflow.dto';
 
 export class WorkflowService {
-  async submitDraft(userId: string) {
+  async submitDraft(userId: string, data: SubmitDraftInput) {
     // Only one language? The requirement doesn't specify. Assume we submit the 'vi' one or it's passed via body/query. 
     // Let's assume user submits their primary draft (or we need CV Profile ID).
-    // API contract says POST /api/cvs/draft/submit (no ID). Let's update all drafts of the user that are Draft/Outdated.
-    // Or we require the language code. Let's just find the first draft/outdated. Usually, UI passes language. Let's assume 'vi' if not provided.
-    // Better: update all Draft/Outdated to PendingApproval.
-    
     const profiles = await prisma.cVProfile.findMany({
       where: {
         userId,
+        languageCode: data.languageCode,
         status: { in: [CVStatus.Draft, CVStatus.Outdated] },
       },
     });
@@ -35,12 +32,35 @@ export class WorkflowService {
     return { message: 'Drafts submitted successfully' };
   }
 
+  private async verifyApproverScope(cvUserId: string, approverId: string, level: number) {
+    const approver = await prisma.user.findUnique({ where: { id: approverId } });
+    if (!approver) throw new ForbiddenError('Approver not found');
+
+    if (level === 1) {
+      if (approver.role !== 'TechLead') throw new ForbiddenError('Only TechLead can approve level 1');
+      const isLead = await prisma.projectMember.findFirst({
+        where: {
+          userId: cvUserId,
+          project: { techLeadId: approverId }
+        }
+      });
+      if (!isLead) throw new ForbiddenError('TechLead can only approve CVs of their project members');
+    } else if (level === 2) {
+      if (approver.role !== 'HR' && approver.role !== 'Admin') {
+        throw new ForbiddenError('Only HR/Admin can approve level 2');
+      }
+      // HR can approve company-wide for now as per assumptions
+    }
+  }
+
   async approveCV(cvId: string, approverId: string, data: ApproveInput) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError('CV not found');
     if (cv.status !== CVStatus.PendingApproval) {
       throw new BadRequestError('CV is not pending approval');
     }
+
+    await this.verifyApproverScope(cv.userId, approverId, data.level);
 
     // Log approval
     await prisma.approvalLog.create({
@@ -84,6 +104,8 @@ export class WorkflowService {
     if (cv.status !== CVStatus.PendingApproval) {
       throw new BadRequestError('CV is not pending approval');
     }
+
+    await this.verifyApproverScope(cv.userId, approverId, level);
 
     // Log rejection
     await prisma.approvalLog.create({

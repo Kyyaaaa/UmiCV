@@ -9,4 +9,10 @@ export const createBatchRequestSchema = z.object({
   }),
 });
 
+export const cancelBatchRequestSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid batch ID format'),
+  }),
+});
+
 export type CreateBatchRequestInput = z.infer<typeof createBatchRequestSchema>['body'];

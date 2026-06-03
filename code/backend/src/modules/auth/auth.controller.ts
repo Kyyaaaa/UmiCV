@@ -27,18 +27,33 @@ export class AuthController {
   }
 
   async refresh(req: Request, res: Response) {
-    const refreshToken = req.cookies?.refreshToken;
-    if (!refreshToken) {
-      throw new UnauthorizedError('No refresh token provided');
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      throw new UnauthorizedError('Invalid or missing refresh token');
     }
-    
+
     const result = await authService.refresh(refreshToken);
-    
+
     res.status(200).json({
       success: true,
       data: {
         accessToken: result.accessToken,
       },
     });
+  }
+
+  async logout(req: Request, res: Response) {
+    const refreshToken = req.cookies.refreshToken;
+    if (refreshToken) {
+      await authService.logout(refreshToken);
+    }
+    
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
   }
 }

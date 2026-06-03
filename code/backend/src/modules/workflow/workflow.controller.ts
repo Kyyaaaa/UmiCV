@@ -7,7 +7,8 @@ const workflowService = new WorkflowService();
 export class WorkflowController {
   async submitDraft(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
-    const result = await workflowService.submitDraft(userId);
+    const data = req.body;
+    const result = await workflowService.submitDraft(userId, data);
     res.status(200).json({ success: true, ...result });
   }
 

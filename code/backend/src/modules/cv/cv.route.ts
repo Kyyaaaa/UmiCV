@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { upsertDraftSchema } from './cv.dto';
+import { getDraftSchema, upsertDraftSchema, searchSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -11,12 +11,15 @@ const cvController = new CVController();
 router.use(authenticate);
 
 // GET /api/cvs/draft
-router.get('/draft', authorize(['Employee']), cvController.getDraft);
+router.get('/draft', authorize(['Employee']), validate(getDraftSchema), cvController.getDraft);
 
 // PUT /api/cvs/draft
 router.put('/draft', authorize(['Employee']), validate(upsertDraftSchema), cvController.upsertDraft);
 
-// Search and diff will be implemented in Search module but mounted here or separately.
-// For now, we leave them as mocks if needed, or remove them and let search module handle it.
+// GET /api/cvs/search
+router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSchema), cvController.search);
+
+// GET /api/cvs/:id/diff
+router.get('/:id/diff', cvController.diff);
 
 export default router;

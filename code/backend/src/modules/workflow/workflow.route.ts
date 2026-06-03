@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { WorkflowController } from './workflow.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { approveSchema, rejectSchema } from './workflow.dto';
+import { approveSchema, rejectSchema, submitDraftSchema } from './workflow.dto';
 
 const router = Router();
 const workflowController = new WorkflowController();
@@ -11,7 +11,7 @@ const workflowController = new WorkflowController();
 router.use(authenticate);
 
 // POST /api/cvs/draft/submit
-router.post('/draft/submit', authorize(['Employee']), workflowController.submitDraft);
+router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema), workflowController.submitDraft);
 
 // POST /api/cvs/:id/approve
 router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchema), workflowController.approveCV);

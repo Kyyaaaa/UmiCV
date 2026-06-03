@@ -25,13 +25,11 @@ import authRoutes from './modules/auth/auth.route';
 import cvRoutes from './modules/cv/cv.route';
 import workflowRoutes from './modules/workflow/workflow.route';
 import batchRequestRoutes from './modules/batch-request/batch-request.route';
-import searchRoutes from './modules/search/search.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/cvs', cvRoutes); // GET /draft, PUT /draft
-app.use('/api/cvs', workflowRoutes); // POST /draft/submit, /:id/approve
-app.use('/api/cvs', searchRoutes); // GET /search, GET /:id/diff
+app.use('/api/cvs', cvRoutes); 
+app.use('/api/cvs', workflowRoutes); 
 app.use('/api/batch-requests', batchRequestRoutes);
 
 // Error Handling

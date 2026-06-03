@@ -40,6 +40,7 @@ export class BatchRequestService {
   async cancelBatchRequest(batchId: string, hrUserId: string) {
     const batch = await prisma.batchRequest.findUnique({
       where: { id: batchId },
+      include: { targets: true },
     });
 
     if (!batch) {
@@ -52,9 +53,24 @@ export class BatchRequestService {
         data: { status: BatchRequestStatus.Cancelled },
       });
 
-      // Optionally we could revert CV profiles from Outdated to whatever they were, 
-      // but the system doesn't track previous states. So we just leave them or change to Draft?
-      // Documents don't explicitly require reverting CV Status, just cancelling the batch.
+      // Lấy danh sách user bị ảnh hưởng
+      const targetUserIds = batch.targets.map(t => t.userId);
+
+      // Xóa các target
+      await tx.batchRequestTarget.deleteMany({
+        where: { batchRequestId: batchId },
+      });
+
+      // Rollback CV status to Draft if they are currently Outdated
+      if (targetUserIds.length > 0) {
+        await tx.cVProfile.updateMany({
+          where: {
+            userId: { in: targetUserIds },
+            status: CVStatus.Outdated,
+          },
+          data: { status: CVStatus.Draft },
+        });
+      }
     });
 
     return { message: 'Batch request cancelled successfully' };

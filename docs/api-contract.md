@@ -30,7 +30,7 @@ API tuân thủ tiêu chuẩn RESTful. Giao tiếp qua HTTP/HTTPS. Request/Respo
 - `GET /api/cvs/{id}/diff`
   - **Mục đích:** So sánh chi tiết bản nháp với bản chính thức.
   - **Quyền:** Tech Lead, HR, Admin (Employee xem của chính mình).
-  - **Response:** `{ "original": {...}, "draft": {...}, "diff": {...} }`
+  - **Response:** `{ "original": {...}, "draft": {...} }`
 
 ## 3. Workflow & Approval APIs
 - `POST /api/cvs/draft/submit`

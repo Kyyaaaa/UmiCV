@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../errors/AppError';
 import { env } from '../config/env';
+import { logger } from '../utils/logger.util';
 
 export const errorHandler = (
   err: Error,
@@ -25,7 +26,7 @@ export const errorHandler = (
   }
 
   // Unhandled errors
-  console.error('Unhandled Error:', err);
+  logger.error('Unhandled Error:', err);
   
   return res.status(500).json({
     success: false,

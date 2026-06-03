@@ -13,5 +13,12 @@ export const rejectSchema = z.object({
   }),
 });
 
+export const submitDraftSchema = z.object({
+  body: z.object({
+    languageCode: z.enum(['vi', 'en', 'jp']).default('vi'),
+  }),
+});
+
 export type ApproveInput = z.infer<typeof approveSchema>['body'];
 export type RejectInput = z.infer<typeof rejectSchema>['body'];
+export type SubmitDraftInput = z.infer<typeof submitDraftSchema>['body'];

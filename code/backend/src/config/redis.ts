@@ -1,4 +1,4 @@
-import { RedisOptions } from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 import { env } from './env';
 
 export const redisConfig: RedisOptions = {
@@ -6,3 +6,5 @@ export const redisConfig: RedisOptions = {
   port: parseInt(env.REDIS_PORT, 10),
   maxRetriesPerRequest: null,
 };
+
+export const redisClient = new Redis(redisConfig);
