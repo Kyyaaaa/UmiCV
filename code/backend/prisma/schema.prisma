@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  Employee
+  TechLead
+  HR
+  Admin
+}
+
+enum CVStatus {
+  Draft
+  PendingApproval
+  Outdated
+  Updated
+  Cancelled
+}
+
+enum ApprovalAction {
+  Approve
+  Reject
+}
+
+enum TargetStatus {
+  Outdated
+  Updated
+}
+
+enum BatchRequestStatus {
+  Active
+  Cancelled
+}
+
+enum UserStatus {
+  Active
+  Locked
+}
+
+model Department {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String   @db.VarChar(255)
+  code               String   @unique @db.VarChar(50)
+  parentDepartmentId String?  @map("parent_department_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  parentDepartment Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  childDepartments Department[] @relation("DepartmentHierarchy")
+  users            User[]
+
+  @@map("departments")
+}
+
+model User {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username     String     @unique @db.VarChar(100)
+  email        String     @unique @db.VarChar(255)
+  fullName     String     @map("full_name") @db.VarChar(255)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  role         UserRole
+  status       UserStatus @default(Active)
+  departmentId String     @map("department_id") @db.Uuid
+  lockedAt     DateTime?  @map("locked_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+
+  department Department @relation(fields: [departmentId], references: [id])
+
+  managedProjects Project[]       @relation("TechLeadProjects")
+  projectMembers  ProjectMember[]
+
+  cvProfiles    CVProfile[]
+  batchRequests BatchRequest[]
+  batchTargets  BatchRequestTarget[]
+  approvalLogs  ApprovalLog[]        @relation("ApproverLogs")
+  auditLogs     AuditLog[]
+
+  @@index([departmentId])
+  @@map("users")
+}
+
+model Project {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @db.VarChar(255)
+  code       String   @unique @db.VarChar(50)
+  techLeadId String   @map("tech_lead_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Tech lead cannot be deleted casually without reassigning
+  techLead User            @relation("TechLeadProjects", fields: [techLeadId], references: [id])
+  members  ProjectMember[]
+
+  @@index([techLeadId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+model CVProfile {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  languageCode  String    @map("language_code") @db.VarChar(10)
+  status        CVStatus
+  versionNumber Int       @default(0) @map("version_number")
+  sectionsData  Json      @default("{}") @map("sections_data")
+  submittedAt   DateTime? @map("submitted_at")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user         User               @relation(fields: [userId], references: [id])
+  histories    CVVersionHistory[]
+  approvalLogs ApprovalLog[]
+  // Manual Migration Required: GIN Index for sections_data (see docs/index-strategy.md)
+  // CREATE INDEX idx_cv_profiles_sections_data_gin ON cv_profiles USING GIN (sections_data);
+
+  @@unique([userId, languageCode])
+  @@index([userId])
+  @@index([status])
+  @@map("cv_profiles")
+}
+
+model CVVersionHistory {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cvProfileId   String   @map("cv_profile_id") @db.Uuid
+  versionNumber Int      @map("version_number")
+  snapshotData  Json     @map("snapshot_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cvProfile CVProfile @relation(fields: [cvProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([cvProfileId, versionNumber])
+  @@index([cvProfileId])
+  @@map("cv_version_histories")
+}
+
+model BatchRequest {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdBy   String             @map("created_by") @db.Uuid
+  title       String             @db.VarChar(255)
+  description String?
+  deadline    DateTime
+  status      BatchRequestStatus @default(Active)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  creator User                 @relation(fields: [createdBy], references: [id])
+  targets BatchRequestTarget[]
+
+  @@index([createdBy])
+  @@index([status, deadline])
+  @@map("batch_requests")
+}
+
+model BatchRequestTarget {
+  batchRequestId String       @map("batch_request_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  status         TargetStatus @default(Outdated)
+  notifiedAt     DateTime?    @map("notified_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  batchRequest BatchRequest @relation(fields: [batchRequestId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Manual Migration Required: Partial Index for status
+  // CREATE INDEX idx_batch_request_targets_status ON batch_request_targets(status) WHERE status = 'Outdated';
+
+  @@id([batchRequestId, userId])
+  @@index([userId])
+  @@map("batch_request_targets")
+}
+
+model ApprovalLog {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cvProfileId String         @map("cv_profile_id") @db.Uuid
+  approverId  String         @map("approver_id") @db.Uuid
+  action      ApprovalAction
+  level       Int
+  reason      String?
+  sectionId   String?        @map("section_id") @db.VarChar(100)
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  cvProfile CVProfile @relation(fields: [cvProfileId], references: [id], onDelete: Cascade)
+  approver  User      @relation("ApproverLogs", fields: [approverId], references: [id])
+
+  @@index([cvProfileId])
+  @@index([approverId])
+  @@map("approval_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  action     String   @db.VarChar(100)
+  userId     String?  @map("user_id") @db.Uuid
+  resourceId String?  @map("resource_id") @db.VarChar(255)
+  ipAddress  String?  @map("ip_address") @db.VarChar(50)
+  timestamp  DateTime @default(now())
+
+  // We don't cascade delete audit logs when a user is deleted
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("audit_logs")
+}

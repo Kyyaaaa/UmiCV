@@ -11,6 +11,10 @@ API tuân thủ tiêu chuẩn RESTful. Giao tiếp qua HTTP/HTTPS. Request/Respo
   - **Mục đích:** Cấp mới Access Token.
   - **Request:** (Đính kèm Cookie)
   - **Response:** `{ "accessToken": "..." }`
+- `POST /api/auth/logout`
+  - **Mục đích:** Đăng xuất, xóa Refresh Token khỏi cookie và đưa vào blacklist.
+  - **Request:** (Đính kèm Cookie)
+  - **Response:** `{ "success": true, "message": "..." }`
 
 ## 2. CV Management APIs
 - `GET /api/cvs/draft`
@@ -30,12 +34,13 @@ API tuân thủ tiêu chuẩn RESTful. Giao tiếp qua HTTP/HTTPS. Request/Respo
 - `GET /api/cvs/{id}/diff`
   - **Mục đích:** So sánh chi tiết bản nháp với bản chính thức.
   - **Quyền:** Tech Lead, HR, Admin (Employee xem của chính mình).
-  - **Response:** `{ "original": {...}, "draft": {...}, "diff": {...} }`
+  - **Response:** `{ "original": {...}, "draft": {...} }`
 
 ## 3. Workflow & Approval APIs
 - `POST /api/cvs/draft/submit`
   - **Mục đích:** Gửi duyệt bản nháp (Nháp -> Chờ duyệt).
   - **Quyền:** Employee
+  - **Request:** `{ "languageCode": "vi" }`
 - `POST /api/cvs/{id}/approve`
   - **Mục đích:** Phê duyệt CV.
   - **Quyền:** Tech Lead (Cấp 1), HR (Cấp 2).
