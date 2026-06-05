@@ -77,7 +77,12 @@ Bộ API này nhằm mục đích xây dựng lại chuẩn mực RESTful xoay q
 ```
 - *Response*: `{ "success": true, "message": "Saved" }`
 
-**4. DELETE /api/cvs/:id/draft**
+**4. POST /api/cvs/:id/publish**
+- *Mục đích*: Submit bản nháp để duyệt. Status sẽ chuyển từ `Draft` sang `PendingApproval`.
+- *Response*: `{ "success": true, "message": "CV submitted for approval" }`
+- *Lưu ý (Chống Spam)*: Backend tự động kiểm tra JSON diff. Nếu bản Draft không có thay đổi so với bản chính thức (Version hiện tại), sẽ báo lỗi `400 Bad Request` (NO_CHANGES_TO_PUBLISH).
+
+**5. DELETE /api/cvs/:id/draft**
 - *Mục đích*: Hủy bản nháp hiện tại, khôi phục lại trạng thái cũ.
 
 ### C. Version Control (Lịch sử & Phục hồi)

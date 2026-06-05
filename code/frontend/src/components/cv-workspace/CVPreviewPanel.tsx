@@ -19,20 +19,20 @@ export function CVPreviewPanel({ data }: CVPreviewPanelProps) {
           {/* Header / Personal Info */}
           <div className="text-center border-b-2 border-slate-800 pb-4 mb-4">
             <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
-              {data.personalInfo.fullName || 'HỌ VÀ TÊN'}
+              {data.personalInfo?.fullName || 'HỌ VÀ TÊN'}
             </h1>
             <h2 className="text-sm font-medium text-blue-700 uppercase tracking-widest mt-1 mb-3">
-              {data.personalInfo.title || 'Vị trí ứng tuyển'}
+              {data.personalInfo?.title || 'Vị trí ứng tuyển'}
             </h2>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px] text-slate-600">
-              <span>{data.personalInfo.phone || 'SĐT'}</span>
+              <span>{data.personalInfo?.phone || 'SĐT'}</span>
               <span>•</span>
-              <span>{data.personalInfo.email || 'Email'}</span>
+              <span>{data.personalInfo?.email || 'Email'}</span>
             </div>
           </div>
 
           {/* Summary */}
-          {data.personalInfo.summary && (
+          {data.personalInfo?.summary && (
             <div className="mb-4">
               <p className="text-[11px] leading-relaxed text-justify">
                 {data.personalInfo.summary}
@@ -45,7 +45,7 @@ export function CVPreviewPanel({ data }: CVPreviewPanelProps) {
             <div className="mb-4">
               <h3 className="text-xs font-bold uppercase border-b border-slate-300 pb-1 mb-2 text-slate-800">Kỹ năng</h3>
               <div className="flex flex-wrap gap-2">
-                {data.skills.map((skill: any, idx: number) => (
+                {data.skills?.map((skill: any, idx: number) => (
                   <span key={idx} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">
                     {skill.name} {skill.level ? `(${skill.level})` : ''}
                   </span>

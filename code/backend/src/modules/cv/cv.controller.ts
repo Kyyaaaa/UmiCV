@@ -50,6 +50,52 @@ export class CVController {
     });
   }
 
+  async getCVVersions(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const cvId = req.params.id;
+    const versions = await cvService.getCVVersions(cvId, userId);
+
+    res.status(200).json({
+      success: true,
+      data: versions,
+    });
+  }
+
+  async getCVVersionById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const { id, versionId } = req.params;
+    const version = await cvService.getCVVersionById(id, versionId, userId);
+
+    res.status(200).json({
+      success: true,
+      data: version,
+    });
+  }
+
+  async restoreCVVersion(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const { id, versionId } = req.params;
+    const cv = await cvService.restoreCVVersion(id, versionId, userId);
+
+    res.status(200).json({
+      success: true,
+      data: cv,
+    });
+  }
+
+  async publish(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const cvId = req.params.id;
+    
+    const cv = await cvService.publishCV(cvId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'CV submitted for approval',
+      data: cv,
+    });
+  }
+
   async search(req: AuthRequest, res: Response) {
     const result = await cvService.searchCVs(req.query as any);
     res.status(200).json({ success: true, ...result });

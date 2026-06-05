@@ -18,7 +18,7 @@ import { DashboardOverview } from './pages/dashboard/DashboardOverview';
 // CV Management
 import { CVDashboard } from './pages/cv/CVDashboard';
 import { CVWorkspace } from './pages/cv/CVWorkspace';
-import { VersionHistoryPage } from './pages/cv/VersionHistoryPage';
+
 import { DiffViewerPage } from './pages/cv/DiffViewerPage';
 import { PublishReviewPage } from './pages/cv/PublishReviewPage';
 
@@ -51,7 +51,7 @@ function App() {
               {/* CV Management */}
               <Route path="/cv" element={<CVDashboard />} />
               <Route path="/cv/:id/workspace" element={<CVWorkspace />} />
-              <Route path="/cv/:id/history" element={<VersionHistoryPage />} />
+
               <Route path="/cv/:id/diff" element={<DiffViewerPage />} />
               <Route path="/cv/:id/publish" element={<PublishReviewPage />} />
               

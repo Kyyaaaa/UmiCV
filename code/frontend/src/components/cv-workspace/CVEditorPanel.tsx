@@ -6,12 +6,13 @@ interface CVEditorPanelProps {
   activeSection: string;
   data: CVSections;
   onChange: (section: string, value: any) => void;
+  disabled?: boolean;
 }
 
-export function CVEditorPanel({ activeSection, data, onChange }: CVEditorPanelProps) {
+export function CVEditorPanel({ activeSection, data, onChange, disabled = false }: CVEditorPanelProps) {
   
   const handlePersonalInfoChange = (field: string, value: string) => {
-    onChange('personalInfo', { ...data.personalInfo, [field]: value });
+    onChange('personalInfo', { ...(data.personalInfo || {}), [field]: value });
   };
 
   const renderSection = () => {
@@ -27,34 +28,39 @@ export function CVEditorPanel({ activeSection, data, onChange }: CVEditorPanelPr
               <div className="col-span-2">
                 <Input 
                   label="Họ và tên" 
-                  value={data.personalInfo.fullName}
+                  value={data.personalInfo?.fullName || ''}
                   onChange={(e) => handlePersonalInfoChange('fullName', e.target.value)}
+                  disabled={disabled}
                 />
               </div>
               <div className="col-span-2">
                 <Input 
                   label="Chức danh" 
-                  value={data.personalInfo.title}
+                  value={data.personalInfo?.title || ''}
                   onChange={(e) => handlePersonalInfoChange('title', e.target.value)}
+                  disabled={disabled}
                 />
               </div>
               <Input 
                 label="Email" 
                 type="email"
-                value={data.personalInfo.email}
+                value={data.personalInfo?.email || ''}
                 onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
+                disabled={disabled}
               />
               <Input 
                 label="Số điện thoại" 
-                value={data.personalInfo.phone}
+                value={data.personalInfo?.phone || ''}
                 onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
+                disabled={disabled}
               />
               <div className="col-span-2 space-y-1">
                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700">Giới thiệu bản thân</label>
                 <textarea 
-                  className="w-full min-h-[120px] rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={data.personalInfo.summary}
+                  className="w-full min-h-[120px] rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={data.personalInfo?.summary || ''}
                   onChange={(e) => handlePersonalInfoChange('summary', e.target.value)}
+                  disabled={disabled}
                 />
               </div>
             </div>
@@ -69,17 +75,18 @@ export function CVEditorPanel({ activeSection, data, onChange }: CVEditorPanelPr
               <p className="text-sm text-slate-500">Thêm các kỹ năng nổi bật của bạn.</p>
             </div>
             <div className="space-y-4">
-              {data.skills.map((skill: any, index: number) => (
+              {data.skills?.map((skill: any, index: number) => (
                 <div key={index} className="flex items-center space-x-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
                   <div className="flex-1">
                     <Input 
                       label="Tên kỹ năng" 
                       value={skill.name} 
                       onChange={(e) => {
-                        const newSkills = [...data.skills];
+                        const newSkills = [...(data.skills || [])];
                         newSkills[index].name = e.target.value;
                         onChange('skills', newSkills);
                       }}
+                      disabled={disabled}
                     />
                   </div>
                   <div className="w-1/3">
@@ -87,15 +94,16 @@ export function CVEditorPanel({ activeSection, data, onChange }: CVEditorPanelPr
                       label="Mức độ (VD: 8/10)" 
                       value={skill.level} 
                       onChange={(e) => {
-                        const newSkills = [...data.skills];
+                        const newSkills = [...(data.skills || [])];
                         newSkills[index].level = e.target.value;
                         onChange('skills', newSkills);
                       }}
+                      disabled={disabled}
                     />
                   </div>
                 </div>
               ))}
-              <button className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors">
+              <button className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={disabled}>
                 + Thêm kỹ năng
               </button>
             </div>

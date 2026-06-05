@@ -124,7 +124,7 @@ export function CVDashboard() {
                       variant="outline" 
                       size="sm" 
                       className="w-full"
-                      onClick={() => navigate(`/cv/${cv.id}/history`)}
+                      onClick={() => navigate(`/cv/${cv.id}/workspace?tab=history`)}
                     >
                       <History size={14} className="mr-1.5" /> Lịch sử
                     </Button>

@@ -3,6 +3,7 @@ import { Prisma, CVStatus } from '@prisma/client';
 import { SearchInput, CreateCVInput, UpdateDraftInput } from './cv.dto';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
 import { MESSAGES } from '../../constants/messages';
+import { generateDiff } from './cv.diff';
 
 export class CVService {
   async getMyCVs(userId: string) {
@@ -74,6 +75,99 @@ export class CVService {
       data: {
         sectionsData: data.sectionsData,
         status: CVStatus.Draft,
+      },
+    });
+  }
+
+  async getCVVersions(cvId: string, userId: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+
+    return prisma.cVVersionHistory.findMany({
+      where: { cvProfileId: cvId },
+      orderBy: { versionNumber: 'desc' },
+      select: {
+        id: true,
+        versionNumber: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async getCVVersionById(cvId: string, versionId: string, userId: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+
+    const version = await prisma.cVVersionHistory.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version || version.cvProfileId !== cvId) {
+      throw new NotFoundError('Version not found');
+    }
+
+    return version;
+  }
+
+  async restoreCVVersion(cvId: string, versionId: string, userId: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+
+    if (cv.status === CVStatus.PendingApproval) {
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
+    }
+
+    const version = await prisma.cVVersionHistory.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version || version.cvProfileId !== cvId) {
+      throw new NotFoundError('Version not found');
+    }
+
+    return prisma.cVProfile.update({
+      where: { id: cvId },
+      data: {
+        sectionsData: version.snapshotData as any,
+        status: CVStatus.Draft,
+      },
+    });
+  }
+
+  async publishCV(cvId: string, userId: string) {
+    const cv = await prisma.cVProfile.findUnique({
+      where: { id: cvId },
+      include: {
+        histories: {
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+
+    if (cv.status === CVStatus.PendingApproval) {
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
+    }
+
+    // Bug-04 Fix: Check for empty changes
+    const draftJson = JSON.stringify(cv.sectionsData);
+    const originalJson = cv.histories.length > 0 ? JSON.stringify(cv.histories[0].snapshotData) : '{}';
+
+    if (draftJson === originalJson) {
+      throw new BadRequestError('NO_CHANGES_TO_PUBLISH');
+    }
+
+    return prisma.cVProfile.update({
+      where: { id: cvId },
+      data: {
+        status: CVStatus.PendingApproval,
+        submittedAt: new Date(),
       },
     });
   }
@@ -154,10 +248,11 @@ export class CVService {
       throw new ForbiddenError(MESSAGES.CV.FORBIDDEN_DIFF);
     }
 
-    const draft = cv.sectionsData;
-    const original = cv.histories.length > 0 ? cv.histories[0].snapshotData : null;
+    const draft = cv.sectionsData || {};
+    const original = cv.histories.length > 0 ? cv.histories[0].snapshotData : {};
 
-    // Fix M3: Removing diff field computation per API contract update.
-    return { original, draft };
+    const diffChanges = generateDiff(original, draft);
+
+    return diffChanges;
   }
 }

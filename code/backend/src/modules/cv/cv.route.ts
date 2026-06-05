@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema } from './cv.dto';
+import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -110,6 +110,27 @@ router.put('/:id/draft', authorize(['Employee']), validate(updateDraftSchema), c
 
 /**
  * @openapi
+ * /api/cvs/{id}/publish:
+ *   post:
+ *     summary: Publish a CV draft for approval
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV submitted for approval
+ *       400:
+ *         description: Bad request (No changes to publish)
+ */
+router.post('/:id/publish', authorize(['Employee']), validate(publishCVSchema), cvController.publish);
+
+/**
+ * @openapi
  * /api/cvs/search:
  *   get:
  *     summary: Search CVs
@@ -166,5 +187,76 @@ router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSch
  *         description: CV not found
  */
 router.get('/:id/diff', cvController.diff);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions:
+ *   get:
+ *     summary: Get CV version history
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of versions retrieved
+ */
+router.get('/:id/versions', authorize(['Employee']), validate(getCVByIdSchema), cvController.getCVVersions);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions/{versionId}:
+ *   get:
+ *     summary: Get specific CV version details
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: versionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Version details retrieved
+ */
+router.get('/:id/versions/:versionId', authorize(['Employee']), validate(cvVersionParamsSchema), cvController.getCVVersionById);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions/{versionId}/restore:
+ *   post:
+ *     summary: Restore a CV draft from a version snapshot
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: versionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV version restored
+ *       400:
+ *         description: Cannot edit pending CV
+ */
+router.post('/:id/versions/:versionId/restore', authorize(['Employee']), validate(cvVersionParamsSchema), cvController.restoreCVVersion);
 
 export default router;

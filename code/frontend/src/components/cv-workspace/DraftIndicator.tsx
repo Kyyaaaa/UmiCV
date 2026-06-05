@@ -21,7 +21,7 @@ export function DraftIndicator({ unsavedChangesCount, lastSavedAt, isSaving }: D
     return (
       <div className="flex items-center text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
         <Save size={14} className="mr-2" />
-        Đã lưu {lastSavedAt ? `lúc ${lastSavedAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}
+        Đã lưu {lastSavedAt && !isNaN(lastSavedAt.getTime()) ? `lúc ${lastSavedAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}
       </div>
     );
   }

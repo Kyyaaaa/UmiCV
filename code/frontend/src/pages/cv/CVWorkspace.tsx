@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { ArrowLeft, Share } from 'lucide-react';
@@ -8,11 +8,15 @@ import { CVEditorPanel } from '../../components/cv-workspace/CVEditorPanel';
 import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
 import { DraftIndicator } from '../../components/cv-workspace/DraftIndicator';
 import { LanguageSwitcher } from '../../components/cv-workspace/LanguageSwitcher';
+import { VersionHistorySidebar } from '../../components/cv-workspace/VersionHistorySidebar';
 import { cvService } from '../../services/cv.service';
 
 export function CVWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const viewMode = searchParams.get('tab') === 'history' ? 'history' : 'draft';
 
   const [cvData, setCvData] = useState<CVProfile | null>(null);
   const [activeSection, setActiveSection] = useState('personalInfo');
@@ -20,6 +24,11 @@ export function CVWorkspace() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Preview Mode States
+  const [previewVersionId, setPreviewVersionId] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<CVSections | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const isFirstRender = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,12 +51,15 @@ export function CVWorkspace() {
         education: []
       };
 
-      // Safely merge sectionsData
+      const safeSections = res.data.sectionsData || {};
       const finalData = {
         ...res.data,
         sectionsData: {
-          ...defaultSections,
-          ...(res.data.sectionsData || {})
+          personalInfo: safeSections.personalInfo || defaultSections.personalInfo,
+          skills: safeSections.skills || [],
+          experience: safeSections.experience || [],
+          projects: safeSections.projects || [],
+          education: safeSections.education || []
         }
       };
 
@@ -58,12 +70,73 @@ export function CVWorkspace() {
     }
   };
 
+  const loadVersionPreview = async (versionId: string) => {
+    if (!id) return;
+    try {
+      setIsPreviewLoading(true);
+      setPreviewVersionId(versionId);
+      const res = await cvService.getVersionById(id, versionId);
+      
+      const defaultSections: CVSections = {
+        personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: []
+      };
+
+      const safeSnap = res.data.snapshotData || {};
+      setPreviewData({
+        personalInfo: safeSnap.personalInfo || defaultSections.personalInfo,
+        skills: safeSnap.skills || [],
+        experience: safeSnap.experience || [],
+        projects: safeSnap.projects || [],
+        education: safeSnap.education || []
+      });
+    } catch (err: any) {
+      console.error('Lỗi khi tải phiên bản:', err);
+      alert('Không thể tải nội dung phiên bản này.');
+      setPreviewVersionId(null);
+      setPreviewData(null);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleRestoreVersion = async (versionId: string) => {
+    if (!id) return;
+    if (unsavedChanges > 0) {
+      const confirm = window.confirm('Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?');
+      if (!confirm) return;
+    } else {
+      const confirm = window.confirm('Bạn có chắc muốn khôi phục phiên bản này đè lên bản nháp hiện tại?');
+      if (!confirm) return;
+    }
+
+    try {
+      await cvService.restoreVersion(id, versionId);
+      alert('Khôi phục thành công!');
+      // Reset view
+      setSearchParams({});
+      setPreviewVersionId(null);
+      setPreviewData(null);
+      setUnsavedChanges(0);
+      // Reload draft
+      await fetchCV();
+    } catch (err: any) {
+      console.error('Lỗi khôi phục:', err);
+      alert('Khôi phục thất bại: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   // Auto-save logic
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
+
+    if (viewMode === 'history') return;
 
     if (unsavedChanges > 0) {
       if (timeoutRef.current) {
@@ -79,6 +152,28 @@ export function CVWorkspace() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [cvData?.sectionsData, unsavedChanges]);
+
+  // BUG-01: Unsaved Changes Protection (beforeunload + useBlocker)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (unsavedChanges > 0) {
+        e.preventDefault();
+        e.returnValue = ''; // Mặc định trình duyệt sẽ hỏi xác nhận
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [unsavedChanges]);
+
+  useBlocker(
+    ({ currentLocation, nextLocation }) => {
+      if (unsavedChanges > 0 && currentLocation.pathname !== nextLocation.pathname) {
+        const confirm = window.confirm('Bạn có thay đổi chưa lưu. Nếu rời khỏi trang, những thay đổi này có thể bị mất. Bạn có chắc chắn muốn rời đi?');
+        return !confirm; // Trả về true để Block, false để Allow
+      }
+      return false;
+    }
+  );
 
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!cvData) return <div className="p-8 text-center text-slate-500">Đang tải Workspace...</div>;
@@ -140,10 +235,30 @@ export function CVWorkspace() {
             onLanguageChange={(lang) => setCvData({ ...cvData, languageCode: lang as any })} 
           />
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || unsavedChanges === 0}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (viewMode === 'history') {
+                  setSearchParams({});
+                  setPreviewVersionId(null);
+                  setPreviewData(null);
+                } else {
+                  setSearchParams({ tab: 'history' });
+                }
+              }}
+              className={viewMode === 'history' ? 'bg-slate-100' : ''}
+            >
+              Lịch sử
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || unsavedChanges === 0 || viewMode === 'history'}>
               {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
-            <Button size="sm" onClick={() => navigate(`/cv/${cvData.id}/publish`)}>
+            <Button 
+              size="sm" 
+              onClick={() => navigate(`/cv/${cvData.id}/publish`)}
+              disabled={viewMode === 'history' || unsavedChanges > 0}
+            >
               <Share size={14} className="mr-2" />
               Publish CV
             </Button>
@@ -153,17 +268,52 @@ export function CVWorkspace() {
 
       {/* Workspace Body (3 Columns) */}
       <div className="flex-1 flex overflow-hidden">
-        <WorkspaceSidebar 
-          activeSection={activeSection} 
-          onSectionSelect={setActiveSection} 
-        />
-        <CVEditorPanel 
-          activeSection={activeSection} 
-          data={cvData.sectionsData} 
-          onChange={handleSectionDataChange} 
-        />
+        {viewMode === 'history' ? (
+          <VersionHistorySidebar 
+            cvId={id!} 
+            selectedVersionId={previewVersionId} 
+            onSelectVersion={loadVersionPreview}
+            onRestoreVersion={handleRestoreVersion}
+          />
+        ) : (
+          <WorkspaceSidebar 
+            activeSection={activeSection} 
+            onSectionSelect={setActiveSection} 
+          />
+        )}
+        
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {viewMode === 'history' && (
+            <div className="bg-blue-50 border-b border-blue-200 p-3 flex justify-between items-center text-sm z-10 shrink-0">
+              <span className="text-blue-800 font-medium">Bạn đang xem phiên bản lịch sử. Các thao tác chỉnh sửa tạm thời bị khóa.</span>
+              <Button size="sm" variant="outline" className="bg-white" onClick={() => {
+                setSearchParams({});
+                setPreviewVersionId(null);
+                setPreviewData(null);
+              }}>
+                Quay lại Bản Nháp
+              </Button>
+            </div>
+          )}
+          
+          <CVEditorPanel 
+            activeSection={activeSection} 
+            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
+            onChange={handleSectionDataChange} 
+            disabled={viewMode === 'history'}
+          />
+          
+          {isPreviewLoading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
+              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center text-slate-600">
+                <span className="animate-pulse">Đang tải nội dung phiên bản...</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <CVPreviewPanel 
-          data={cvData.sectionsData} 
+          data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
         />
       </div>
     </div>

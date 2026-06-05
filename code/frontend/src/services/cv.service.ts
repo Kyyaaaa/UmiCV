@@ -5,7 +5,12 @@ import {
   GetCVsResponse, 
   GetCVResponse, 
   CreateCVResponse, 
-  UpdateDraftResponse 
+  UpdateDraftResponse,
+  GetVersionsResponse,
+  GetVersionByIdResponse,
+  RestoreVersionResponse,
+  PublishCVResponse,
+  GetDiffResponse
 } from '../types/cv';
 
 export const cvService = {
@@ -26,6 +31,31 @@ export const cvService = {
 
   updateDraft: async (id: string, data: UpdateDraftInput): Promise<UpdateDraftResponse> => {
     const response = await apiClient.put<UpdateDraftResponse>(`/cvs/${id}/draft`, data);
+    return response.data;
+  },
+
+  getVersions: async (id: string): Promise<GetVersionsResponse> => {
+    const response = await apiClient.get<GetVersionsResponse>(`/cvs/${id}/versions`);
+    return response.data;
+  },
+
+  getVersionById: async (id: string, versionId: string): Promise<GetVersionByIdResponse> => {
+    const response = await apiClient.get<GetVersionByIdResponse>(`/cvs/${id}/versions/${versionId}`);
+    return response.data;
+  },
+
+  restoreVersion: async (id: string, versionId: string): Promise<RestoreVersionResponse> => {
+    const response = await apiClient.post<RestoreVersionResponse>(`/cvs/${id}/versions/${versionId}/restore`);
+    return response.data;
+  },
+
+  publishCV: async (id: string): Promise<PublishCVResponse> => {
+    const response = await apiClient.post<PublishCVResponse>(`/cvs/${id}/publish`);
+    return response.data;
+  },
+
+  getDiff: async (id: string): Promise<GetDiffResponse> => {
+    const response = await apiClient.get<GetDiffResponse>(`/cvs/${id}/diff`);
     return response.data;
   }
 };
