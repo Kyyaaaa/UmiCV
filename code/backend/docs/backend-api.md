@@ -61,3 +61,35 @@ Tất cả các API yêu cầu xác thực phải gửi kèm Header `Authorizati
 ### POST `/api/batch-requests/:id/cancel`
 - **Quyền:** HR
 - **Mô tả:** Hủy chiến dịch cập nhật CV.
+
+## 6. User Management Module
+### GET `/api/users`
+- **Quyền:** Admin
+- **Query:** `?page=1&limit=10&keyword=...&role=Employee&status=Active`
+- **Response:** `{ "success": true, "total": 10, "page": 1, "data": [...] }`
+
+### POST `/api/users`
+- **Quyền:** Admin
+- **Body:** `{ "username": "...", "email": "...", "fullName": "...", "password": "...", "role": "Employee", "departmentId": "..." }`
+
+### GET `/api/users/:id`
+- **Quyền:** Admin
+
+### PUT `/api/users/:id`
+- **Quyền:** Admin
+- **Body:** `{ "fullName": "...", "role": "TechLead", "departmentId": "...", "status": "Active" }`
+
+### PATCH `/api/users/:id/lock`
+- **Quyền:** Admin
+- **Mô tả:** Khóa tài khoản, không cho login/refresh token.
+
+### PATCH `/api/users/:id/unlock`
+- **Quyền:** Admin
+
+### POST `/api/users/:id/reset-password`
+- **Quyền:** Admin
+- **Body:** `{ "newPassword": "..." }`
+
+### PATCH `/api/users/:id/role`
+- **Quyền:** Admin
+- **Body:** `{ "role": "HR" }`

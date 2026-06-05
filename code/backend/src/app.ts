@@ -31,12 +31,14 @@ import authRoutes from './modules/auth/auth.route';
 import cvRoutes from './modules/cv/cv.route';
 import workflowRoutes from './modules/workflow/workflow.route';
 import batchRequestRoutes from './modules/batch-request/batch-request.route';
+import userRoutes from './modules/user/user.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/cvs', cvRoutes); 
 app.use('/api/cvs', workflowRoutes); 
 app.use('/api/batch-requests', batchRequestRoutes);
+app.use('/api/users', userRoutes);
 
 // Error Handling
 app.use(errorHandler);

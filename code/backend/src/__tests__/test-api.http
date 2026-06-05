@@ -1,0 +1,87 @@
+@baseUrl = http://localhost:3000/api
+
+### 1. Đăng nhập Admin (Lấy Token tự động)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "123456"
+}
+
+### Gán token vào biến môi trường (VS Code REST Client tự động lấy)
+@token = {{loginAdmin.response.body.data.accessToken}}
+
+# ==========================================
+# USER MANAGEMENT API (Cần quyền Admin)
+# ==========================================
+
+### 2. Lấy danh sách Users (Hỗ trợ phân trang, tìm kiếm)
+GET {{baseUrl}}/users?page=1&limit=10&keyword=admin
+Authorization: Bearer {{token}}
+
+
+### 3. Tạo User mới (Ghi chú: Thay đổi departmentId bằng UUID thật trong DB của bạn)
+# @name createUser
+POST {{baseUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "testemployee",
+  "email": "employee@umicv.local",
+  "fullName": "Nhân viên Test",
+  "password": "password123",
+  "role": "Employee",
+  "departmentId": "00000000-0000-0000-0000-000000000000" 
+}
+
+### Gán ID user mới tạo vào biến để test các API dưới
+@userId = {{createUser.response.body.data.id}}
+
+
+### 4. Lấy thông tin chi tiết User
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+
+
+### 5. Cập nhật thông tin User
+PUT {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Nhân viên Test (Đã sửa)",
+  "role": "Employee"
+}
+
+
+### 6. Khóa tài khoản User (Lock)
+PATCH {{baseUrl}}/users/{{userId}}/lock
+Authorization: Bearer {{token}}
+
+
+### 7. Mở khóa tài khoản User (Unlock)
+PATCH {{baseUrl}}/users/{{userId}}/unlock
+Authorization: Bearer {{token}}
+
+
+### 8. Reset mật khẩu User
+POST {{baseUrl}}/users/{{userId}}/reset-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "newPassword": "newpassword123"
+}
+
+
+### 9. Đổi Role (Quyền) của User
+PATCH {{baseUrl}}/users/{{userId}}/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "role": "HR"
+}

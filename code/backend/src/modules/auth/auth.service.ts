@@ -18,6 +18,10 @@ export class AuthService {
       throw new UnauthorizedError('Invalid username or password');
     }
 
+    if (user.status === 'Locked') {
+      throw new UnauthorizedError('Account is locked');
+    }
+
     const isMatch = await verifyPassword(data.password, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedError('Invalid username or password');
@@ -53,6 +57,10 @@ export class AuthService {
       const user = await prisma.user.findUnique({ where: { id: payload.userId } });
       if (!user || user.deletedAt) {
         throw new UnauthorizedError('User not found or inactive');
+      }
+
+      if (user.status === 'Locked') {
+        throw new UnauthorizedError('Account is locked');
       }
 
       const newPayload = { userId: user.id, role: user.role };
