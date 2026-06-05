@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { ArrowLeft, Share } from 'lucide-react';
@@ -165,15 +165,7 @@ export function CVWorkspace() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [unsavedChanges]);
 
-  useBlocker(
-    ({ currentLocation, nextLocation }) => {
-      if (unsavedChanges > 0 && currentLocation.pathname !== nextLocation.pathname) {
-        const confirm = window.confirm('Bạn có thay đổi chưa lưu. Nếu rời khỏi trang, những thay đổi này có thể bị mất. Bạn có chắc chắn muốn rời đi?');
-        return !confirm; // Trả về true để Block, false để Allow
-      }
-      return false;
-    }
-  );
+  // Note: useBlocker cannot be used here because the app uses BrowserRouter instead of createBrowserRouter (Data Router).
 
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!cvData) return <div className="p-8 text-center text-slate-500">Đang tải Workspace...</div>;
