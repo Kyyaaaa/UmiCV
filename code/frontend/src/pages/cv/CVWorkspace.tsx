@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { ArrowLeft, Share } from 'lucide-react';
 import { WorkspaceSidebar } from '../../components/cv-workspace/WorkspaceSidebar';
 import { CVEditorPanel } from '../../components/cv-workspace/CVEditorPanel';
@@ -9,6 +10,7 @@ import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
 import { DraftIndicator } from '../../components/cv-workspace/DraftIndicator';
 import { LanguageSwitcher } from '../../components/cv-workspace/LanguageSwitcher';
 import { VersionHistorySidebar } from '../../components/cv-workspace/VersionHistorySidebar';
+import { CopyLocalizationModal } from '../../components/cv-workspace/CopyLocalizationModal';
 import { cvService } from '../../services/cv.service';
 
 export function CVWorkspace() {
@@ -29,6 +31,19 @@ export function CVWorkspace() {
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CVSections | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // Copy Localization States
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{title: string, type: 'success'|'error'} | null>(null);
+  
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
+  const [versionToRestore, setVersionToRestore] = useState<string | null>(null);
+
+  const showToast = (title: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ title, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const isFirstRender = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,10 +108,9 @@ export function CVWorkspace() {
         projects: safeSnap.projects || [],
         education: safeSnap.education || []
       });
-    } catch (err: any) {
-      console.error('Lỗi khi tải phiên bản:', err);
-      alert('Không thể tải nội dung phiên bản này.');
-      setPreviewVersionId(null);
+    } catch (err) {
+      showToast('Không thể tải nội dung phiên bản này.', 'error');
+      setIsPreviewLoading(false);
       setPreviewData(null);
     } finally {
       setIsPreviewLoading(false);
@@ -104,28 +118,25 @@ export function CVWorkspace() {
   };
 
   const handleRestoreVersion = async (versionId: string) => {
-    if (!id) return;
-    if (unsavedChanges > 0) {
-      const confirm = window.confirm('Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?');
-      if (!confirm) return;
-    } else {
-      const confirm = window.confirm('Bạn có chắc muốn khôi phục phiên bản này đè lên bản nháp hiện tại?');
-      if (!confirm) return;
-    }
+    setVersionToRestore(versionId);
+    setRestoreModalOpen(true);
+  };
 
+  const executeRestore = async () => {
+    if (!id || !versionToRestore) return;
     try {
-      await cvService.restoreVersion(id, versionId);
-      alert('Khôi phục thành công!');
-      // Reset view
-      setSearchParams({});
-      setPreviewVersionId(null);
+      await cvService.restoreVersion(id, versionToRestore);
+      
+      const res = await cvService.getCVById(id);
+      setCvData(res.data);
       setPreviewData(null);
+      setPreviewVersionId(null);
+      setSearchParams({});
       setUnsavedChanges(0);
-      // Reload draft
-      await fetchCV();
+      showToast('Khôi phục thành công!');
+      setRestoreModalOpen(false);
     } catch (err: any) {
-      console.error('Lỗi khôi phục:', err);
-      alert('Khôi phục thất bại: ' + (err.response?.data?.message || err.message));
+      showToast('Khôi phục thất bại: ' + (err.response?.data?.message || err.message), 'error');
     }
   };
 
@@ -171,6 +182,18 @@ export function CVWorkspace() {
   if (!cvData) return <div className="p-8 text-center text-slate-500">Đang tải Workspace...</div>;
 
   const handleSectionDataChange = (section: string, value: any) => {
+    if (value === undefined) {
+      setCvData(prev => {
+        if (!prev) return prev;
+        const newSections = { ...prev.sectionsData };
+        delete newSections[section];
+        return { ...prev, sectionsData: newSections };
+      });
+      setActiveSection('personalInfo');
+      setUnsavedChanges(prev => prev + 1);
+      return;
+    }
+
     setCvData(prev => {
       if (!prev) return prev;
       return {
@@ -182,6 +205,21 @@ export function CVWorkspace() {
       };
     });
     setUnsavedChanges(prev => prev + 1);
+  };
+
+  const handleAddCustomSection = (sectionId: string) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sectionsData: {
+          ...prev.sectionsData,
+          [sectionId]: []
+        }
+      };
+    });
+    setUnsavedChanges(prev => prev + 1);
+    setActiveSection(sectionId);
   };
 
   const handleSaveDraft = async () => {
@@ -197,6 +235,22 @@ export function CVWorkspace() {
       // alert('Không thể lưu nháp: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCopyLocalization = async (langCode: string) => {
+    if (!id) return;
+    try {
+      setIsCopying(true);
+      const res = await cvService.copyLocalization(id, langCode);
+      setCopyModalOpen(false);
+      // Navigate to new CV
+      navigate(`/cv/${res.data.id}/workspace`);
+    } catch (err: any) {
+      console.error('Lỗi khi nhân bản:', err);
+      showToast('Không thể nhân bản CV: ' + (err.response?.data?.message || err.message), 'error');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -224,7 +278,7 @@ export function CVWorkspace() {
         <div className="flex flex-wrap items-center gap-4">
           <LanguageSwitcher 
             currentLanguage={cvData.languageCode} 
-            onLanguageChange={(lang) => setCvData({ ...cvData, languageCode: lang as any })} 
+            onLanguageSelect={(lang) => setCopyModalOpen(true)} 
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button 
@@ -271,6 +325,8 @@ export function CVWorkspace() {
           <WorkspaceSidebar 
             activeSection={activeSection} 
             onSectionSelect={setActiveSection} 
+            data={cvData.sectionsData}
+            onAddSection={handleAddCustomSection}
           />
         )}
         
@@ -309,6 +365,34 @@ export function CVWorkspace() {
           data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
         />
       </div>
+
+      <CopyLocalizationModal
+        isOpen={copyModalOpen}
+        onClose={() => setCopyModalOpen(false)}
+        onConfirm={handleCopyLocalization}
+        isCopying={isCopying}
+        currentLanguage={cvData.languageCode}
+      />
+
+      <Modal isOpen={restoreModalOpen} onClose={() => setRestoreModalOpen(false)} title="Xác nhận khôi phục">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">
+            {unsavedChanges > 0 
+              ? 'Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?' 
+              : 'Bạn có chắc muốn khôi phục phiên bản này đè lên bản nháp hiện tại?'}
+          </p>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setRestoreModalOpen(false)}>Hủy</Button>
+            <Button onClick={executeRestore} className="bg-red-600 hover:bg-red-700 text-white border-transparent">Đồng ý khôi phục</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {toastMessage && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center z-[200] animate-in slide-in-from-bottom-5 ${toastMessage.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+          {toastMessage.title}
+        </div>
+      )}
     </div>
   );
 }

@@ -160,6 +160,26 @@ export function CVPreviewPanel({ data }: CVPreviewPanelProps) {
                 ))}
               </div>
             )}
+            {/* Custom Sections */}
+            {Object.keys(data || {}).filter(k => !['personalInfo', 'skills', 'experience', 'education', 'projects'].includes(k)).map(customKey => {
+              const customData = data[customKey] || [];
+              if (!customData.length) return null;
+              return (
+                <div key={customKey} className="mb-4">
+                  <h3 className="text-xs font-bold uppercase border-b border-slate-300 pb-1 mb-2 text-slate-800">{customKey}</h3>
+                  {customData.map((item: any, idx: number) => (
+                    <div key={idx} className="mb-3">
+                      <div className="flex justify-between items-baseline">
+                        <h4 className="text-[11px] font-bold">{item.title}</h4>
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-slate-600 mt-1 whitespace-pre-wrap break-words">
+                        {item.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

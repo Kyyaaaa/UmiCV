@@ -255,4 +255,46 @@ export class CVService {
 
     return diffChanges;
   }
+
+  async copyLocalization(sourceCvId: string, targetLanguageCode: string, userId: string) {
+    const sourceCv = await prisma.cVProfile.findUnique({ where: { id: sourceCvId } });
+    if (!sourceCv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (sourceCv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+
+    let targetCv = await prisma.cVProfile.findUnique({
+      where: {
+        userId_languageCode: {
+          userId,
+          languageCode: targetLanguageCode,
+        },
+      },
+    });
+
+    if (!targetCv) {
+      // Create new CV with copied sectionsData
+      targetCv = await prisma.cVProfile.create({
+        data: {
+          userId,
+          languageCode: targetLanguageCode,
+          status: CVStatus.Draft,
+          sectionsData: sourceCv.sectionsData as any,
+        },
+      });
+    } else {
+      // Overwrite existing CV
+      if (targetCv.status === CVStatus.PendingApproval) {
+        throw new BadRequestError('Cannot overwrite a CV that is pending approval.');
+      }
+
+      targetCv = await prisma.cVProfile.update({
+        where: { id: targetCv.id },
+        data: {
+          sectionsData: sourceCv.sectionsData as any,
+          status: CVStatus.Draft,
+        },
+      });
+    }
+
+    return targetCv;
+  }
 }

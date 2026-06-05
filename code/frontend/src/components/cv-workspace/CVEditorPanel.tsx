@@ -400,10 +400,74 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
         );
         
       default:
+        // Handle Custom Dynamic Sections
+        const customData = (data || {})[activeSection] || [];
         return (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-            <p>Section chưa được cài đặt Form Editing.</p>
-            <p className="text-sm mt-2">Dùng để test kiến trúc.</p>
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-1 capitalize">{activeSection}</h2>
+                <p className="text-sm text-slate-500">Mục tùy chỉnh do bạn tự tạo.</p>
+              </div>
+              <button 
+                onClick={() => {
+                  onChange(activeSection, undefined);
+                }}
+                disabled={disabled}
+                className="text-red-600 text-sm font-medium px-3 py-1.5 rounded-md hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50"
+              >
+                Xóa toàn bộ mục này
+              </button>
+            </div>
+            <div className="space-y-6">
+              {customData.map((item: any, index: number) => (
+                <div key={index} className="bg-slate-50 p-5 rounded-lg border border-slate-200 space-y-4">
+                  <Input 
+                    label="Tiêu đề (Ví dụ: Tên giải thưởng, Chứng chỉ)" 
+                    value={item.title || ''} 
+                    onChange={(e) => {
+                      const newData = [...customData];
+                      newData[index] = { ...newData[index], title: e.target.value };
+                      onChange(activeSection, newData);
+                    }}
+                    disabled={disabled}
+                  />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-700">Mô tả chi tiết / Thời gian</label>
+                    <textarea 
+                      className="w-full min-h-[80px] rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      value={item.description || ''}
+                      onChange={(e) => {
+                        const newData = [...customData];
+                        newData[index] = { ...newData[index], description: e.target.value };
+                        onChange(activeSection, newData);
+                      }}
+                      disabled={disabled}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const newData = customData.filter((_: any, i: number) => i !== index);
+                      onChange(activeSection, newData);
+                    }}
+                    disabled={disabled}
+                    className="text-red-500 text-sm font-medium hover:underline disabled:opacity-50"
+                  >
+                    Xóa mục này
+                  </button>
+                </div>
+              ))}
+              <button 
+                onClick={() => {
+                  const newData = [...customData, { title: '', description: '' }];
+                  onChange(activeSection, newData);
+                }}
+                className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50" 
+                disabled={disabled}
+              >
+                + Thêm nội dung mới vào {activeSection}
+              </button>
+            </div>
           </div>
         );
     }
@@ -419,12 +483,13 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
               { id: 'skills', label: 'Kỹ năng' },
               { id: 'experience', label: 'Kinh nghiệm' },
               { id: 'education', label: 'Học vấn' },
-              { id: 'projects', label: 'Dự án' }
+              { id: 'projects', label: 'Dự án' },
+              ...Object.keys(data || {}).filter(k => !['personalInfo', 'skills', 'experience', 'education', 'projects'].includes(k)).map(k => ({ id: k, label: k }))
             ].map(s => (
               <button
                 key={s.id}
                 onClick={() => onSectionChange?.(s.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${activeSection === s.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${activeSection === s.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 {s.label}
               </button>

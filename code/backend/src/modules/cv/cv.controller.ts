@@ -108,4 +108,18 @@ export class CVController {
     const result = await cvService.diffCV(cvId, requestUserId, requestUserRole);
     res.status(200).json({ success: true, data: result });
   }
+
+  async copyLocalization(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const sourceCvId = req.params.id;
+    const { targetLanguageCode } = req.body;
+
+    const result = await cvService.copyLocalization(sourceCvId, targetLanguageCode, userId);
+
+    res.status(200).json({
+      success: true,
+      message: `Đã đồng bộ nội dung sang bản tiếng ${targetLanguageCode.toUpperCase()}`,
+      data: result,
+    });
+  }
 }

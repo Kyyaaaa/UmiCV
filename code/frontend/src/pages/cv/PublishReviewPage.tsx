@@ -13,6 +13,12 @@ export function PublishReviewPage() {
   const [diffs, setDiffs] = useState<DiffChange[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{title: string, type: 'success'|'error'} | null>(null);
+
+  const showToast = (title: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ title, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   useEffect(() => {
     const fetchDiff = async () => {
@@ -34,11 +40,11 @@ export function PublishReviewPage() {
     if (!id) return;
     try {
       setIsPublishing(true);
-      await cvService.publishCV(id);
-      alert('Đã xuất bản CV thành công và gửi yêu cầu phê duyệt!');
-      navigate('/cv');
+      await cvService.publishCV(id!);
+      showToast('Đã xuất bản CV thành công và gửi yêu cầu phê duyệt!');
+      setTimeout(() => navigate('/cv'), 1500);
     } catch (err: any) {
-      alert('Lỗi xuất bản: ' + (err.response?.data?.message || err.message));
+      showToast('Lỗi xuất bản: ' + (err.response?.data?.message || err.message), 'error');
     } finally {
       setIsPublishing(false);
     }
@@ -153,8 +159,10 @@ export function PublishReviewPage() {
               <div className="text-sm text-slate-500 mb-2 sm:mb-0">
                 {diffs.length > 0 ? 'Hành động này sẽ tạo ra Phiên bản mới chờ duyệt.' : 'Không thể xuất bản do không có dữ liệu mới.'}
               </div>
-              <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
-                <Button variant="outline" onClick={() => navigate(-1)}>Hủy</Button>
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-200">
+                <Button variant="outline" onClick={() => navigate(-1)}>
+                  Hủy bỏ
+                </Button>
                 <Button 
                   onClick={handlePublish} 
                   isLoading={isPublishing} 
@@ -163,6 +171,12 @@ export function PublishReviewPage() {
                   Xác nhận Publish
                 </Button>
               </div>
+
+              {toastMessage && (
+                <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center z-[200] animate-in slide-in-from-bottom-5 ${toastMessage.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                  {toastMessage.title}
+                </div>
+              )}
             </div>
           </>
         )}

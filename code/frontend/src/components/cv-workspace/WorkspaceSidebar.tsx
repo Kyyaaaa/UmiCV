@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Award, Briefcase, GraduationCap, Code, FileText, GripVertical } from 'lucide-react';
+
+import { CVSections } from '../../types';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
 
 interface Section {
   id: string;
@@ -18,9 +22,30 @@ const SECTIONS: Section[] = [
 interface WorkspaceSidebarProps {
   activeSection: string;
   onSectionSelect: (id: string) => void;
+  data?: CVSections;
+  onAddSection?: (id: string) => void;
 }
 
-export function WorkspaceSidebar({ activeSection, onSectionSelect }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSection }: WorkspaceSidebarProps) {
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptValue, setPromptValue] = useState('');
+
+  const customSectionIds = data 
+    ? Object.keys(data).filter(key => !SECTIONS.find(s => s.id === key))
+    : [];
+
+  const handleAddSection = () => {
+    setPromptValue('');
+    setPromptOpen(true);
+  };
+
+  const handleConfirmAdd = () => {
+    const cleanId = promptValue.trim();
+    if (cleanId && onAddSection) {
+      onAddSection(cleanId);
+    }
+    setPromptOpen(false);
+  };
   return (
     <div className="w-64 shrink-0 bg-slate-50 border-r border-slate-200 p-4 flex flex-col h-full overflow-y-auto">
       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">
@@ -47,15 +72,65 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect }: WorkspaceSi
           </div>
         ))}
       </div>
+
+      {customSectionIds.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
+            Mục tùy chỉnh
+          </h3>
+          <div className="space-y-1">
+            {customSectionIds.map(key => (
+              <div
+                key={key}
+                onClick={() => onSectionSelect(key)}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors group ${
+                  activeSection === key
+                    ? 'bg-blue-100 text-blue-700 font-medium'
+                    : 'text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`${activeSection === key ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                    <Award size={16} />
+                  </div>
+                  <span className="text-sm capitalize">{key}</span>
+                </div>
+                <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 cursor-grab" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       <div className="mt-8 px-2">
         <button 
-          onClick={() => alert('Tính năng thêm mục tùy chỉnh sẽ được hỗ trợ trong phiên bản sau.')}
+          onClick={handleAddSection}
           className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-400 transition-colors"
         >
           + Thêm mục mới
         </button>
       </div>
+
+      <Modal isOpen={promptOpen} onClose={() => setPromptOpen(false)} title="Thêm mục mới">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tên mục mới (Tiếng Việt có dấu được chấp nhận)</label>
+            <input 
+              type="text" 
+              autoFocus
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ví dụ: Giải thưởng, Chứng chỉ, Sở thích..."
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleConfirmAdd()}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setPromptOpen(false)}>Hủy</Button>
+            <Button onClick={handleConfirmAdd} disabled={!promptValue.trim()}>Tạo mục</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

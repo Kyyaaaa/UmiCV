@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema } from './cv.dto';
+import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema, copyLocalizationSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -258,5 +258,36 @@ router.get('/:id/versions/:versionId', authorize(['Employee']), validate(cvVersi
  *         description: Cannot edit pending CV
  */
 router.post('/:id/versions/:versionId/restore', authorize(['Employee']), validate(cvVersionParamsSchema), cvController.restoreCVVersion);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/localizations/copy:
+ *   post:
+ *     summary: Copy CV sectionsData to another language draft
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetLanguageCode:
+ *                 type: string
+ *                 enum: [vi, en, jp]
+ *     responses:
+ *       200:
+ *         description: CV draft copied successfully
+ *       400:
+ *         description: Cannot overwrite pending CV
+ */
+router.post('/:id/localizations/copy', authorize(['Employee']), validate(copyLocalizationSchema), cvController.copyLocalization);
 
 export default router;

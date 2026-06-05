@@ -57,5 +57,10 @@ export const cvService = {
   getDiff: async (id: string): Promise<GetDiffResponse> => {
     const response = await apiClient.get<GetDiffResponse>(`/cvs/${id}/diff`);
     return response.data;
+  },
+
+  copyLocalization: async (id: string, targetLanguageCode: string): Promise<CreateCVResponse> => {
+    const response = await apiClient.post<CreateCVResponse>(`/cvs/${id}/localizations/copy`, { targetLanguageCode });
+    return response.data;
   }
 };

@@ -6,6 +6,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { Plus, Edit3, History, Globe, Clock, ChevronRight } from 'lucide-react';
 import { cvService } from '../../services/cv.service';
 import { CVProfile } from '../../types';
+import { Modal } from '../../components/ui/Modal';
 
 export function CVDashboard() {
   const navigate = useNavigate();
@@ -14,6 +15,14 @@ export function CVDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState('vi');
+
+  const availableLanguages = [
+    { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'en', label: 'English' },
+    { code: 'jp', label: 'Tiếng Nhật' }
+  ].filter(lang => !cvs.some(cv => cv.languageCode === lang.code));
 
   useEffect(() => {
     fetchCVs();
@@ -48,10 +57,11 @@ export function CVDashboard() {
   const handleCreateCV = async () => {
     try {
       setIsCreating(true);
-      const res = await cvService.createCV({ languageCode: 'vi' });
+      const res = await cvService.createCV({ languageCode: selectedLang as any });
       navigate(`/cv/${res.data.id}/workspace`);
     } catch (err: any) {
-      alert('Tạo CV thất bại: ' + (err.response?.data?.message || err.message));
+      setError('Tạo CV thất bại: ' + (err.response?.data?.message || err.message));
+      setCreateModalOpen(false);
       setIsCreating(false);
     }
   };
@@ -68,7 +78,10 @@ export function CVDashboard() {
         title="Quản lý CV" 
         description="Quản lý kho hồ sơ nhân sự với trải nghiệm chỉnh sửa trực quan" 
         actions={
-          <Button onClick={handleCreateCV} isLoading={isCreating}>
+          <Button onClick={() => {
+            if (availableLanguages.length > 0) setSelectedLang(availableLanguages[0].code);
+            setCreateModalOpen(true);
+          }}>
             <Plus size={16} className="mr-2" />
             Tạo Workspace Mới
           </Button>
@@ -162,6 +175,39 @@ export function CVDashboard() {
           )}
         </>
       )}
+
+      <Modal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Tạo Workspace Mới">
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Ngôn ngữ CV</label>
+            {availableLanguages.length === 0 ? (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700">
+                Bạn đã tạo đủ Workspace cho tất cả các ngôn ngữ hỗ trợ.
+              </div>
+            ) : (
+              <select 
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedLang}
+                onChange={(e) => setSelectedLang(e.target.value)}
+              >
+                {availableLanguages.map(l => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>Hủy</Button>
+            <Button 
+              onClick={handleCreateCV} 
+              isLoading={isCreating} 
+              disabled={availableLanguages.length === 0}
+            >
+              Tạo mới
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

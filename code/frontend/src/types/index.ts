@@ -44,6 +44,7 @@ export interface CVSections {
   experience: { company: string; role: string; startDate: string; endDate: string; description: string }[];
   projects: { name: string; role: string; technologies: string[]; description: string }[];
   education: { school: string; degree: string; year: string }[];
+  [key: string]: any; // Support for custom dynamic sections
 }
 
 export interface BatchRequest {
