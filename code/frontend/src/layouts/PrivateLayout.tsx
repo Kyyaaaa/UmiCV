@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu
 } from 'lucide-react';
-import { currentUser } from '../mocks/users.mock';
+import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/auth.service';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -21,7 +22,19 @@ const navItems = [
 
 export function PrivateLayout() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error', error);
+    } finally {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -76,8 +89,8 @@ export function PrivateLayout() {
             
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="hidden text-right md:block">
-                <p className="text-sm font-medium text-slate-900">{currentUser.fullName}</p>
-                <p className="text-xs text-slate-500">{currentUser.role}</p>
+                <p className="text-sm font-medium text-slate-900">{user?.fullName || user?.username}</p>
+                <p className="text-xs text-slate-500">{user?.role}</p>
               </div>
               <button 
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100"
@@ -87,7 +100,7 @@ export function PrivateLayout() {
               </button>
               <button 
                 className="rounded-md p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-                onClick={() => navigate('/login')}
+                onClick={handleLogout}
                 title="Đăng xuất"
               >
                 <LogOut size={20} />

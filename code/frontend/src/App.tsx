@@ -1,6 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+// Providers & Guards
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './routes/ProtectedRoute';
+
 // Layouts
 import { PublicLayout } from './layouts/PublicLayout';
 import { PrivateLayout } from './layouts/PrivateLayout';
@@ -31,41 +35,45 @@ import { UserProfilePage } from './pages/profile/UserProfilePage';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-        </Route>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Route>
 
-        {/* Private Routes */}
-        <Route element={<PrivateLayout />}>
-          <Route path="/" element={<DashboardOverview />} />
-          
-          {/* CV Management */}
-          <Route path="/cv" element={<CVListPage />} />
-          <Route path="/cv/create" element={<CVFormPage />} />
-          <Route path="/cv/:id" element={<CVDetailPage />} />
-          <Route path="/cv/:id/edit" element={<CVFormPage />} />
-          
-          {/* Workflow & Approval */}
-          <Route path="/workflow" element={<ApprovalRequestListPage />} />
-          <Route path="/workflow/:id" element={<ApprovalDetailPage />} />
-          
-          {/* User Management */}
-          <Route path="/users" element={<UserListPage />} />
-          
-          {/* Notifications & Profile */}
-          <Route path="/notifications" element={<NotificationCenterPage />} />
-          <Route path="/profile" element={<UserProfilePage />} />
-        </Route>
+          {/* Private Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<PrivateLayout />}>
+              <Route path="/" element={<DashboardOverview />} />
+              
+              {/* CV Management */}
+              <Route path="/cv" element={<CVListPage />} />
+              <Route path="/cv/create" element={<CVFormPage />} />
+              <Route path="/cv/:id" element={<CVDetailPage />} />
+              <Route path="/cv/:id/edit" element={<CVFormPage />} />
+              
+              {/* Workflow & Approval */}
+              <Route path="/workflow" element={<ApprovalRequestListPage />} />
+              <Route path="/workflow/:id" element={<ApprovalDetailPage />} />
+              
+              {/* User Management */}
+              <Route path="/users" element={<UserListPage />} />
+              
+              {/* Notifications & Profile */}
+              <Route path="/notifications" element={<NotificationCenterPage />} />
+              <Route path="/profile" element={<UserProfilePage />} />
+            </Route>
+          </Route>
 
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
