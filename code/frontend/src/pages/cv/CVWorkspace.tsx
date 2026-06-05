@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockCVs } from '../../mocks/cvs.mock';
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { ArrowLeft, Share } from 'lucide-react';
@@ -9,6 +8,7 @@ import { CVEditorPanel } from '../../components/cv-workspace/CVEditorPanel';
 import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
 import { DraftIndicator } from '../../components/cv-workspace/DraftIndicator';
 import { LanguageSwitcher } from '../../components/cv-workspace/LanguageSwitcher';
+import { cvService } from '../../services/cv.service';
 
 export function CVWorkspace() {
   const { id } = useParams<{ id: string }>();
@@ -17,36 +17,71 @@ export function CVWorkspace() {
   const [cvData, setCvData] = useState<CVProfile | null>(null);
   const [activeSection, setActiveSection] = useState('personalInfo');
   const [unsavedChanges, setUnsavedChanges] = useState(0);
-  const [lastSaved, setLastSaved] = useState<Date | null>(new Date());
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isFirstRender = useRef(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Mock fetch CV by id
-    const found = mockCVs.find(cv => cv.id === id);
-    if (found) {
-      // Create a deep copy for drafting
-      setCvData(JSON.parse(JSON.stringify(found)));
-    } else if (id === 'new') {
-      setCvData({
-        id: 'new',
-        userId: 'currentUser',
-        languageCode: 'vi',
-        status: 'Draft',
-        versionNumber: 1,
-        sectionsData: {
-          personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
-          skills: [],
-          experience: [],
-          projects: [],
-          education: []
-        },
-        submittedAt: null,
-        publishedAt: null,
-        updatedAt: new Date().toISOString()
-      });
+    if (id && id !== 'new') {
+      fetchCV();
     }
   }, [id]);
 
-  if (!cvData) return <div className="p-8 text-center">Đang tải Workspace...</div>;
+  const fetchCV = async () => {
+    try {
+      const res = await cvService.getCVById(id!);
+      
+      const defaultSections: CVSections = {
+        personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
+        skills: [],
+        experience: [],
+        projects: [],
+        education: []
+      };
+
+      // Safely merge sectionsData
+      const finalData = {
+        ...res.data,
+        sectionsData: {
+          ...defaultSections,
+          ...(res.data.sectionsData || {})
+        }
+      };
+
+      setCvData(finalData);
+      setLastSaved(new Date(res.data.updatedAt));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể tải CV');
+    }
+  };
+
+  // Auto-save logic
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (unsavedChanges > 0) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = setTimeout(() => {
+        handleSaveDraft();
+      }, 2500);
+    }
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [cvData?.sectionsData, unsavedChanges]);
+
+  if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+  if (!cvData) return <div className="p-8 text-center text-slate-500">Đang tải Workspace...</div>;
 
   const handleSectionDataChange = (section: string, value: any) => {
     setCvData(prev => {
@@ -62,10 +97,20 @@ export function CVWorkspace() {
     setUnsavedChanges(prev => prev + 1);
   };
 
-  const handleSaveDraft = () => {
-    // Mock save
-    setUnsavedChanges(0);
-    setLastSaved(new Date());
+  const handleSaveDraft = async () => {
+    if (!id || id === 'new') return;
+    
+    try {
+      setIsSaving(true);
+      await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
+      setUnsavedChanges(0);
+      setLastSaved(new Date());
+    } catch (err: any) {
+      console.error('Lưu nháp thất bại:', err);
+      // alert('Không thể lưu nháp: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -81,12 +126,12 @@ export function CVWorkspace() {
           </button>
           <div className="h-4 w-px bg-slate-300"></div>
           <span className="font-semibold text-sm text-slate-800">
-            {cvData.sectionsData.personalInfo.fullName || 'CV Chưa Đặt Tên'}
+            {cvData.sectionsData?.personalInfo?.fullName || 'CV Chưa Đặt Tên'}
           </span>
           <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
             v{cvData.versionNumber}
           </span>
-          <DraftIndicator unsavedChangesCount={unsavedChanges} lastSavedAt={lastSaved} />
+          <DraftIndicator unsavedChangesCount={unsavedChanges} lastSavedAt={lastSaved} isSaving={isSaving} />
         </div>
 
         <div className="flex items-center space-x-4">
@@ -95,8 +140,8 @@ export function CVWorkspace() {
             onLanguageChange={(lang) => setCvData({ ...cvData, languageCode: lang as any })} 
           />
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" onClick={handleSaveDraft}>
-              Lưu nháp
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || unsavedChanges === 0}>
+              {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
             <Button size="sm" onClick={() => navigate(`/cv/${cvData.id}/publish`)}>
               <Share size={14} className="mr-2" />
