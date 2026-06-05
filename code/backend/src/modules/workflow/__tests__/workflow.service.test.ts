@@ -2,6 +2,7 @@ import { prismaMock } from '../../../__tests__/prismaMock';
 import { WorkflowService } from '../workflow.service';
 import { CVStatus, ApprovalAction } from '@prisma/client';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../../errors/AppError';
+import { MESSAGES } from '../../../constants/messages';
 
 describe('WorkflowService', () => {
   let workflowService: WorkflowService;
@@ -18,7 +19,7 @@ describe('WorkflowService', () => {
 
       const result = await workflowService.submitDraft('user-1', { languageCode: 'vi' });
 
-      expect(result).toEqual({ message: 'Drafts submitted successfully' });
+      expect(result).toEqual({ message: MESSAGES.WORKFLOW.SUBMIT_SUCCESS });
       expect(prismaMock.cVProfile.updateMany).toHaveBeenCalledWith({
         where: { id: { in: ['cv-1'] } },
         data: { status: CVStatus.PendingApproval, submittedAt: expect.any(Date) },
@@ -50,7 +51,7 @@ describe('WorkflowService', () => {
 
       const result = await workflowService.approveCV('cv-1', 'hr-1', { level: 2 });
 
-      expect(result).toEqual({ message: 'CV approved successfully' });
+      expect(result).toEqual({ message: MESSAGES.WORKFLOW.APPROVE_SUCCESS });
       expect(prismaMock.approvalLog.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ action: ApprovalAction.Approve, level: 2 }),
       }));

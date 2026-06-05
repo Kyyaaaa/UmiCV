@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { env } from '../../config/env';
 import { UnauthorizedError } from '../../errors/AppError';
+import { MESSAGES } from '../../constants/messages';
 
 const authService = new AuthService();
 
@@ -29,7 +30,7 @@ export class AuthController {
   async refresh(req: Request, res: Response) {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken || typeof refreshToken !== 'string') {
-      throw new UnauthorizedError('Invalid or missing refresh token');
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_REFRESH_TOKEN);
     }
 
     const result = await authService.refresh(refreshToken);
@@ -54,6 +55,6 @@ export class AuthController {
       sameSite: 'strict',
     });
 
-    res.status(200).json({ success: true, message: 'Logged out successfully' });
+    res.status(200).json({ success: true, message: MESSAGES.AUTH.LOGOUT_SUCCESS });
   }
 }

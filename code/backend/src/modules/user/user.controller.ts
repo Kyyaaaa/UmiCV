@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
+import { MESSAGES } from '../../constants/messages';
 
 const userService = new UserService();
 
@@ -26,21 +27,21 @@ export class UserController {
 
   async lockUser(req: Request, res: Response) {
     const result = await userService.lockUser(req.params.id);
-    res.status(200).json({ success: true, message: 'User locked successfully', data: result });
+    res.status(200).json({ success: true, message: MESSAGES.USER.LOCK_SUCCESS, data: result });
   }
 
   async unlockUser(req: Request, res: Response) {
     const result = await userService.unlockUser(req.params.id);
-    res.status(200).json({ success: true, message: 'User unlocked successfully', data: result });
+    res.status(200).json({ success: true, message: MESSAGES.USER.UNLOCK_SUCCESS, data: result });
   }
 
   async resetPassword(req: Request, res: Response) {
     await userService.resetPassword(req.params.id, req.body.newPassword);
-    res.status(200).json({ success: true, message: 'Password reset successfully' });
+    res.status(200).json({ success: true, message: MESSAGES.USER.RESET_PASSWORD_SUCCESS });
   }
 
   async changeRole(req: Request, res: Response) {
     const result = await userService.changeRole(req.params.id, req.body.role);
-    res.status(200).json({ success: true, message: 'Role changed successfully', data: result });
+    res.status(200).json({ success: true, message: MESSAGES.USER.CHANGE_ROLE_SUCCESS, data: result });
   }
 }

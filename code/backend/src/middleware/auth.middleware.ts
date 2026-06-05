@@ -1,36 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken, TokenPayload } from '../utils/jwt.util';
 import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
-import { UserRole } from '@prisma/client';
+import { verifyToken } from '../utils/jwt.util';
+import { MESSAGES } from '../constants/messages';
 
 export interface AuthRequest extends Request {
-  user?: TokenPayload;
+  user?: {
+    userId: string;
+    role: string;
+  };
 }
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new UnauthorizedError('Missing or invalid token');
+    throw new UnauthorizedError(MESSAGES.AUTH.MISSING_TOKEN);
   }
 
   const token = authHeader.split(' ')[1];
   try {
-    const payload = verifyToken(token);
-    req.user = payload;
+    const decoded = verifyToken(token) as any;
+    req.user = decoded;
     next();
   } catch (error) {
-    throw new UnauthorizedError('Invalid or expired token');
+    throw new UnauthorizedError(MESSAGES.AUTH.INVALID_TOKEN);
   }
 };
 
-export const authorize = (roles: UserRole[]) => {
+export const authorize = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      throw new UnauthorizedError('Not authenticated');
+      throw new UnauthorizedError(MESSAGES.AUTH.NOT_AUTHENTICATED);
     }
 
-    if (!roles.includes(req.user.role as UserRole)) {
-      throw new ForbiddenError('You do not have permission to perform this action');
+    if (!roles.includes(req.user.role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
     }
     
     next();

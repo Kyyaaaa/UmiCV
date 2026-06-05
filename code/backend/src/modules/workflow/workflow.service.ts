@@ -2,6 +2,7 @@ import prisma from '../../config/db';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
 import { CVStatus, ApprovalAction } from '@prisma/client';
 import { ApproveInput, RejectInput, SubmitDraftInput } from './workflow.dto';
+import { MESSAGES } from '../../constants/messages';
 
 export class WorkflowService {
   async submitDraft(userId: string, data: SubmitDraftInput) {
@@ -16,7 +17,7 @@ export class WorkflowService {
     });
 
     if (profiles.length === 0) {
-      throw new BadRequestError('No drafts to submit');
+      throw new BadRequestError(MESSAGES.WORKFLOW.NO_DRAFTS);
     }
 
     await prisma.cVProfile.updateMany({
@@ -29,25 +30,25 @@ export class WorkflowService {
       },
     });
 
-    return { message: 'Drafts submitted successfully' };
+    return { message: MESSAGES.WORKFLOW.SUBMIT_SUCCESS };
   }
 
   private async verifyApproverScope(cvUserId: string, approverId: string, level: number) {
     const approver = await prisma.user.findUnique({ where: { id: approverId } });
-    if (!approver) throw new ForbiddenError('Approver not found');
+    if (!approver) throw new ForbiddenError(MESSAGES.WORKFLOW.APPROVER_NOT_FOUND);
 
     if (level === 1) {
-      if (approver.role !== 'TechLead') throw new ForbiddenError('Only TechLead can approve level 1');
+      if (approver.role !== 'TechLead') throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_TECHLEAD_ONLY);
       const isLead = await prisma.projectMember.findFirst({
         where: {
           userId: cvUserId,
           project: { techLeadId: approverId }
         }
       });
-      if (!isLead) throw new ForbiddenError('TechLead can only approve CVs of their project members');
+      if (!isLead) throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_MEMBER_ONLY);
     } else if (level === 2) {
       if (approver.role !== 'HR' && approver.role !== 'Admin') {
-        throw new ForbiddenError('Only HR/Admin can approve level 2');
+        throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL2_HR_ADMIN_ONLY);
       }
       // HR can approve company-wide for now as per assumptions
     }
@@ -55,9 +56,9 @@ export class WorkflowService {
 
   async approveCV(cvId: string, approverId: string, data: ApproveInput) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
-    if (!cv) throw new NotFoundError('CV not found');
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     if (cv.status !== CVStatus.PendingApproval) {
-      throw new BadRequestError('CV is not pending approval');
+      throw new BadRequestError(MESSAGES.WORKFLOW.NOT_PENDING);
     }
 
     await this.verifyApproverScope(cv.userId, approverId, data.level);
@@ -95,14 +96,14 @@ export class WorkflowService {
       ]);
     }
 
-    return { message: 'CV approved successfully' };
+    return { message: MESSAGES.WORKFLOW.APPROVE_SUCCESS };
   }
 
   async rejectCV(cvId: string, approverId: string, data: RejectInput, level: number) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
-    if (!cv) throw new NotFoundError('CV not found');
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     if (cv.status !== CVStatus.PendingApproval) {
-      throw new BadRequestError('CV is not pending approval');
+      throw new BadRequestError(MESSAGES.WORKFLOW.NOT_PENDING);
     }
 
     await this.verifyApproverScope(cv.userId, approverId, level);
@@ -127,6 +128,6 @@ export class WorkflowService {
       },
     });
 
-    return { message: 'CV rejected' };
+    return { message: MESSAGES.WORKFLOW.REJECT_SUCCESS };
   }
 }

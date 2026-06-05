@@ -23,6 +23,11 @@ app.get('/health', (req: Request, res: Response) => {
 
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
+import { z } from 'zod';
+import { customZodErrorMap } from './config/zod';
+
+// Set global Zod error map
+z.setErrorMap(customZodErrorMap);
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

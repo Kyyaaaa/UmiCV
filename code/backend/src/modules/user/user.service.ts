@@ -2,6 +2,7 @@ import prisma from '../../config/db';
 import { UserRole, UserStatus, Prisma } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../errors/AppError';
 import bcrypt from 'bcrypt';
+import { MESSAGES } from '../../constants/messages';
 
 // Helper to exclude fields
 function exclude<User, Key extends keyof User>(
@@ -66,7 +67,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError(MESSAGES.USER.NOT_FOUND);
     }
 
     return exclude(user, ['passwordHash']);
@@ -83,7 +84,7 @@ export class UserService {
     });
 
     if (existing) {
-      throw new BadRequestError('Username or email already exists');
+      throw new BadRequestError(MESSAGES.USER.EXISTS);
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -117,7 +118,7 @@ export class UserService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new BadRequestError('Email or username already exists');
+          throw new BadRequestError(MESSAGES.USER.EXISTS);
         }
       }
       throw error;

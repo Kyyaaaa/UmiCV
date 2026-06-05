@@ -8,7 +8,7 @@ export const approveSchema = z.object({
 
 export const rejectSchema = z.object({
   body: z.object({
-    reason: z.string().min(1, 'Reason is required'),
+    reason: z.string().min(1),
     sectionId: z.string().optional(),
   }),
 });

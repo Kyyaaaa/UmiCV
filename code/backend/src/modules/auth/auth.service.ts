@@ -6,6 +6,7 @@ import { UnauthorizedError } from '../../errors/AppError';
 import { LoginInput } from './auth.dto';
 import { redisClient } from '../../config/redis';
 import { env } from '../../config/env';
+import { MESSAGES } from '../../constants/messages';
 
 export class AuthService {
   async login(data: LoginInput) {
@@ -15,16 +16,16 @@ export class AuthService {
     });
 
     if (!user || user.deletedAt) {
-      throw new UnauthorizedError('Invalid username or password');
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     if (user.status === 'Locked') {
-      throw new UnauthorizedError('Account is locked');
+      throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
     }
 
     const isMatch = await verifyPassword(data.password, user.passwordHash);
     if (!isMatch) {
-      throw new UnauthorizedError('Invalid username or password');
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     const payload = { userId: user.id, role: user.role };
@@ -47,7 +48,7 @@ export class AuthService {
     // Check blacklist
     const isBlacklisted = await redisClient.get(`bl_${token}`);
     if (isBlacklisted) {
-      throw new UnauthorizedError('Token has been revoked');
+      throw new UnauthorizedError(MESSAGES.AUTH.TOKEN_REVOKED);
     }
 
     try {
@@ -56,11 +57,11 @@ export class AuthService {
       // Ensure user still exists
       const user = await prisma.user.findUnique({ where: { id: payload.userId } });
       if (!user || user.deletedAt) {
-        throw new UnauthorizedError('User not found or inactive');
+        throw new UnauthorizedError(MESSAGES.AUTH.USER_NOT_FOUND_INACTIVE);
       }
 
       if (user.status === 'Locked') {
-        throw new UnauthorizedError('Account is locked');
+        throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
       }
 
       const newPayload = { userId: user.id, role: user.role };
@@ -68,7 +69,8 @@ export class AuthService {
 
       return { accessToken };
     } catch (error) {
-      throw new UnauthorizedError('Invalid refresh token');
+      if (error instanceof UnauthorizedError) throw error;
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_REFRESH_TOKEN);
     }
   }
 

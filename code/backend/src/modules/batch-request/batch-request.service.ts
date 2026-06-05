@@ -2,6 +2,7 @@ import prisma from '../../config/db';
 import { CreateBatchRequestInput } from './batch-request.dto';
 import { NotFoundError } from '../../errors/AppError';
 import { BatchRequestStatus, CVStatus, TargetStatus } from '@prisma/client';
+import { MESSAGES } from '../../constants/messages';
 
 export class BatchRequestService {
   async createBatchRequest(hrUserId: string, data: CreateBatchRequestInput) {
@@ -44,7 +45,7 @@ export class BatchRequestService {
     });
 
     if (!batch) {
-      throw new NotFoundError('Batch Request not found');
+      throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -73,6 +74,6 @@ export class BatchRequestService {
       }
     });
 
-    return { message: 'Batch request cancelled successfully' };
+    return { message: MESSAGES.BATCH_REQUEST.CANCEL_SUCCESS };
   }
 }

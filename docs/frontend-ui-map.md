@@ -8,8 +8,6 @@ Toàn bộ màn hình được lưu trong thư mục `code/frontend/src/pages/`.
 
 ### Authentication (`/auth`)
 - **Login (`/login`)**: Màn hình đăng nhập chính. Có chức năng ghi nhớ đăng nhập.
-- **Forgot Password (`/forgot-password`)**: Yêu cầu khôi phục mật khẩu.
-- **Reset Password (`/reset-password`)**: Nhập mật khẩu mới.
 
 ### Dashboard (`/`)
 - **Dashboard Overview (`/`)**: Bảng điều khiển tóm tắt thống kê CV, CV chờ duyệt, và thông báo mới nhất.

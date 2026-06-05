@@ -2,6 +2,7 @@ import prisma from '../../config/db';
 import { Prisma, CVStatus } from '@prisma/client';
 import { UpsertDraftInput, SearchInput } from './cv.dto';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
+import { MESSAGES } from '../../constants/messages';
 
 export class CVService {
   async getDraft(userId: string, languageCode: string) {
@@ -15,7 +16,7 @@ export class CVService {
     });
 
     if (!cv) {
-      throw new NotFoundError('CV Profile not found');
+      throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     }
 
     return cv;
@@ -36,7 +37,7 @@ export class CVService {
     });
 
     if (existing && existing.status === CVStatus.PendingApproval) {
-      throw new BadRequestError('Cannot edit CV while it is pending approval');
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
     }
 
     const cv = await prisma.cVProfile.upsert({
@@ -116,7 +117,7 @@ export class CVService {
       },
     });
 
-    if (!cv) throw new NotFoundError('CV not found');
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
 
     // Fix C2: IDOR protection
     let hasAccess = false;
@@ -135,7 +136,7 @@ export class CVService {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenError('You do not have permission to view this CV diff');
+      throw new ForbiddenError(MESSAGES.CV.FORBIDDEN_DIFF);
     }
 
     const draft = cv.sectionsData;

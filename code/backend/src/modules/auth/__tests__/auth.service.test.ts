@@ -4,6 +4,7 @@ import { verifyPassword } from '../../../utils/hash.util';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../../../utils/jwt.util';
 import { UnauthorizedError } from '../../../errors/AppError';
 import { redisClient } from '../../../config/redis';
+import { MESSAGES } from '../../../constants/messages';
 
 jest.mock('../../../utils/hash.util');
 jest.mock('../../../utils/jwt.util');
@@ -88,7 +89,7 @@ describe('AuthService', () => {
       (redisClient.get as jest.Mock).mockResolvedValue('blacklisted');
 
       await expect(authService.refresh('blacklisted-token'))
-        .rejects.toThrow(new UnauthorizedError('Token has been revoked'));
+        .rejects.toThrow(new UnauthorizedError(MESSAGES.AUTH.TOKEN_REVOKED));
     });
   });
 

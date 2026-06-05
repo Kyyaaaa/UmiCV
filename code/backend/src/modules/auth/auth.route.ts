@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller';
 import { validate } from '../../middleware/validate.middleware';
 import { loginSchema } from './auth.dto';
 import rateLimit from 'express-rate-limit';
+import { MESSAGES } from '../../constants/messages';
 
 const router = Router();
 const authController = new AuthController();
@@ -10,7 +11,7 @@ const authController = new AuthController();
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login requests per `window`
-  message: { success: false, message: 'Too many login attempts, please try again after 15 minutes' },
+  message: { success: false, message: MESSAGES.AUTH.TOO_MANY_ATTEMPTS },
   standardHeaders: true,
   legacyHeaders: false,
 });

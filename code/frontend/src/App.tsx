@@ -11,8 +11,6 @@ import { PrivateLayout } from './layouts/PrivateLayout';
 
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
-import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
 // Dashboard
 import { DashboardOverview } from './pages/dashboard/DashboardOverview';
@@ -41,8 +39,6 @@ function App() {
           {/* Public Routes */}
           <Route element={<PublicLayout />}>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
 
           {/* Private Routes */}
