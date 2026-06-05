@@ -44,17 +44,53 @@ export function PublishReviewPage() {
     }
   };
 
+  const translatePath = (path: string) => {
+    const dict: Record<string, string> = {
+      'personalInfo': 'Thông tin cá nhân',
+      'fullName': 'Họ và tên',
+      'title': 'Chức danh',
+      'email': 'Email',
+      'phone': 'Số điện thoại',
+      'summary': 'Mục tiêu',
+      'skills': 'Kỹ năng',
+      'name': 'Tên',
+      'level': 'Mức độ',
+      'experience': 'Kinh nghiệm làm việc',
+      'company': 'Công ty',
+      'role': 'Vai trò',
+      'startDate': 'Ngày bắt đầu',
+      'endDate': 'Ngày kết thúc',
+      'description': 'Mô tả',
+      'projects': 'Dự án',
+      'technologies': 'Công nghệ',
+      'education': 'Học vấn',
+      'school': 'Trường học',
+      'degree': 'Bằng cấp',
+      'year': 'Năm hoàn thành',
+    };
+
+    return path.split('.').map(segment => {
+      const match = segment.match(/^([a-zA-Z]+)\[(\d+)\]$/);
+      if (match) {
+        const key = match[1];
+        const index = parseInt(match[2], 10) + 1;
+        return `${dict[key] || key} thứ ${index}`;
+      }
+      return dict[segment] || segment;
+    }).join(' ➔ ');
+  };
+
   const getDiffDescription = (diff: DiffChange) => {
-    const pathStr = diff.path;
+    const pathStr = translatePath(diff.path);
     switch (diff.type) {
       case 'added':
-        return `Đã thêm trường dữ liệu: ${pathStr}`;
+        return `Đã thêm dữ liệu: ${pathStr}`;
       case 'removed':
-        return `Đã xóa trường dữ liệu: ${pathStr}`;
+        return `Đã xóa dữ liệu: ${pathStr}`;
       case 'modified':
-        return `Đã chỉnh sửa thông tin tại: ${pathStr}`;
+        return `Đã cập nhật: ${pathStr}`;
       default:
-        return `Thay đổi tại: ${pathStr}`;
+        return `Thay đổi: ${pathStr}`;
     }
   };
 
@@ -113,11 +149,11 @@ export function PublishReviewPage() {
               )}
             </div>
 
-            <div className="p-6 border-t border-slate-200 flex justify-between items-center bg-white">
-              <div className="text-sm text-slate-500">
+            <div className="p-6 border-t border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white">
+              <div className="text-sm text-slate-500 mb-2 sm:mb-0">
                 {diffs.length > 0 ? 'Hành động này sẽ tạo ra Phiên bản mới chờ duyệt.' : 'Không thể xuất bản do không có dữ liệu mới.'}
               </div>
-              <div className="space-x-3">
+              <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
                 <Button variant="outline" onClick={() => navigate(-1)}>Hủy</Button>
                 <Button 
                   onClick={handlePublish} 

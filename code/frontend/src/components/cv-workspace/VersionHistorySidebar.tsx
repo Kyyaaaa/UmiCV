@@ -41,7 +41,7 @@ export function VersionHistorySidebar({ cvId, selectedVersionId, onSelectVersion
   };
 
   return (
-    <div className="w-80 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden">
+    <div className="w-80 shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-slate-200 bg-white">
         <h3 className="font-bold text-slate-800">Lịch sử phiên bản</h3>
         <p className="text-xs text-slate-500 mt-1">Các thay đổi được lưu tự động hoặc khi phê duyệt.</p>

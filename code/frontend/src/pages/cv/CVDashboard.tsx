@@ -24,7 +24,20 @@ export function CVDashboard() {
       setIsLoading(true);
       setError(null);
       const res = await cvService.getMyCVs();
-      setCVs(res.data);
+      
+      // Fetch details for each CV to get sectionsData
+      const detailedCVs = await Promise.all(
+        res.data.map(async (cv) => {
+          try {
+            const detailRes = await cvService.getCVById(cv.id);
+            return detailRes.data;
+          } catch (e) {
+            return cv; // fallback to basic data if detail fetch fails
+          }
+        })
+      );
+      
+      setCVs(detailedCVs);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Không thể tải danh sách CV. Vui lòng thử lại.');
     } finally {

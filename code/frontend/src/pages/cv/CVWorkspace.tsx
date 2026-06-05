@@ -203,8 +203,8 @@ export function CVWorkspace() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden">
       {/* Workspace Header */}
-      <div className="h-14 border-b border-slate-200 px-4 flex items-center justify-between shrink-0 bg-white z-20">
-        <div className="flex items-center space-x-4">
+      <div className="min-h-[56px] py-2 border-b border-slate-200 px-4 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white z-20">
+        <div className="flex flex-wrap items-center gap-4">
           <button 
             onClick={() => navigate('/cv')}
             className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors"
@@ -221,12 +221,12 @@ export function CVWorkspace() {
           <DraftIndicator unsavedChangesCount={unsavedChanges} lastSavedAt={lastSaved} isSaving={isSaving} />
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-4">
           <LanguageSwitcher 
             currentLanguage={cvData.languageCode} 
             onLanguageChange={(lang) => setCvData({ ...cvData, languageCode: lang as any })} 
           />
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button 
               variant="outline" 
               size="sm" 
@@ -259,7 +259,7 @@ export function CVWorkspace() {
       </div>
 
       {/* Workspace Body (3 Columns) */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-x-auto overflow-y-hidden">
         {viewMode === 'history' ? (
           <VersionHistorySidebar 
             cvId={id!} 
@@ -274,11 +274,11 @@ export function CVWorkspace() {
           />
         )}
         
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 flex flex-col overflow-hidden relative min-w-[450px]">
           {viewMode === 'history' && (
-            <div className="bg-blue-50 border-b border-blue-200 p-3 flex justify-between items-center text-sm z-10 shrink-0">
+            <div className="bg-blue-50 border-b border-blue-200 p-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-sm z-10 shrink-0">
               <span className="text-blue-800 font-medium">Bạn đang xem phiên bản lịch sử. Các thao tác chỉnh sửa tạm thời bị khóa.</span>
-              <Button size="sm" variant="outline" className="bg-white" onClick={() => {
+              <Button size="sm" variant="outline" className="bg-white whitespace-nowrap self-start sm:self-auto" onClick={() => {
                 setSearchParams({});
                 setPreviewVersionId(null);
                 setPreviewData(null);
@@ -292,6 +292,7 @@ export function CVWorkspace() {
             activeSection={activeSection} 
             data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
             onChange={handleSectionDataChange} 
+            onSectionChange={setActiveSection}
             disabled={viewMode === 'history'}
           />
           

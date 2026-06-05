@@ -22,7 +22,7 @@ interface WorkspaceSidebarProps {
 
 export function WorkspaceSidebar({ activeSection, onSectionSelect }: WorkspaceSidebarProps) {
   return (
-    <div className="w-64 bg-slate-50 border-r border-slate-200 p-4 flex flex-col h-full overflow-y-auto">
+    <div className="w-64 shrink-0 bg-slate-50 border-r border-slate-200 p-4 flex flex-col h-full overflow-y-auto">
       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">
         Cấu trúc CV
       </h3>
@@ -49,7 +49,10 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect }: WorkspaceSi
       </div>
       
       <div className="mt-8 px-2">
-        <button className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-400 transition-colors">
+        <button 
+          onClick={() => alert('Tính năng thêm mục tùy chỉnh sẽ được hỗ trợ trong phiên bản sau.')}
+          className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-400 transition-colors"
+        >
           + Thêm mục mới
         </button>
       </div>
