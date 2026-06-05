@@ -73,16 +73,6 @@ export function LoginPage() {
             />
 
           </div>
-          <div className="flex items-center space-x-2">
-            <input 
-              type="checkbox" 
-              id="remember" 
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="remember" className="text-sm font-medium leading-none text-slate-700">
-              Ghi nhớ đăng nhập
-            </label>
-          </div>
         </CardContent>
         <CardFooter>
           <Button type="submit" className="w-full" isLoading={isLoading}>

@@ -10,7 +10,7 @@ const authController = new AuthController();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per `window`
+  max: 5000, // Limit each IP to 5000 login requests per `window`
   message: { success: false, message: MESSAGES.AUTH.TOO_MANY_ATTEMPTS },
   standardHeaders: true,
   legacyHeaders: false,
