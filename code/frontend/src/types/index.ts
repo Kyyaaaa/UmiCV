@@ -1,0 +1,79 @@
+export type Role = 'Employee' | 'TechLead' | 'HR' | 'Admin';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  departmentId: string;
+  status: 'Active' | 'Locked';
+  avatarUrl?: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  parentDepartmentId: string | null;
+}
+
+export type CVStatus = 'Draft' | 'PendingApproval' | 'Outdated' | 'Updated' | 'Cancelled';
+
+export interface CVProfile {
+  id: string;
+  userId: string;
+  languageCode: 'vi' | 'en' | 'jp';
+  status: CVStatus;
+  versionNumber: number;
+  sectionsData: CVSections;
+  submittedAt: string | null;
+  publishedAt: string | null;
+  updatedAt: string;
+}
+
+export interface CVSections {
+  personalInfo: {
+    fullName: string;
+    email: string;
+    phone: string;
+    title: string;
+    summary: string;
+  };
+  skills: { name: string; level: string }[];
+  experience: { company: string; role: string; startDate: string; endDate: string; description: string }[];
+  projects: { name: string; role: string; technologies: string[]; description: string }[];
+  education: { school: string; degree: string; year: string }[];
+}
+
+export interface BatchRequest {
+  id: string;
+  createdBy: string;
+  title: string;
+  description: string;
+  deadline: string;
+  status: 'Active' | 'Cancelled';
+  createdAt: string;
+  targetCount: number;
+  completedCount: number;
+}
+
+export interface ApprovalLog {
+  id: string;
+  cvProfileId: string;
+  approverId: string;
+  action: 'Approve' | 'Reject';
+  level: 1 | 2;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+}

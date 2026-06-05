@@ -1,0 +1,43 @@
+@baseUrl = http://localhost:3000/api
+
+# ==========================================
+# BATCH REQUEST API (Yêu cầu quyền HR)
+# ==========================================
+
+### 1. Đăng nhập tài khoản HR (Bạn cần tạo một user có role HR trước bằng API Admin)
+# @name loginHR
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "hr_test",
+  "password": "123456"
+}
+
+### Gán token vào biến
+@hrToken = {{loginHR.response.body.data.accessToken}}
+
+
+### 2. Tạo một Batch Request mới (Yêu cầu nhân viên cập nhật CV)
+# Thay đổi targetUserIds bằng ID thật của một Employee trong DB
+# @name createBatchRequest
+POST {{baseUrl}}/batch-requests
+Authorization: Bearer {{hrToken}}
+Content-Type: application/json
+
+{
+  "title": "Yêu cầu cập nhật CV đợt 1 - 2026",
+  "description": "Vui lòng cập nhật dự án gần nhất vào CV của bạn",
+  "targetUserIds": [
+    "e3fb0355-dee9-40d8-98ba-e73eb2073abf"
+  ],
+  "deadline": "2026-12-31T23:59:59.000Z"
+}
+
+### Gán ID của Batch Request vừa tạo vào biến
+@batchRequestId = {{createBatchRequest.response.body.data.id}}
+
+
+### 3. Hủy Batch Request
+POST {{baseUrl}}/batch-requests/{{batchRequestId}}/cancel
+Authorization: Bearer {{hrToken}}
