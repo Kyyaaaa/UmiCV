@@ -5,27 +5,48 @@ import { AuthRequest } from '../../middleware/auth.middleware';
 const cvService = new CVService();
 
 export class CVController {
-  async getDraft(req: AuthRequest, res: Response) {
+  async getMyCVs(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
-    // Assume validation middleware parsed the query into req.query with default 'vi'
-    const languageCode = (req.query.languageCode as string) || 'vi'; 
-    const draft = await cvService.getDraft(userId, languageCode);
+    const list = await cvService.getMyCVs(userId);
 
     res.status(200).json({
       success: true,
-      data: draft,
+      data: list,
     });
   }
 
-  async upsertDraft(req: AuthRequest, res: Response) {
+  async createCV(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
     const data = req.body;
+    const cv = await cvService.createCV(userId, data);
 
-    const draft = await cvService.upsertDraft(userId, data);
+    res.status(201).json({
+      success: true,
+      data: cv,
+    });
+  }
+
+  async getCVById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const cvId = req.params.id;
+    const cv = await cvService.getCVById(cvId, userId);
 
     res.status(200).json({
       success: true,
-      data: draft,
+      data: cv,
+    });
+  }
+
+  async updateDraftById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const cvId = req.params.id;
+    const data = req.body;
+
+    const cv = await cvService.updateDraftById(cvId, userId, data);
+
+    res.status(200).json({
+      success: true,
+      data: cv,
     });
   }
 

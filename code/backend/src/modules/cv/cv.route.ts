@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { getDraftSchema, upsertDraftSchema, searchSchema } from './cv.dto';
+import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -19,32 +19,23 @@ router.use(authenticate);
 
 /**
  * @openapi
- * /api/cvs/draft:
+ * /api/cvs/me:
  *   get:
- *     summary: Get user's CV draft
+ *     summary: Get list of current user's CVs
  *     tags: [CV Management]
- *     parameters:
- *       - in: query
- *         name: languageCode
- *         schema:
- *           type: string
- *           enum: [vi, en, jp]
- *           default: vi
  *     responses:
  *       200:
- *         description: CV Draft retrieved
+ *         description: List of CVs retrieved
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Draft not found
  */
-router.get('/draft', authorize(['Employee']), validate(getDraftSchema), cvController.getDraft);
+router.get('/me', authorize(['Employee']), cvController.getMyCVs);
 
 /**
  * @openapi
- * /api/cvs/draft:
- *   put:
- *     summary: Upsert user's CV draft
+ * /api/cvs:
+ *   post:
+ *     summary: Create a new CV draft
  *     tags: [CV Management]
  *     requestBody:
  *       required: true
@@ -56,16 +47,66 @@ router.get('/draft', authorize(['Employee']), validate(getDraftSchema), cvContro
  *               languageCode:
  *                 type: string
  *                 enum: [vi, en, jp]
- *                 default: vi
+ *     responses:
+ *       201:
+ *         description: CV Created
+ *       400:
+ *         description: Bad request
+ */
+router.post('/', authorize(['Employee']), validate(createCVSchema), cvController.createCV);
+
+/**
+ * @openapi
+ * /api/cvs/{id}:
+ *   get:
+ *     summary: Get CV details by ID
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV retrieved
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Not found
+ */
+router.get('/:id', authorize(['Employee']), validate(getCVByIdSchema), cvController.getCVById);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/draft:
+ *   put:
+ *     summary: Update CV draft (Auto-save)
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
  *               sectionsData:
  *                 type: object
  *     responses:
  *       200:
  *         description: CV Draft updated
  *       400:
- *         description: Bad request (cannot edit pending CV)
+ *         description: Bad request
  */
-router.put('/draft', authorize(['Employee']), validate(upsertDraftSchema), cvController.upsertDraft);
+router.put('/:id/draft', authorize(['Employee']), validate(updateDraftSchema), cvController.updateDraftById);
 
 /**
  * @openapi

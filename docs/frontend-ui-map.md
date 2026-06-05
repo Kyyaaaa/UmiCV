@@ -13,10 +13,11 @@ Toàn bộ màn hình được lưu trong thư mục `code/frontend/src/pages/`.
 - **Dashboard Overview (`/`)**: Bảng điều khiển tóm tắt thống kê CV, CV chờ duyệt, và thông báo mới nhất.
 
 ### CV Management (`/cv`)
-- **CV List (`/cv`)**: Danh sách CV với tính năng tìm kiếm và bộ lọc trạng thái.
-- **CV Detail (`/cv/:id`)**: Xem chi tiết CV (Read Only). Hiển thị lịch sử, kinh nghiệm, thông tin cá nhân.
-- **CV Creation (`/cv/create`)**: Form tạo CV mới (Mock form nhập tay).
-- **CV Edit (`/cv/:id/edit`)**: Form chỉnh sửa CV hiện tại.
+- **CV Dashboard (`/cv`)**: Bảng điều khiển quản lý toàn bộ CV dạng Card (thay thế dạng List cũ).
+- **CV Workspace (`/cv/:id/workspace`)**: Không gian chỉnh sửa CV 3 cột (Sidebar, Editor, Live Preview). Hỗ trợ Draft Space và Inline Editing.
+- **Version History (`/cv/:id/history`)**: Lịch sử các phiên bản của CV.
+- **Diff Viewer (`/cv/:id/diff`)**: So sánh thay đổi giữa 2 phiên bản.
+- **Publish Review (`/cv/:id/publish`)**: Màn hình xác nhận các thay đổi trước khi Publish.
 
 ### Workflow & Approval (`/workflow`)
 - **Approval Request List (`/workflow`)**: Danh sách các CV đang ở trạng thái `PendingApproval`.
@@ -65,7 +66,8 @@ Hệ thống hiện đang sử dụng Mock Data. Khi tích hợp API thật, c�
 1. **Auth**: Trong `LoginPage`, `UserProfilePage` cần gọi `POST /api/auth/login` thay vì `setTimeout()`.
 2. **Data Fetching**: Thay thế việc import `mockCVs`, `mockUsers` thành các custom hook gọi API thực tế (ví dụ: `useQuery`).
 3. **Form Submissions**:
-   - `CVFormPage`: Chuyển sang gọi `PUT /api/cvs/draft`.
+   - `CVWorkspace`: Tự động gọi Save Draft (`PUT /api/cvs/draft`) khi chỉnh sửa.
+   - `PublishReviewPage`: Gọi Publish/Approve.
    - `ApprovalDetailPage`: Gọi `POST /api/cvs/:id/approve` hoặc `reject`.
    - `UserListPage/UserFormModal`: Gọi các endpoint quản trị người dùng.
 4. **State Management**: Có thể cài đặt thêm React Query (hoặc RTK Query) để quản lý server state hiệu quả hơn. Thay vì set state local, các tương tác sẽ trigger mutation.

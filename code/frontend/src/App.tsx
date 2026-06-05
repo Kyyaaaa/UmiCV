@@ -16,9 +16,11 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { DashboardOverview } from './pages/dashboard/DashboardOverview';
 
 // CV Management
-import { CVListPage } from './pages/cv/CVListPage';
-import { CVDetailPage } from './pages/cv/CVDetailPage';
-import { CVFormPage } from './pages/cv/CVFormPage';
+import { CVDashboard } from './pages/cv/CVDashboard';
+import { CVWorkspace } from './pages/cv/CVWorkspace';
+import { VersionHistoryPage } from './pages/cv/VersionHistoryPage';
+import { DiffViewerPage } from './pages/cv/DiffViewerPage';
+import { PublishReviewPage } from './pages/cv/PublishReviewPage';
 
 // Workflow
 import { ApprovalRequestListPage } from './pages/workflow/ApprovalRequestListPage';
@@ -47,10 +49,11 @@ function App() {
               <Route path="/" element={<DashboardOverview />} />
               
               {/* CV Management */}
-              <Route path="/cv" element={<CVListPage />} />
-              <Route path="/cv/create" element={<CVFormPage />} />
-              <Route path="/cv/:id" element={<CVDetailPage />} />
-              <Route path="/cv/:id/edit" element={<CVFormPage />} />
+              <Route path="/cv" element={<CVDashboard />} />
+              <Route path="/cv/:id/workspace" element={<CVWorkspace />} />
+              <Route path="/cv/:id/history" element={<VersionHistoryPage />} />
+              <Route path="/cv/:id/diff" element={<DiffViewerPage />} />
+              <Route path="/cv/:id/publish" element={<PublishReviewPage />} />
               
               {/* Workflow & Approval */}
               <Route path="/workflow" element={<ApprovalRequestListPage />} />
