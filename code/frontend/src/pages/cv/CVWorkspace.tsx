@@ -37,8 +37,16 @@ export function CVWorkspace() {
   const [isCopying, setIsCopying] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string, type: 'success' | 'error' } | null>(null);
 
+  // Restore Version States
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [versionToRestore, setVersionToRestore] = useState<string | null>(null);
+
+  // Unsaved Changes Navigation Guard State
+  type UnsavedAction = {
+    proceed: () => void;
+    reset: () => void;
+  } | null;
+  const [pendingUnsavedAction, setPendingUnsavedAction] = useState<UnsavedAction>(null);
 
   const showToast = (title: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ title, type });
@@ -166,12 +174,10 @@ export function CVWorkspace() {
 
   useEffect(() => {
     if (blocker.state === "blocked") {
-      const confirm = window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát mà không lưu?");
-      if (confirm) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
+      setPendingUnsavedAction({
+        proceed: () => { blocker.proceed(); },
+        reset: () => { blocker.reset(); }
+      });
     }
   }, [blocker]);
 
@@ -304,15 +310,7 @@ export function CVWorkspace() {
       <div className="min-h-[56px] py-2 border-b border-slate-200 px-4 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white z-20">
         <div className="flex flex-wrap items-center gap-4">
           <button
-            onClick={() => {
-              if (isDirty) {
-                if (window.confirm('Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát?')) {
-                  navigate('/cv');
-                }
-              } else {
-                navigate('/cv');
-              }
-            }}
+            onClick={() => navigate('/cv')}
             className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors"
           >
             <ArrowLeft size={18} />
@@ -332,10 +330,13 @@ export function CVWorkspace() {
             currentLanguage={cvData.languageCode}
             onLanguageSelect={(lang) => {
               if (isDirty) {
-                alert("Vui lòng lưu nháp trước khi chuyển đổi ngôn ngữ!");
-                return;
+                setPendingUnsavedAction({
+                  proceed: () => { setCopyModalOpen(true); },
+                  reset: () => {}
+                });
+              } else {
+                setCopyModalOpen(true);
               }
-              setCopyModalOpen(true);
             }}
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -444,6 +445,31 @@ export function CVWorkspace() {
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setRestoreModalOpen(false)}>Hủy</Button>
             <Button onClick={executeRestore} className="bg-red-600 hover:bg-red-700 text-white border-transparent">Đồng ý khôi phục</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!pendingUnsavedAction} onClose={() => {
+        pendingUnsavedAction?.reset();
+        setPendingUnsavedAction(null);
+      }} title="Bạn có thay đổi chưa được lưu">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">
+            Các thay đổi gần đây của bạn chưa được lưu nháp. 
+            Nếu rời khỏi trang, các thay đổi này sẽ bị mất.<br/><br/>
+            Bạn có muốn tiếp tục không?
+          </p>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => {
+              pendingUnsavedAction?.reset();
+              setPendingUnsavedAction(null);
+            }}>Ở lại</Button>
+            <Button onClick={() => {
+              pendingUnsavedAction?.proceed();
+              setPendingUnsavedAction(null);
+            }} className="bg-red-600 hover:bg-red-700 text-white border-transparent">
+              Rời khỏi trang
+            </Button>
           </div>
         </div>
       </Modal>
