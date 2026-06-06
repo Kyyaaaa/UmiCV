@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Award, Briefcase, GraduationCap, Code, FileText, GripVertical } from 'lucide-react';
+import { User, Award, Briefcase, GraduationCap, Code, FileText, GripVertical, Edit2 } from 'lucide-react';
 
 import { CVSections } from '../../types';
 import { Modal } from '../ui/Modal';
@@ -24,15 +24,54 @@ interface WorkspaceSidebarProps {
   onSectionSelect: (id: string) => void;
   data?: CVSections;
   onAddSection?: (id: string) => void;
+  onRenameSection?: (oldKey: string, newKey: string) => void;
+  onReorderCustomSections?: (newOrder: string[]) => void;
 }
 
-export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSection }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSection, onRenameSection, onReorderCustomSections }: WorkspaceSidebarProps) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptValue, setPromptValue] = useState('');
+
+  const [renamePromptOpen, setRenamePromptOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState('');
+  const [renameValue, setRenameValue] = useState('');
+
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   const customSectionIds = data 
     ? Object.keys(data).filter(key => !SECTIONS.find(s => s.id === key))
     : [];
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedItem(id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Small delay to prevent the dragged element from disappearing
+    setTimeout(() => {
+      e.target && (e.target as HTMLElement).classList.add('opacity-50');
+    }, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (!draggedItem || draggedItem === id) return;
+
+    const draggedIndex = customSectionIds.indexOf(draggedItem);
+    const targetIndex = customSectionIds.indexOf(id);
+
+    if (draggedIndex !== -1 && targetIndex !== -1 && onReorderCustomSections) {
+      const newOrder = [...customSectionIds];
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedItem);
+      onReorderCustomSections(newOrder);
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedItem(null);
+    e.target && (e.target as HTMLElement).classList.remove('opacity-50');
+  };
 
   const handleAddSection = () => {
     setPromptValue('');
@@ -46,6 +85,22 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSe
     }
     setPromptOpen(false);
   };
+
+  const handleRenameClick = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    setRenameTarget(key);
+    setRenameValue(key);
+    setRenamePromptOpen(true);
+  };
+
+  const handleConfirmRename = () => {
+    const cleanId = renameValue.trim();
+    if (cleanId && cleanId !== renameTarget && onRenameSection) {
+      onRenameSection(renameTarget, cleanId);
+    }
+    setRenamePromptOpen(false);
+  };
+
   return (
     <div className="w-64 shrink-0 bg-slate-50 border-r border-slate-200 p-4 flex flex-col h-full overflow-y-auto">
       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">
@@ -82,8 +137,14 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSe
             {customSectionIds.map(key => (
               <div
                 key={key}
+                draggable
+                onDragStart={(e) => handleDragStart(e, key)}
+                onDragOver={(e) => handleDragOver(e, key)}
+                onDragEnd={handleDragEnd}
                 onClick={() => onSectionSelect(key)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors group ${
+                  draggedItem === key ? 'opacity-50' : ''
+                } ${
                   activeSection === key
                     ? 'bg-blue-100 text-blue-700 font-medium'
                     : 'text-slate-700 hover:bg-slate-200'
@@ -95,7 +156,14 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSe
                   </div>
                   <span className="text-sm capitalize">{key}</span>
                 </div>
-                <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 cursor-grab" />
+                <div className="flex items-center gap-2">
+                  <Edit2 
+                    size={14} 
+                    className="text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" 
+                    onClick={(e) => handleRenameClick(e, key)}
+                  />
+                  <GripVertical size={14} className="text-slate-300 opacity-0 group-hover:opacity-100 cursor-grab" />
+                </div>
               </div>
             ))}
           </div>
@@ -128,6 +196,27 @@ export function WorkspaceSidebar({ activeSection, onSectionSelect, data, onAddSe
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setPromptOpen(false)}>Hủy</Button>
             <Button onClick={handleConfirmAdd} disabled={!promptValue.trim()}>Tạo mục</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={renamePromptOpen} onClose={() => setRenamePromptOpen(false)} title="Đổi tên mục">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Tên mục mới</label>
+            <input 
+              type="text" 
+              autoFocus
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nhập tên mục..."
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleConfirmRename()}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setRenamePromptOpen(false)}>Hủy</Button>
+            <Button onClick={handleConfirmRename} disabled={!renameValue.trim() || renameValue.trim() === renameTarget}>Đổi tên</Button>
           </div>
         </div>
       </Modal>

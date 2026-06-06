@@ -54,7 +54,6 @@ export function PublishReviewPage() {
     const dict: Record<string, string> = {
       'personalInfo': 'Thông tin cá nhân',
       'fullName': 'Họ và tên',
-      'title': 'Chức danh',
       'email': 'Email',
       'phone': 'Số điện thoại',
       'summary': 'Mục tiêu',
@@ -75,13 +74,18 @@ export function PublishReviewPage() {
       'year': 'Năm hoàn thành',
     };
 
-    return path.split('.').map(segment => {
+    return path.split('.').map((segment, index, arr) => {
       const match = segment.match(/^(.+)\[(\d+)\]$/);
       if (match) {
         const key = match[1];
         const index = parseInt(match[2], 10) + 1;
         return `${dict[key] || key} thứ ${index}`;
       }
+      
+      if (segment === 'title') {
+        return arr[0] === 'personalInfo' ? 'Chức danh' : 'Tiêu đề';
+      }
+      
       return dict[segment] || segment;
     }).join(' ➔ ');
   };

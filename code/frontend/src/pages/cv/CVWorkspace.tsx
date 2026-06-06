@@ -241,6 +241,57 @@ export function CVWorkspace() {
     setActiveSection(sectionId);
   };
 
+  const handleRenameCustomSection = (oldKey: string, newKey: string) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      const newSections = { ...prev.sectionsData };
+      if (newSections[oldKey] !== undefined) {
+        newSections[newKey] = newSections[oldKey];
+        delete newSections[oldKey];
+      }
+      return {
+        ...prev,
+        sectionsData: newSections
+      };
+    });
+    setUnsavedChanges(prev => prev + 1);
+    if (activeSection === oldKey) {
+      setActiveSection(newKey);
+    }
+  };
+
+  const handleReorderCustomSections = (newOrder: string[]) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      const baseSections: any = {};
+      
+      const standardKeys = ['personalInfo', 'skills', 'experience', 'education', 'projects'];
+      standardKeys.forEach(key => {
+        if (prev.sectionsData[key]) {
+          baseSections[key] = prev.sectionsData[key];
+        }
+      });
+
+      newOrder.forEach(key => {
+        if (prev.sectionsData[key]) {
+          baseSections[key] = prev.sectionsData[key];
+        }
+      });
+      
+      Object.keys(prev.sectionsData).forEach(key => {
+        if (!baseSections[key]) {
+          baseSections[key] = prev.sectionsData[key];
+        }
+      });
+
+      return {
+        ...prev,
+        sectionsData: baseSections
+      };
+    });
+    setUnsavedChanges(prev => prev + 1);
+  };
+
   const handleCopyLocalization = async (langCode: string) => {
     if (!id) return;
     try {
@@ -330,6 +381,8 @@ export function CVWorkspace() {
             onSectionSelect={setActiveSection}
             data={cvData.sectionsData}
             onAddSection={handleAddCustomSection}
+            onRenameSection={handleRenameCustomSection}
+            onReorderCustomSections={handleReorderCustomSections}
           />
         )}
 
