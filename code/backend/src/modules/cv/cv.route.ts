@@ -57,6 +57,42 @@ router.post('/', authorize(['Employee']), validate(createCVSchema), cvController
 
 /**
  * @openapi
+ * /api/cvs/search:
+ *   get:
+ *     summary: Search CVs
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: query
+ *         name: keyword
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: departmentId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: A list of CVs
+ */
+router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSchema), cvController.search);
+
+/**
+ * @openapi
  * /api/cvs/{id}:
  *   get:
  *     summary: Get CV details by ID
@@ -76,7 +112,7 @@ router.post('/', authorize(['Employee']), validate(createCVSchema), cvController
  *       404:
  *         description: Not found
  */
-router.get('/:id', authorize(['Employee']), validate(getCVByIdSchema), cvController.getCVById);
+router.get('/:id', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getCVById);
 
 /**
  * @openapi
@@ -128,42 +164,6 @@ router.put('/:id/draft', authorize(['Employee']), validate(updateDraftSchema), c
  *         description: Bad request (No changes to publish)
  */
 router.post('/:id/publish', authorize(['Employee']), validate(publishCVSchema), cvController.publish);
-
-/**
- * @openapi
- * /api/cvs/search:
- *   get:
- *     summary: Search CVs
- *     tags: [CV Management]
- *     parameters:
- *       - in: query
- *         name: keyword
- *         schema:
- *           type: string
- *       - in: query
- *         name: departmentId
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     responses:
- *       200:
- *         description: A list of CVs
- */
-router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSchema), cvController.search);
 
 /**
  * @openapi

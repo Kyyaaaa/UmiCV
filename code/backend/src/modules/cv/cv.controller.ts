@@ -28,8 +28,9 @@ export class CVController {
 
   async getCVById(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const cvId = req.params.id;
-    const cv = await cvService.getCVById(cvId, userId);
+    const cv = await cvService.getCVById(cvId, userId, role);
 
     res.status(200).json({
       success: true,
@@ -97,7 +98,9 @@ export class CVController {
   }
 
   async search(req: AuthRequest, res: Response) {
-    const result = await cvService.searchCVs(req.query as any);
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const result = await cvService.searchCVs(req.query as any, userId, userRole);
     res.status(200).json({ success: true, ...result });
   }
 

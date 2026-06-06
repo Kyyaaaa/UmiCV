@@ -356,13 +356,13 @@ export function CVWorkspace() {
             >
               Lịch sử
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history'}>
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval'}>
               {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
             <Button
               size="sm"
               onClick={() => navigate(`/cv/${cvData.id}/publish`)}
-              disabled={viewMode === 'history' || isDirty}
+              disabled={viewMode === 'history' || isDirty || cvData.status === 'PendingApproval'}
             >
               <Share size={14} className="mr-2" />
               Publish CV

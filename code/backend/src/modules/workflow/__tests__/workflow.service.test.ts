@@ -47,6 +47,8 @@ describe('WorkflowService', () => {
     it('should approve CV and publish if level 2 (HR)', async () => {
       prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval, versionNumber: 0 } as any);
       prismaMock.user.findUnique.mockResolvedValue({ id: 'hr-1', role: 'HR' } as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any); // has tech lead
       prismaMock.$transaction.mockResolvedValue([] as any);
 
       const result = await workflowService.approveCV('cv-1', 'hr-1', { level: 2 });

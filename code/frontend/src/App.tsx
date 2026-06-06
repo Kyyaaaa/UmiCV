@@ -24,6 +24,7 @@ import { PublishReviewPage } from './pages/cv/PublishReviewPage';
 // Workflow
 import { ApprovalRequestListPage } from './pages/workflow/ApprovalRequestListPage';
 import { ApprovalDetailPage } from './pages/workflow/ApprovalDetailPage';
+import { RoleRoute } from './routes/RoleRoute';
 
 // User Management
 import { UserListPage } from './pages/users/UserListPage';
@@ -47,8 +48,13 @@ const router = createBrowserRouter([
           { path: "cv/:id/diff", element: <DiffViewerPage /> },
           { path: "cv/:id/publish", element: <PublishReviewPage /> },
           
-          { path: "workflow", element: <ApprovalRequestListPage /> },
-          { path: "workflow/:id", element: <ApprovalDetailPage /> },
+          {
+            element: <RoleRoute allowedRoles={['TechLead', 'HR', 'Admin']} />,
+            children: [
+              { path: "workflow", element: <ApprovalRequestListPage /> },
+              { path: "workflow/:id", element: <ApprovalDetailPage /> },
+            ]
+          },
           
           { path: "users", element: <UserListPage /> },
           

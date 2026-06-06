@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  error?: string;
 }
 
 export function ConfirmModal({
@@ -24,6 +25,7 @@ export function ConfirmModal({
   cancelText = 'Hủy',
   type = 'info',
   isLoading = false,
+  error,
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -46,7 +48,10 @@ export function ConfirmModal({
         </>
       }
     >
-      <p className="text-sm text-slate-500">{description}</p>
+      <div className="space-y-3">
+        <p className="text-sm text-slate-500">{description}</p>
+        {error && <p className="text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">{error}</p>}
+      </div>
     </Modal>
   );
 }

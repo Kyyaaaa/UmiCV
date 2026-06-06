@@ -40,7 +40,7 @@ export class CVService {
     });
   }
 
-  async getCVById(id: string, userId: string) {
+  async getCVById(id: string, userId: string, role?: string) {
     const cv = await prisma.cVProfile.findUnique({ where: { id } });
 
     if (!cv) {
@@ -48,8 +48,19 @@ export class CVService {
     }
 
     // IDOR protection
-    if (cv.userId !== userId) {
+    if ((!role || role === 'Employee') && cv.userId !== userId) {
       throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    if (role === 'TechLead' && cv.userId !== userId) {
+      const projects = await prisma.project.findMany({
+        where: { techLeadId: userId },
+        include: { members: true },
+      });
+      const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
+      if (!memberIds.includes(cv.userId)) {
+        throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
     }
 
     return cv;
@@ -172,11 +183,24 @@ export class CVService {
     });
   }
 
-  async searchCVs(query: SearchInput) {
+  async searchCVs(query: SearchInput, requestUserId: string, requestUserRole: string) {
     const { keyword, departmentId, status, page, limit } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.CVProfileWhereInput = {};
+
+    // RBAC: Data Scope Isolation
+    if (requestUserRole === 'Employee') {
+      where.userId = requestUserId;
+    } else if (requestUserRole === 'TechLead') {
+      const projects = await prisma.project.findMany({
+        where: { techLeadId: requestUserId },
+        include: { members: true },
+      });
+      const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
+      where.userId = { in: memberIds };
+    }
+    // HR and Admin can see all
 
     if (status) {
       where.status = status;

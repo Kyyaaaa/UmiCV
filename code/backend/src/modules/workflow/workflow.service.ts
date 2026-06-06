@@ -63,6 +63,40 @@ export class WorkflowService {
 
     await this.verifyApproverScope(cv.userId, approverId, data.level);
 
+    // State Machine: 2-Level Approval Logic
+    const logs = await prisma.approvalLog.findMany({ 
+      where: { 
+        cvProfileId: cvId,
+        ...(cv.submittedAt ? { createdAt: { gte: cv.submittedAt } } : {})
+      } 
+    });
+
+    if (data.level === 1) {
+      const hasLevel2 = logs.some(l => l.level === 2 && l.action === ApprovalAction.Approve);
+      if (hasLevel2) {
+        throw new BadRequestError('CV đã được HR duyệt, không thể duyệt lại cấp 1.');
+      }
+
+      const hasLevel1 = logs.some(l => l.level === 1 && l.action === ApprovalAction.Approve);
+      if (hasLevel1) {
+        throw new BadRequestError('CV đã được duyệt cấp 1, không thể duyệt lại.');
+      }
+    }
+
+    if (data.level === 2) {
+      const hasTechLead = await prisma.projectMember.findFirst({ where: { userId: cv.userId } });
+      const hasLevel1 = logs.some(l => l.level === 1 && l.action === ApprovalAction.Approve);
+      
+      if (hasTechLead && !hasLevel1) {
+        throw new BadRequestError('CV phải được TechLead duyệt trước khi HR phê duyệt.');
+      }
+
+      const hasLevel2 = logs.some(l => l.level === 2 && l.action === ApprovalAction.Approve);
+      if (hasLevel2) {
+        throw new BadRequestError('CV đã được duyệt cấp 2, không thể duyệt lại.');
+      }
+    }
+
     // Log approval
     await prisma.approvalLog.create({
       data: {
@@ -136,7 +170,10 @@ export class WorkflowService {
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
 
     const logs = await prisma.approvalLog.findMany({
-      where: { cvProfileId: cvId },
+      where: { 
+        cvProfileId: cvId,
+        ...(cv.submittedAt ? { createdAt: { gte: cv.submittedAt } } : {})
+      },
       include: {
         approver: {
           select: { fullName: true }

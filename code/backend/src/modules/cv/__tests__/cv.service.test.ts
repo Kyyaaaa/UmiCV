@@ -19,7 +19,7 @@ describe('CVService', () => {
         keyword: 'React" OR "1"="1', // Malicious input with special characters
         page: 1,
         limit: 10,
-      });
+      }, 'admin-id', 'Admin');
 
       expect(result.data).toHaveLength(1);
       expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);

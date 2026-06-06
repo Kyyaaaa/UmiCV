@@ -11,10 +11,12 @@ import { ApprovalTimeline } from '../../components/workflow/ApprovalTimeline';
 import { workflowService } from '../../services/workflow.service';
 import { cvService } from '../../services/cv.service';
 import { CVProfile, ApprovalLog } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 
 export function ApprovalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cv, setCv] = useState<CVProfile | null>(null);
   const [logs, setLogs] = useState<ApprovalLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +26,7 @@ export function ApprovalDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [approveError, setApproveError] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -48,16 +51,17 @@ export function ApprovalDetailPage() {
   };
 
   const handleApprove = async () => {
-    if (!id) return;
+    if (!id || !user) return;
     try {
       setIsSubmitting(true);
-      // Hardcoded level 1 for now (should come from user role context)
-      await workflowService.approveCV(id, 1);
+      setApproveError('');
+      const level = user.role === 'TechLead' ? 1 : 2;
+      await workflowService.approveCV(id, level);
       setIsApproveOpen(false);
       navigate('/workflow');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Approve failed', err);
-      // Handle error visually if needed
+      setApproveError(err.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt.');
     } finally {
       setIsSubmitting(false);
     }
@@ -146,11 +150,16 @@ export function ApprovalDetailPage() {
 
       <ConfirmModal
         isOpen={isApproveOpen}
-        onClose={() => setIsApproveOpen(false)}
+        onClose={() => {
+          setIsApproveOpen(false);
+          setApproveError('');
+        }}
         onConfirm={handleApprove}
         title="Xác nhận phê duyệt CV"
         description="Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt."
         confirmText={isSubmitting ? "Đang xử lý..." : "Phê duyệt"}
+        isLoading={isSubmitting}
+        error={approveError}
       />
 
       <Modal isOpen={isRejectOpen} onClose={() => setIsRejectOpen(false)} title="Từ chối CV">

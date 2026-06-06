@@ -21,13 +21,21 @@ export function ApprovalRequestListPage() {
     fetchCVs();
   }, []);
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const fetchCVs = async () => {
     try {
       setIsLoading(true);
+      setErrorMsg('');
       const res = await workflowService.searchCVs({ status: 'PendingApproval' });
       setPendingCVs(res.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch approval requests', error);
+      if (error?.response?.status === 403) {
+        setErrorMsg('Bạn không có quyền truy cập vào danh sách này');
+      } else {
+        setErrorMsg('Có lỗi xảy ra khi tải danh sách');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +114,12 @@ export function ApprovalRequestListPage() {
         title="Yêu cầu phê duyệt" 
         description="Danh sách các CV đang chờ bạn duyệt" 
       />
+
+      {errorMsg && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+          {errorMsg}
+        </div>
+      )}
 
       <FilterPanel>
         <div className="flex-1 min-w-[200px]">
