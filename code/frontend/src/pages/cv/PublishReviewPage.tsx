@@ -76,7 +76,7 @@ export function PublishReviewPage() {
     };
 
     return path.split('.').map(segment => {
-      const match = segment.match(/^([a-zA-Z]+)\[(\d+)\]$/);
+      const match = segment.match(/^(.+)\[(\d+)\]$/);
       if (match) {
         const key = match[1];
         const index = parseInt(match[2], 10) + 1;

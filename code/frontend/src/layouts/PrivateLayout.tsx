@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -22,8 +22,11 @@ const navItems = [
 
 export function PrivateLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  const isWorkspace = location.pathname.includes('/workspace');
 
   const handleLogout = async () => {
     try {
@@ -40,8 +43,8 @@ export function PrivateLayout() {
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-slate-200 bg-white transition-all duration-300 ease-in-out md:relative ${
+          isSidebarOpen ? 'translate-x-0 md:ml-0' : '-translate-x-full md:translate-x-0 md:-ml-64'
         }`}
       >
         <div className="flex h-16 items-center px-6 border-b border-slate-200">
@@ -72,8 +75,9 @@ export function PrivateLayout() {
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
           <button 
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 md:hidden"
+            className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Thu gọn menu" : "Mở rộng menu"}
           >
             <Menu size={24} />
           </button>
@@ -110,8 +114,8 @@ export function PrivateLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="mx-auto max-w-6xl w-full">
+        <main className={`flex-1 overflow-y-auto ${isWorkspace ? 'p-0' : 'p-4 md:p-8'}`}>
+          <div className={`${isWorkspace ? 'w-full h-full' : 'mx-auto max-w-6xl w-full'}`}>
             <Outlet />
           </div>
         </main>
