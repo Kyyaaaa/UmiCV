@@ -29,44 +29,9 @@ export function CVPreviewPanel({ data }: CVPreviewPanelProps) {
     return () => clearTimeout(timer);
   }, [data]);
 
-  return (
-    <div className="w-[500px] shrink-0 bg-slate-100 border-l border-slate-200 flex flex-col h-full overflow-hidden">
-      <div className="p-3 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 shrink-0">
-        <h3 className="text-sm font-semibold text-slate-700">Live Preview</h3>
-        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-          {pageCount} Trang A4
-        </span>
-      </div>
-      
-      {/* Vertical scrolling container */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 bg-[#f0f2f5]">
-        
-        {/* Continuous A4 Paper */}
-        <div 
-          className="relative mx-auto bg-white shadow-md rounded-sm w-[400px]"
-          style={{ minHeight: A4_HEIGHT }}
-        >
-          {/* Page Dividers */}
-          <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-            {Array.from({ length: pageCount - 1 }).map((_, i) => (
-              <div 
-                key={i}
-                className="absolute w-full border-t border-dashed border-slate-300 flex items-center justify-center opacity-70"
-                style={{ top: (i + 1) * A4_HEIGHT }}
-              >
-                <span className="bg-white px-2 py-0.5 text-[9px] text-slate-400 rounded-full border border-slate-200 -mt-2.5">
-                  Page Break
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Actual Content */}
-          <div 
-            ref={contentRef}
-            className="relative z-10 text-slate-800 p-6 overflow-hidden"
-          >
-            {/* Header / Personal Info */}
+  const renderContent = () => (
+    <div className="relative z-10 text-slate-800 p-6 overflow-hidden">
+      {/* Header / Personal Info */}
             <div className="text-center border-b-2 border-slate-800 pb-4 mb-4">
               <h1 className="text-2xl font-bold uppercase tracking-wider text-slate-900">
                 {data.personalInfo?.fullName || 'HỌ VÀ TÊN'}
@@ -180,7 +145,42 @@ export function CVPreviewPanel({ data }: CVPreviewPanelProps) {
                 </div>
               );
             })}
+    </div>
+  );
+  return (
+    <div className="w-[500px] shrink-0 bg-slate-100 border-l border-slate-200 flex flex-col h-full overflow-hidden">
+      <div className="p-3 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 shrink-0">
+        <h3 className="text-sm font-semibold text-slate-700">Live Preview</h3>
+        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+          {pageCount} Trang A4
+        </span>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 bg-[#f0f2f5] relative">
+        
+        {/* Measurement Container (Invisible) */}
+        <div className="absolute left-[-9999px] top-0 w-[400px] bg-white opacity-0 pointer-events-none z-[-1]">
+          <div ref={contentRef}>
+            {renderContent()}
           </div>
+        </div>
+
+        {/* Sliced Pages */}
+        <div className="flex flex-col gap-6 items-center pb-8">
+          {Array.from({ length: pageCount }).map((_, i) => (
+            <div 
+              key={i} 
+              className="relative bg-white shadow-md rounded-sm w-[400px] overflow-hidden shrink-0" 
+              style={{ height: A4_HEIGHT }}
+            >
+              <div 
+                className="absolute w-full"
+                style={{ top: -(i * A4_HEIGHT) }}
+              >
+                {renderContent()}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

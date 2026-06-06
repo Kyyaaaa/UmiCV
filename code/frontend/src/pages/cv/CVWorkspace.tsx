@@ -35,8 +35,8 @@ export function CVWorkspace() {
   // Copy Localization States
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
-  const [toastMessage, setToastMessage] = useState<{title: string, type: 'success'|'error'} | null>(null);
-  
+  const [toastMessage, setToastMessage] = useState<{ title: string, type: 'success' | 'error' } | null>(null);
+
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [versionToRestore, setVersionToRestore] = useState<string | null>(null);
 
@@ -48,16 +48,10 @@ export function CVWorkspace() {
   const isFirstRender = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (id && id !== 'new') {
-      fetchCV();
-    }
-  }, [id]);
-
   const fetchCV = async () => {
     try {
       const res = await cvService.getCVById(id!);
-      
+
       const defaultSections: CVSections = {
         personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
         skills: [],
@@ -66,10 +60,11 @@ export function CVWorkspace() {
         education: []
       };
 
-      const safeSections = res.data.sectionsData || {};
+      const safeSections: any = res.data.sectionsData || {};
       const finalData = {
         ...res.data,
         sectionsData: {
+          ...safeSections,
           personalInfo: safeSections.personalInfo || defaultSections.personalInfo,
           skills: safeSections.skills || [],
           experience: safeSections.experience || [],
@@ -85,13 +80,20 @@ export function CVWorkspace() {
     }
   };
 
+  useEffect(() => {
+    if (id && id !== 'new') {
+      fetchCV();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const loadVersionPreview = async (versionId: string) => {
     if (!id) return;
     try {
       setIsPreviewLoading(true);
       setPreviewVersionId(versionId);
       const res = await cvService.getVersionById(id, versionId);
-      
+
       const defaultSections: CVSections = {
         personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
         skills: [],
@@ -100,8 +102,9 @@ export function CVWorkspace() {
         education: []
       };
 
-      const safeSnap = res.data.snapshotData || {};
+      const safeSnap: any = res.data.snapshotData || {};
       setPreviewData({
+        ...safeSnap,
         personalInfo: safeSnap.personalInfo || defaultSections.personalInfo,
         skills: safeSnap.skills || [],
         experience: safeSnap.experience || [],
@@ -126,7 +129,7 @@ export function CVWorkspace() {
     if (!id || !versionToRestore) return;
     try {
       await cvService.restoreVersion(id, versionToRestore);
-      
+
       const res = await cvService.getCVById(id);
       setCvData(res.data);
       setPreviewData(null);
@@ -137,6 +140,22 @@ export function CVWorkspace() {
       setRestoreModalOpen(false);
     } catch (err: any) {
       showToast('Khôi phục thất bại: ' + (err.response?.data?.message || err.message), 'error');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!id || id === 'new') return;
+
+    try {
+      setIsSaving(true);
+      await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
+      setUnsavedChanges(0);
+      setLastSaved(new Date());
+    } catch (err: any) {
+      console.error('Lưu nháp thất bại:', err);
+      // alert('Không thể lưu nháp: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -153,7 +172,7 @@ export function CVWorkspace() {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         handleSaveDraft();
       }, 2500);
@@ -222,22 +241,6 @@ export function CVWorkspace() {
     setActiveSection(sectionId);
   };
 
-  const handleSaveDraft = async () => {
-    if (!id || id === 'new') return;
-    
-    try {
-      setIsSaving(true);
-      await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
-      setUnsavedChanges(0);
-      setLastSaved(new Date());
-    } catch (err: any) {
-      console.error('Lưu nháp thất bại:', err);
-      // alert('Không thể lưu nháp: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleCopyLocalization = async (langCode: string) => {
     if (!id) return;
     try {
@@ -259,7 +262,7 @@ export function CVWorkspace() {
       {/* Workspace Header */}
       <div className="min-h-[56px] py-2 border-b border-slate-200 px-4 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white z-20">
         <div className="flex flex-wrap items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate('/cv')}
             className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors"
           >
@@ -276,14 +279,14 @@ export function CVWorkspace() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <LanguageSwitcher 
-            currentLanguage={cvData.languageCode} 
-            onLanguageSelect={(lang) => setCopyModalOpen(true)} 
+          <LanguageSwitcher
+            currentLanguage={cvData.languageCode}
+            onLanguageSelect={(lang) => setCopyModalOpen(true)}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 if (viewMode === 'history') {
                   setSearchParams({});
@@ -300,8 +303,8 @@ export function CVWorkspace() {
             <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || unsavedChanges === 0 || viewMode === 'history'}>
               {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={() => navigate(`/cv/${cvData.id}/publish`)}
               disabled={viewMode === 'history' || unsavedChanges > 0}
             >
@@ -315,21 +318,21 @@ export function CVWorkspace() {
       {/* Workspace Body (3 Columns) */}
       <div className="flex-1 flex overflow-x-auto overflow-y-hidden">
         {viewMode === 'history' ? (
-          <VersionHistorySidebar 
-            cvId={id!} 
-            selectedVersionId={previewVersionId} 
+          <VersionHistorySidebar
+            cvId={id!}
+            selectedVersionId={previewVersionId}
             onSelectVersion={loadVersionPreview}
             onRestoreVersion={handleRestoreVersion}
           />
         ) : (
-          <WorkspaceSidebar 
-            activeSection={activeSection} 
-            onSectionSelect={setActiveSection} 
+          <WorkspaceSidebar
+            activeSection={activeSection}
+            onSectionSelect={setActiveSection}
             data={cvData.sectionsData}
             onAddSection={handleAddCustomSection}
           />
         )}
-        
+
         <div className="flex-1 flex flex-col overflow-hidden relative min-w-[450px]">
           {viewMode === 'history' && (
             <div className="bg-blue-50 border-b border-blue-200 p-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-sm z-10 shrink-0">
@@ -343,15 +346,15 @@ export function CVWorkspace() {
               </Button>
             </div>
           )}
-          
-          <CVEditorPanel 
-            activeSection={activeSection} 
-            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
-            onChange={handleSectionDataChange} 
+
+          <CVEditorPanel
+            activeSection={activeSection}
+            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+            onChange={handleSectionDataChange}
             onSectionChange={setActiveSection}
             disabled={viewMode === 'history'}
           />
-          
+
           {isPreviewLoading && (
             <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
               <div className="bg-white p-4 rounded-lg shadow-lg flex items-center text-slate-600">
@@ -361,8 +364,8 @@ export function CVWorkspace() {
           )}
         </div>
 
-        <CVPreviewPanel 
-          data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData} 
+        <CVPreviewPanel
+          data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
         />
       </div>
 
@@ -377,8 +380,8 @@ export function CVWorkspace() {
       <Modal isOpen={restoreModalOpen} onClose={() => setRestoreModalOpen(false)} title="Xác nhận khôi phục">
         <div className="space-y-4">
           <p className="text-sm text-slate-700">
-            {unsavedChanges > 0 
-              ? 'Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?' 
+            {unsavedChanges > 0
+              ? 'Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?'
               : 'Bạn có chắc muốn khôi phục phiên bản này đè lên bản nháp hiện tại?'}
           </p>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
