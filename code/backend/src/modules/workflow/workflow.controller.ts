@@ -31,4 +31,10 @@ export class WorkflowController {
     const result = await workflowService.rejectCV(cvId, approverId, data, level);
     res.status(200).json({ success: true, ...result });
   }
+
+  async getApprovalLogs(req: AuthRequest, res: Response) {
+    const cvId = req.params.id;
+    const result = await workflowService.getApprovalLogs(cvId);
+    res.status(200).json({ success: true, data: result });
+  }
 }

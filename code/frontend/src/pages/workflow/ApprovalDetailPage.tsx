@@ -1,35 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
-import { mockCVs } from '../../mocks/cvs.mock';
-import { mockApprovalLogs } from '../../mocks/workflows.mock';
+import { Modal } from '../../components/ui/Modal';
 import { ArrowLeft, Check, X, Clock } from 'lucide-react';
-import { Input } from '../../components/ui/Input';
+import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
+import { ApprovalTimeline } from '../../components/workflow/ApprovalTimeline';
+import { workflowService } from '../../services/workflow.service';
+import { cvService } from '../../services/cv.service';
+import { CVProfile, ApprovalLog } from '../../types';
 
 export function ApprovalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const cv = mockCVs.find(c => c.id === id) || mockCVs[0];
-  const logs = mockApprovalLogs.filter(l => l.cvProfileId === cv.id);
+  const [cv, setCv] = useState<CVProfile | null>(null);
+  const [logs, setLogs] = useState<ApprovalLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleApprove = () => {
-    // Mock approve API call
-    setIsApproveOpen(false);
-    navigate('/workflow');
+  useEffect(() => {
+    if (id) {
+      fetchData(id);
+    }
+  }, [id]);
+
+  const fetchData = async (cvId: string) => {
+    try {
+      setIsLoading(true);
+      const [cvRes, logsRes] = await Promise.all([
+        cvService.getCVById(cvId),
+        workflowService.getApprovalLogs(cvId).catch(() => ({ data: [] }))
+      ]);
+      setCv(cvRes.data);
+      setLogs(logsRes.data);
+    } catch (err) {
+      console.error('Failed to fetch approval detail', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReject = () => {
-    // Mock reject API call
-    setIsRejectOpen(false);
-    navigate('/workflow');
+  const handleApprove = async () => {
+    if (!id) return;
+    try {
+      setIsSubmitting(true);
+      // Hardcoded level 1 for now (should come from user role context)
+      await workflowService.approveCV(id, 1);
+      setIsApproveOpen(false);
+      navigate('/workflow');
+    } catch (err) {
+      console.error('Approve failed', err);
+      // Handle error visually if needed
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const handleReject = async () => {
+    if (!id) return;
+    if (!rejectReason.trim()) {
+      setError('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await workflowService.rejectCV(id, rejectReason);
+      setIsRejectOpen(false);
+      navigate('/workflow');
+    } catch (err) {
+      console.error('Reject failed', err);
+      setError('Có lỗi xảy ra khi từ chối');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading || !cv) {
+    return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu...</div>;
+  }
 
   return (
     <div>
@@ -57,38 +113,18 @@ export function ApprovalDetailPage() {
         }
       />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Main Content (CV Preview Mock) */}
-        <div className="md:col-span-2 space-y-6">
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+        {/* Main Content (CV Preview Panel) */}
+        <div className="md:col-span-2 lg:col-span-3 space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 pb-4">
               <CardTitle>Nội dung CV</CardTitle>
+              {/* Diff Mode Toggle Placeholder for Phase 3 */}
             </CardHeader>
-            <CardContent>
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-8 min-h-[500px]">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold">{cv.sectionsData.personalInfo.fullName}</h2>
-                  <p className="text-blue-600 font-medium mt-1">{cv.sectionsData.personalInfo.title}</p>
-                  <p className="text-sm text-slate-500 mt-2">{cv.sectionsData.personalInfo.email} • {cv.sectionsData.personalInfo.phone}</p>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">TÓM TẮT</h3>
-                  <p className="text-sm text-slate-700">{cv.sectionsData.personalInfo.summary}</p>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">KINH NGHIỆM</h3>
-                  {cv.sectionsData.experience.map((exp, i) => (
-                    <div key={i} className="mb-4">
-                      <div className="flex justify-between font-medium text-slate-900">
-                        <span>{exp.role}</span>
-                        <span className="text-sm text-slate-500">{exp.startDate} - {exp.endDate}</span>
-                      </div>
-                      <p className="text-sm font-medium text-blue-600">{exp.company}</p>
-                      <p className="text-sm text-slate-700 mt-1">{exp.description}</p>
-                    </div>
-                  ))}
+            <CardContent className="p-0">
+              <div className="h-[700px] overflow-y-auto bg-slate-100 p-6 flex justify-center">
+                <div className="w-full max-w-4xl bg-white shadow-sm ring-1 ring-slate-200">
+                  <CVPreviewPanel data={cv.sectionsData} />
                 </div>
               </div>
             </CardContent>
@@ -102,30 +138,7 @@ export function ApprovalDetailPage() {
               <CardTitle>Lịch sử phê duyệt</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {logs.length > 0 ? logs.map((log, idx) => (
-                  <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-2 before:h-2 before:w-2 before:rounded-full before:bg-slate-300">
-                    <p className="text-sm font-medium text-slate-900">
-                      {log.action === 'Approve' ? 'Đã duyệt (Cấp 1)' : 'Đã từ chối'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">{new Date(log.createdAt).toLocaleString('vi-VN')}</p>
-                    {log.reason && (
-                      <div className="mt-2 rounded-md bg-red-50 p-2 text-sm text-red-700">
-                        {log.reason}
-                      </div>
-                    )}
-                  </div>
-                )) : (
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Clock size={16} /> Chưa có lịch sử duyệt
-                  </div>
-                )}
-                
-                <div className="relative pl-6 before:absolute before:left-0 before:top-2 before:h-2 before:w-2 before:rounded-full before:bg-blue-500">
-                  <p className="text-sm font-medium text-blue-600">Đang chờ duyệt (Cấp {logs.length + 1})</p>
-                  <p className="text-xs text-slate-500 mt-1">Hiện tại</p>
-                </div>
-              </div>
+              <ApprovalTimeline logs={logs} />
             </CardContent>
           </Card>
         </div>
@@ -137,18 +150,32 @@ export function ApprovalDetailPage() {
         onConfirm={handleApprove}
         title="Xác nhận phê duyệt CV"
         description="Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt."
-        confirmText="Phê duyệt"
+        confirmText={isSubmitting ? "Đang xử lý..." : "Phê duyệt"}
       />
 
-      <ConfirmModal
-        isOpen={isRejectOpen}
-        onClose={() => setIsRejectOpen(false)}
-        onConfirm={handleReject}
-        title="Từ chối CV"
-        description="Vui lòng cung cấp lý do từ chối để nhân sự có thể chỉnh sửa lại."
-        confirmText="Từ chối"
-        type="danger"
-      />
+      <Modal isOpen={isRejectOpen} onClose={() => setIsRejectOpen(false)} title="Từ chối CV">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">Vui lòng cung cấp lý do từ chối để nhân sự có thể chỉnh sửa lại.</p>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Lý do từ chối <span className="text-red-500">*</span></label>
+            <textarea 
+              className={`w-full rounded-md border ${error ? 'border-red-500 ring-red-500' : 'border-slate-300'} px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]`}
+              placeholder="VD: Thiếu kinh nghiệm phần ReactJS..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>Hủy</Button>
+            <Button variant="danger" onClick={handleReject} disabled={isSubmitting}>
+              {isSubmitting ? 'Đang xử lý...' : 'Từ chối CV'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

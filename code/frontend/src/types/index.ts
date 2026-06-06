@@ -30,6 +30,7 @@ export interface CVProfile {
   submittedAt: string | null;
   publishedAt: string | null;
   updatedAt: string;
+  slaStatus?: 'Safe' | 'Warning' | 'Overdue';
 }
 
 export interface CVSections {
@@ -63,6 +64,7 @@ export interface ApprovalLog {
   id: string;
   cvProfileId: string;
   approverId: string;
+  approverName?: string;
   action: 'Approve' | 'Reject';
   level: 1 | 2;
   reason: string | null;

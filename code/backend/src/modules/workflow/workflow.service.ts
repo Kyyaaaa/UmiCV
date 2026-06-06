@@ -130,4 +130,29 @@ export class WorkflowService {
 
     return { message: MESSAGES.WORKFLOW.REJECT_SUCCESS };
   }
+
+  async getApprovalLogs(cvId: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+
+    const logs = await prisma.approvalLog.findMany({
+      where: { cvProfileId: cvId },
+      include: {
+        approver: {
+          select: { fullName: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      approverId: log.approverId,
+      approverName: log.approver.fullName,
+      action: log.action,
+      level: log.level,
+      reason: log.reason,
+      createdAt: log.createdAt
+    }));
+  }
 }

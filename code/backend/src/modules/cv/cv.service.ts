@@ -212,7 +212,20 @@ export class CVService {
       }),
     ]);
 
-    return { total, page, data };
+    const dataWithSLA = data.map((cv) => {
+      let slaStatus = 'Safe';
+      if (cv.status === CVStatus.PendingApproval && cv.submittedAt) {
+        const diffHours = (new Date().getTime() - new Date(cv.submittedAt).getTime()) / (1000 * 60 * 60);
+        if (diffHours >= 48) {
+          slaStatus = 'Overdue';
+        } else if (diffHours >= 24) {
+          slaStatus = 'Warning';
+        }
+      }
+      return { ...cv, slaStatus };
+    });
+
+    return { total, page, data: dataWithSLA };
   }
 
   async diffCV(cvId: string, requestUserId: string, requestUserRole: string) {

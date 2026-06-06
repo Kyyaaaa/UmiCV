@@ -113,4 +113,25 @@ router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchem
  */
 router.post('/:id/reject', authorize(['TechLead', 'HR']), validate(rejectSchema), workflowController.rejectCV);
 
+/**
+ * @openapi
+ * /api/cvs/{id}/approval-logs:
+ *   get:
+ *     summary: Get approval logs for a CV
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of approval logs
+ *       404:
+ *         description: CV not found
+ */
+router.get('/:id/approval-logs', authorize(['Employee', 'TechLead', 'HR', 'Admin']), workflowController.getApprovalLogs);
+
 export default router;
