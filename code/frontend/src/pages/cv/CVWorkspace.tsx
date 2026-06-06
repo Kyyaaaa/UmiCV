@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -22,7 +22,7 @@ export function CVWorkspace() {
 
   const [cvData, setCvData] = useState<CVProfile | null>(null);
   const [activeSection, setActiveSection] = useState('personalInfo');
-  const [unsavedChanges, setUnsavedChanges] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export function CVWorkspace() {
       setPreviewData(null);
       setPreviewVersionId(null);
       setSearchParams({});
-      setUnsavedChanges(0);
+      setIsDirty(false);
       showToast('Khôi phục thành công!');
       setRestoreModalOpen(false);
     } catch (err: any) {
@@ -148,54 +148,45 @@ export function CVWorkspace() {
 
     try {
       setIsSaving(true);
-      await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
-      setUnsavedChanges(0);
+      await cvService.updateDraft(id, { sectionsData: cvData!.sectionsData });
+      setIsDirty(false);
       setLastSaved(new Date());
     } catch (err: any) {
       console.error('Lưu nháp thất bại:', err);
-      // alert('Không thể lưu nháp: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Auto-save logic
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (viewMode === 'history') return;
-
-    if (unsavedChanges > 0) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    if (blocker.state === "blocked") {
+      const confirm = window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát mà không lưu?");
+      if (confirm) {
+        blocker.proceed();
+      } else {
+        blocker.reset();
       }
-
-      timeoutRef.current = setTimeout(() => {
-        handleSaveDraft();
-      }, 2500);
     }
-
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [cvData?.sectionsData, unsavedChanges]);
+  }, [blocker]);
 
   // BUG-01: Unsaved Changes Protection (beforeunload + useBlocker)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (unsavedChanges > 0) {
+      if (isDirty) {
         e.preventDefault();
-        e.returnValue = ''; // Mặc định trình duyệt sẽ hỏi xác nhận
+        e.returnValue = ''; // Required for Chrome
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [unsavedChanges]);
+  }, [isDirty]);
 
-  // Note: useBlocker cannot be used here because the app uses BrowserRouter instead of createBrowserRouter (Data Router).
 
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!cvData) return <div className="p-8 text-center text-slate-500">Đang tải Workspace...</div>;
@@ -209,7 +200,7 @@ export function CVWorkspace() {
         return { ...prev, sectionsData: newSections };
       });
       setActiveSection('personalInfo');
-      setUnsavedChanges(prev => prev + 1);
+      setIsDirty(true);
       return;
     }
 
@@ -223,7 +214,7 @@ export function CVWorkspace() {
         }
       };
     });
-    setUnsavedChanges(prev => prev + 1);
+    setIsDirty(true);
   };
 
   const handleAddCustomSection = (sectionId: string) => {
@@ -237,7 +228,7 @@ export function CVWorkspace() {
         }
       };
     });
-    setUnsavedChanges(prev => prev + 1);
+    setIsDirty(true);
     setActiveSection(sectionId);
   };
 
@@ -254,7 +245,7 @@ export function CVWorkspace() {
         sectionsData: newSections
       };
     });
-    setUnsavedChanges(prev => prev + 1);
+    setIsDirty(true);
     if (activeSection === oldKey) {
       setActiveSection(newKey);
     }
@@ -264,7 +255,7 @@ export function CVWorkspace() {
     setCvData(prev => {
       if (!prev) return prev;
       const baseSections: any = {};
-      
+
       const standardKeys = ['personalInfo', 'skills', 'experience', 'education', 'projects'];
       standardKeys.forEach(key => {
         if (prev.sectionsData[key]) {
@@ -277,7 +268,7 @@ export function CVWorkspace() {
           baseSections[key] = prev.sectionsData[key];
         }
       });
-      
+
       Object.keys(prev.sectionsData).forEach(key => {
         if (!baseSections[key]) {
           baseSections[key] = prev.sectionsData[key];
@@ -289,7 +280,7 @@ export function CVWorkspace() {
         sectionsData: baseSections
       };
     });
-    setUnsavedChanges(prev => prev + 1);
+    setIsDirty(true);
   };
 
   const handleCopyLocalization = async (langCode: string) => {
@@ -298,7 +289,6 @@ export function CVWorkspace() {
       setIsCopying(true);
       const res = await cvService.copyLocalization(id, langCode);
       setCopyModalOpen(false);
-      // Navigate to new CV
       navigate(`/cv/${res.data.id}/workspace`);
     } catch (err: any) {
       console.error('Lỗi khi nhân bản:', err);
@@ -314,7 +304,15 @@ export function CVWorkspace() {
       <div className="min-h-[56px] py-2 border-b border-slate-200 px-4 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white z-20">
         <div className="flex flex-wrap items-center gap-4">
           <button
-            onClick={() => navigate('/cv')}
+            onClick={() => {
+              if (isDirty) {
+                if (window.confirm('Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn thoát?')) {
+                  navigate('/cv');
+                }
+              } else {
+                navigate('/cv');
+              }
+            }}
             className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors"
           >
             <ArrowLeft size={18} />
@@ -326,13 +324,19 @@ export function CVWorkspace() {
           <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
             v{cvData.versionNumber}
           </span>
-          <DraftIndicator unsavedChangesCount={unsavedChanges} lastSavedAt={lastSaved} isSaving={isSaving} />
+          <DraftIndicator isDirty={isDirty} lastSavedAt={lastSaved} isSaving={isSaving} />
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <LanguageSwitcher
             currentLanguage={cvData.languageCode}
-            onLanguageSelect={(lang) => setCopyModalOpen(true)}
+            onLanguageSelect={(lang) => {
+              if (isDirty) {
+                alert("Vui lòng lưu nháp trước khi chuyển đổi ngôn ngữ!");
+                return;
+              }
+              setCopyModalOpen(true);
+            }}
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -351,13 +355,13 @@ export function CVWorkspace() {
             >
               Lịch sử
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || unsavedChanges === 0 || viewMode === 'history'}>
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history'}>
               {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
             <Button
               size="sm"
               onClick={() => navigate(`/cv/${cvData.id}/publish`)}
-              disabled={viewMode === 'history' || unsavedChanges > 0}
+              disabled={viewMode === 'history' || isDirty}
             >
               <Share size={14} className="mr-2" />
               Publish CV
@@ -433,7 +437,7 @@ export function CVWorkspace() {
       <Modal isOpen={restoreModalOpen} onClose={() => setRestoreModalOpen(false)} title="Xác nhận khôi phục">
         <div className="space-y-4">
           <p className="text-sm text-slate-700">
-            {unsavedChanges > 0
+            {isDirty
               ? 'Bản nháp hiện tại đang có thay đổi chưa lưu. Nếu khôi phục, bạn sẽ mất những thay đổi này. Tiếp tục?'
               : 'Bạn có chắc muốn khôi phục phiên bản này đè lên bản nháp hiện tại?'}
           </p>

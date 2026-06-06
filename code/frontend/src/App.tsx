@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 
 // Providers & Guards
 import { AuthProvider } from './contexts/AuthContext';
@@ -18,7 +18,6 @@ import { DashboardOverview } from './pages/dashboard/DashboardOverview';
 // CV Management
 import { CVDashboard } from './pages/cv/CVDashboard';
 import { CVWorkspace } from './pages/cv/CVWorkspace';
-
 import { DiffViewerPage } from './pages/cv/DiffViewerPage';
 import { PublishReviewPage } from './pages/cv/PublishReviewPage';
 
@@ -33,45 +32,49 @@ import { UserListPage } from './pages/users/UserListPage';
 import { NotificationCenterPage } from './pages/notifications/NotificationCenterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <PrivateLayout />,
+        children: [
+          { index: true, element: <DashboardOverview /> },
+          
+          { path: "cv", element: <CVDashboard /> },
+          { path: "cv/:id/workspace", element: <CVWorkspace /> },
+          { path: "cv/:id/diff", element: <DiffViewerPage /> },
+          { path: "cv/:id/publish", element: <PublishReviewPage /> },
+          
+          { path: "workflow", element: <ApprovalRequestListPage /> },
+          { path: "workflow/:id", element: <ApprovalDetailPage /> },
+          
+          { path: "users", element: <UserListPage /> },
+          
+          { path: "notifications", element: <NotificationCenterPage /> },
+          { path: "profile", element: <UserProfilePage /> }
+        ]
+      }
+    ]
+  },
+  {
+    path: "/login",
+    element: <PublicLayout />,
+    children: [
+      { index: true, element: <LoginPage /> }
+    ]
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />
+  }
+]);
+
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route element={<PublicLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-          </Route>
-
-          {/* Private Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<PrivateLayout />}>
-              <Route path="/" element={<DashboardOverview />} />
-              
-              {/* CV Management */}
-              <Route path="/cv" element={<CVDashboard />} />
-              <Route path="/cv/:id/workspace" element={<CVWorkspace />} />
-
-              <Route path="/cv/:id/diff" element={<DiffViewerPage />} />
-              <Route path="/cv/:id/publish" element={<PublishReviewPage />} />
-              
-              {/* Workflow & Approval */}
-              <Route path="/workflow" element={<ApprovalRequestListPage />} />
-              <Route path="/workflow/:id" element={<ApprovalDetailPage />} />
-              
-              {/* User Management */}
-              <Route path="/users" element={<UserListPage />} />
-              
-              {/* Notifications & Profile */}
-              <Route path="/notifications" element={<NotificationCenterPage />} />
-              <Route path="/profile" element={<UserProfilePage />} />
-            </Route>
-          </Route>
-
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }
