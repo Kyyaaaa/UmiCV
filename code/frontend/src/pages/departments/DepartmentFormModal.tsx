@@ -61,7 +61,21 @@ export function DepartmentFormModal({ isOpen, onClose, department, departmentsLi
       }
       onSave();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu phòng ban');
+      if (err.response?.data?.errors && err.response.data.errors.length > 0) {
+        const fieldLabels: Record<string, string> = {
+          name: 'Tên phòng ban',
+          code: 'Mã phòng ban',
+          parentDepartmentId: 'Phòng ban cha'
+        };
+        const detailErrors = err.response.data.errors.map((e: any) => {
+          const rawField = e.field.replace(/^(body\.|query\.|params\.)/, '');
+          const label = fieldLabels[rawField] || rawField;
+          return `${label} ${e.message}`;
+        }).join(', ');
+        setError(`${err.response?.data?.message} - Chi tiết: ${detailErrors}`);
+      } else {
+        setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu phòng ban');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -90,3 +90,38 @@ Tài liệu này dùng để điều phối công việc giữa các Agent (Back
   - Chạy kịch bản đăng nhập bằng User thường để lấy Token. Đứng từ một màn hình có gọi API.
   - Dùng Admin khóa User này lại. Quay lại màn hình User thường và bấm tương tác để gọi API.
   - Xác nhận ngay lập tức trình duyệt của User thường bị đẩy về màn hình Đăng nhập với thông báo đỏ báo lỗi bị khóa, và Token đã bị xóa khỏi Session.
+
+---
+
+## Phase 4: Batch Request (Chiến dịch Cập nhật Hàng loạt)
+
+### 🧑‍💻 Backend Agent Tasks
+
+- [x] **TASK-4.1: Xây dựng Module Batch Request (Tạo mới & Đồng bộ trạng thái)**
+  - Khởi tạo Controller/Service cho `BatchRequest`.
+  - Xây dựng API `POST /api/batch-requests`: Khởi tạo đợt yêu cầu (nhận Title, Deadline, `targetUserIds`).
+  - **Logic quan trọng:** Khi tạo thành công `batch_requests`, hệ thống phải tạo các bản ghi `batch_request_targets` với trạng thái `Outdated`. Đồng thời, cập nhật cột `status` của bảng `cv_profiles` tương ứng của các User đó sang trạng thái `Outdated` (Dựa theo quyết định DBD-03).
+- [x] **TASK-4.2: Xây dựng API Quản lý & Hủy chiến dịch**
+  - Xây dựng API `GET /api/batch-requests` (Có phân trang, tìm kiếm theo tiêu đề/trạng thái Active/Cancelled).
+  - Xây dựng API `GET /api/batch-requests/:id/targets` để trả về danh sách chi tiết tiến độ của các nhân sự trong chiến dịch (Xem ai còn Outdated, ai đã Updated).
+  - Xây dựng API `POST /api/batch-requests/:id/cancel` để hủy chiến dịch (chuyển trạng thái sang `Cancelled`).
+
+### 🎨 Frontend Agent Tasks
+
+- [ ] **TASK-4.3: Giao diện Quản lý Chiến dịch (Dành cho HR)**
+  - Tích hợp API `GET /api/batch-requests` vào trang danh sách Chiến dịch (`/hr/batch-requests`).
+  - Xây dựng màn hình Chi tiết Chiến dịch (`/hr/batch-requests/:id`), tích hợp API lấy `targets` để hiển thị danh sách nhân viên và trạng thái cập nhật CV của họ. Có nút Cancel để gọi API hủy chiến dịch.
+- [ ] **TASK-4.4: Màn hình/Modal Tạo mới Batch Request**
+  - Xây dựng Form tạo chiến dịch (Nhập Tiêu đề, Chọn Deadline qua DatePicker).
+  - Xây dựng Component chọn nhân viên mục tiêu: Có tính năng filter nhân viên theo Phòng ban (Department) để HR có thể dễ dàng chọn tất cả nhân sự của một phòng ban đẩy vào danh sách `targetUserIds`.
+  - Tích hợp gọi API `POST /api/batch-requests` và xử lý thông báo thành công.
+
+### 🕵️ QA Agent Tasks
+
+- [ ] **TASK-4.5: Kiểm thử luồng Khởi tạo & Đồng bộ trạng thái (E2E)**
+  - Đứng từ tài khoản HR, tạo một Batch Request chọn 2 nhân viên (Ví dụ: User A và User B).
+  - Đảm bảo API trả về thành công.
+  - Đăng nhập vào tài khoản của User A hoặc User B, kiểm tra xem trạng thái CV của họ trên UI có bị chuyển sang "Chưa cập nhật (Outdated)" không.
+- [ ] **TASK-4.6: Kiểm thử bộ lọc & luồng Hủy chiến dịch (Cancel)**
+  - Kiểm tra tính năng lọc nhân viên theo phòng ban lúc tạo Batch Request có hoạt động chính xác không.
+  - Tạo một Batch Request, sau đó bấm nút Cancel. Xác nhận trạng thái trên lưới dữ liệu chuyển sang Cancelled và không xảy ra lỗi crash hệ thống.

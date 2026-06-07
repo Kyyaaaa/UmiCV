@@ -55,7 +55,21 @@ export function ProjectFormModal({ isOpen, onClose, project, techLeads, onSave }
       }
       onSave();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu dự án');
+      if (err.response?.data?.errors && err.response.data.errors.length > 0) {
+        const fieldLabels: Record<string, string> = {
+          name: 'Tên dự án',
+          code: 'Mã dự án',
+          techLeadId: 'Tech Lead phụ trách'
+        };
+        const detailErrors = err.response.data.errors.map((e: any) => {
+          const rawField = e.field.replace(/^(body\.|query\.|params\.)/, '');
+          const label = fieldLabels[rawField] || rawField;
+          return `${label} ${e.message}`;
+        }).join(', ');
+        setError(`${err.response?.data?.message} - Chi tiết: ${detailErrors}`);
+      } else {
+        setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu dự án');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const createDepartmentSchema = z.object({
-  name: z.string().min(1, 'Tên phòng ban không được để trống'),
-  code: z.string().min(1, 'Mã phòng ban không được để trống'),
-  parentDepartmentId: z.string().uuid('ID phòng ban cha không hợp lệ').optional().nullable(),
+  name: z.string().min(1),
+  code: z.string().min(1),
+  parentDepartmentId: z.string().uuid().optional().nullable(),
 });
 
 export const updateDepartmentSchema = createDepartmentSchema.partial();

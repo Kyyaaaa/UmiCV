@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
 export const createProjectSchema = z.object({
-  name: z.string().min(1, 'Tên dự án không được để trống'),
-  code: z.string().min(1, 'Mã dự án không được để trống'),
-  techLeadId: z.string().uuid('ID Tech Lead không hợp lệ'),
+  name: z.string().min(1),
+  code: z.string().min(1),
+  techLeadId: z.string().uuid(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial();
 
 export const assignMembersSchema = z.object({
-  userIds: z.array(z.string().uuid('ID user không hợp lệ')).min(1, 'Danh sách user không được trống'),
+  userIds: z.array(z.string().uuid()).min(1),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
