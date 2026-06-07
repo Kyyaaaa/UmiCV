@@ -35,6 +35,10 @@ import { ProjectListPage } from './pages/projects/ProjectListPage';
 import { NotificationCenterPage } from './pages/notifications/NotificationCenterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
 
+// Batch Request
+import { BatchRequestListPage } from './pages/batch-requests/BatchRequestListPage';
+import { BatchRequestDetailPage } from './pages/batch-requests/BatchRequestDetailPage';
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -55,6 +59,14 @@ const router = createBrowserRouter([
             children: [
               { path: "workflow", element: <ApprovalRequestListPage /> },
               { path: "workflow/:id", element: <ApprovalDetailPage /> },
+            ]
+          },
+          
+          {
+            element: <RoleRoute allowedRoles={['HR', 'Admin']} />,
+            children: [
+              { path: "hr/batch-requests", element: <BatchRequestListPage /> },
+              { path: "hr/batch-requests/:id", element: <BatchRequestDetailPage /> },
             ]
           },
           

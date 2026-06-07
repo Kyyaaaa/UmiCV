@@ -1,7 +1,7 @@
 import prisma from '../../config/db';
 import { CreateBatchRequestInput } from './batch-request.dto';
 import { NotFoundError } from '../../errors/AppError';
-import { BatchRequestStatus, CVStatus, TargetStatus } from '@prisma/client';
+import { BatchRequestStatus, CVStatus, TargetStatus, Prisma } from '@prisma/client';
 import { MESSAGES } from '../../constants/messages';
 
 export class BatchRequestService {
@@ -36,6 +36,55 @@ export class BatchRequestService {
 
       return batchRequest;
     });
+  }
+
+  async getBatchRequests(params: { page?: number; limit?: number; status?: string; keyword?: string }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.BatchRequestWhereInput = {
+      ...(params.status && { status: params.status as BatchRequestStatus }),
+      ...(params.keyword && { title: { contains: params.keyword, mode: 'insensitive' } }),
+    };
+
+    const [total, data] = await Promise.all([
+      prisma.batchRequest.count({ where }),
+      prisma.batchRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          creator: { select: { id: true, fullName: true, email: true } },
+          _count: { select: { targets: true } },
+        },
+      }),
+    ]);
+
+    return { total, page, limit, data };
+  }
+
+  async getBatchRequestTargets(batchId: string, params: { status?: string }) {
+    const batch = await prisma.batchRequest.findUnique({ where: { id: batchId } });
+    if (!batch) {
+      throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
+    }
+
+    const where: Prisma.BatchRequestTargetWhereInput = {
+      batchRequestId: batchId,
+      ...(params.status && { status: params.status as TargetStatus }),
+    };
+
+    const targets = await prisma.batchRequestTarget.findMany({
+      where,
+      include: {
+        user: { select: { id: true, fullName: true, email: true, department: { select: { name: true } } } },
+      },
+      orderBy: { user: { fullName: 'asc' } },
+    });
+
+    return targets;
   }
 
   async cancelBatchRequest(batchId: string, hrUserId: string) {

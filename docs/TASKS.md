@@ -108,20 +108,55 @@ Tài liệu này dùng để điều phối công việc giữa các Agent (Back
 
 ### 🎨 Frontend Agent Tasks
 
-- [ ] **TASK-4.3: Giao diện Quản lý Chiến dịch (Dành cho HR)**
+- [x] **TASK-4.3: Giao diện Quản lý Chiến dịch (Dành cho HR)**
   - Tích hợp API `GET /api/batch-requests` vào trang danh sách Chiến dịch (`/hr/batch-requests`).
   - Xây dựng màn hình Chi tiết Chiến dịch (`/hr/batch-requests/:id`), tích hợp API lấy `targets` để hiển thị danh sách nhân viên và trạng thái cập nhật CV của họ. Có nút Cancel để gọi API hủy chiến dịch.
-- [ ] **TASK-4.4: Màn hình/Modal Tạo mới Batch Request**
+- [x] **TASK-4.4: Màn hình/Modal Tạo mới Batch Request**
   - Xây dựng Form tạo chiến dịch (Nhập Tiêu đề, Chọn Deadline qua DatePicker).
   - Xây dựng Component chọn nhân viên mục tiêu: Có tính năng filter nhân viên theo Phòng ban (Department) để HR có thể dễ dàng chọn tất cả nhân sự của một phòng ban đẩy vào danh sách `targetUserIds`.
   - Tích hợp gọi API `POST /api/batch-requests` và xử lý thông báo thành công.
 
 ### 🕵️ QA Agent Tasks
 
-- [ ] **TASK-4.5: Kiểm thử luồng Khởi tạo & Đồng bộ trạng thái (E2E)**
+- [x] **TASK-4.5: Kiểm thử luồng Khởi tạo & Đồng bộ trạng thái (E2E)**
   - Đứng từ tài khoản HR, tạo một Batch Request chọn 2 nhân viên (Ví dụ: User A và User B).
   - Đảm bảo API trả về thành công.
   - Đăng nhập vào tài khoản của User A hoặc User B, kiểm tra xem trạng thái CV của họ trên UI có bị chuyển sang "Chưa cập nhật (Outdated)" không.
-- [ ] **TASK-4.6: Kiểm thử bộ lọc & luồng Hủy chiến dịch (Cancel)**
+- [x] **TASK-4.6: Kiểm thử bộ lọc & luồng Hủy chiến dịch (Cancel)**
   - Kiểm tra tính năng lọc nhân viên theo phòng ban lúc tạo Batch Request có hoạt động chính xác không.
   - Tạo một Batch Request, sau đó bấm nút Cancel. Xác nhận trạng thái trên lưới dữ liệu chuyển sang Cancelled và không xảy ra lỗi crash hệ thống.
+
+---
+
+## 📍 Phase 5: Cập nhật hệ thống phân quyền (RBAC Matrix)
+
+Giai đoạn này tập trung vào việc định hình lại Role-Based Access Control (RBAC) cho hệ thống, đảm bảo các chức năng hoạt động đúng theo ma trận phân quyền đã được định nghĩa trong SRS.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-5.1: Cập nhật phân quyền User & Batch Request API**
+  - Mở quyền API `GET /api/users` và `GET /api/users/:id` cho các Role `HR` và `TechLead` thay vì chỉ `Admin`.
+  - Đảm bảo API `GET`, `POST`, `CANCEL` của Batch Request cho phép cả `HR` và `Admin`.
+- [x] **TASK-5.2: Nâng cấp cơ chế IDOR & Phân quyền CV API**
+  - Mở rộng middleware `authorize` của các endpoint trong `cv.route.ts` để cho phép `HR`, `Admin` đi vào hệ thống.
+  - Sửa đổi logic trong `cv.service.ts` để HR và Admin được phép Sửa (`updateDraft`, `restore`, `copy`) bất kỳ CV nào. 
+  - Tech Lead được phép Xem nhưng không được phép Sửa CV của thành viên dự án.
+- [x] **TASK-5.3: Cập nhật phân quyền Workflow (Duyệt CV)**
+  - Cập nhật `workflow.route.ts` cho phép `Admin` truy cập các endpoint `/approve` và `/reject`.
+  - Cập nhật hàm `verifyApproverScope` trong `workflow.service.ts`:
+    - Level 1: Cho phép `TechLead` (của dự án) và `Admin` được duyệt.
+    - Level 2: Cho phép `HR` và `Admin` được duyệt.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-5.4: Điều chỉnh UI rào chặn theo Role**
+  - Đảm bảo giao diện tuân thủ RBAC mới: HR và Admin sẽ thấy các chức năng chỉnh sửa CV/duyệt CV của nhân sự.
+  - Tech Lead sẽ thấy màn hình phê duyệt (Duyệt cấp 1) cho các thành viên trong dự án của mình.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-5.5: Kiểm thử phân quyền của HR và Admin**
+  - Đăng nhập dưới quyền HR: Tạo Batch Request (kiểm tra API User đã được mở khóa chưa).
+  - Đăng nhập dưới quyền Admin: Thử sửa một bản nháp CV của nhân viên khác. Thử thao tác duyệt CV trực tiếp cấp 1 và cấp 2.
+- [x] **TASK-5.6: Kiểm thử phân quyền của Tech Lead**
+  - Đăng nhập dưới quyền Tech Lead: Kiểm tra chỉ xem được CV của nhân viên trong dự án. Thử duyệt một CV đang ở trạng thái PendingApproval và đảm bảo log lưu đúng level 1.

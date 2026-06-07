@@ -64,7 +64,14 @@ export function ApprovalDetailPage() {
     try {
       setIsSubmitting(true);
       setApproveError('');
-      const level = user.role === 'TechLead' ? 1 : 2;
+      let level = 2;
+      if (user.role === 'TechLead') {
+        level = 1;
+      } else if (user.role === 'Admin') {
+        const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+        level = hasLevel1 ? 2 : 1;
+      }
+      
       await workflowService.approveCV(id, level);
       setIsApproveOpen(false);
       navigate('/workflow');

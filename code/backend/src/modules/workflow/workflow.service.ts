@@ -38,14 +38,16 @@ export class WorkflowService {
     if (!approver) throw new ForbiddenError(MESSAGES.WORKFLOW.APPROVER_NOT_FOUND);
 
     if (level === 1) {
-      if (approver.role !== 'TechLead') throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_TECHLEAD_ONLY);
-      const isLead = await prisma.projectMember.findFirst({
-        where: {
-          userId: cvUserId,
-          project: { techLeadId: approverId }
-        }
-      });
-      if (!isLead) throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_MEMBER_ONLY);
+      if (approver.role !== 'TechLead' && approver.role !== 'Admin') throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_TECHLEAD_ONLY);
+      if (approver.role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: {
+            userId: cvUserId,
+            project: { techLeadId: approverId }
+          }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL1_MEMBER_ONLY);
+      }
     } else if (level === 2) {
       if (approver.role !== 'HR' && approver.role !== 'Admin') {
         throw new ForbiddenError(MESSAGES.WORKFLOW.LEVEL2_HR_ADMIN_ONLY);

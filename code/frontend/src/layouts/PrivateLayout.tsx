@@ -19,6 +19,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
   { to: '/cv', icon: FileText, label: 'Quản lý CV', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
   { to: '/workflow', icon: CheckSquare, label: 'Phê duyệt', roles: ['Admin', 'HR', 'TechLead'] },
+  { to: '/hr/batch-requests', icon: Users, label: 'Chiến dịch cập nhật', roles: ['Admin', 'HR'] },
   { to: '/users', icon: Users, label: 'Nhân sự', roles: ['Admin'] },
   { to: '/departments', icon: Building2, label: 'Phòng ban', roles: ['Admin'] },
   { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin'] },

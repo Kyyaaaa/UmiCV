@@ -79,6 +79,15 @@ export interface BatchRequest {
   completedCount: number;
 }
 
+export interface BatchRequestTarget {
+  id: string;
+  batchRequestId: string;
+  userId: string;
+  status: 'Outdated' | 'Updated';
+  updatedAt: string;
+  user?: User;
+}
+
 export interface ApprovalLog {
   id: string;
   cvProfileId: string;

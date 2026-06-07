@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { BatchRequestController } from './batch-request.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { createBatchRequestSchema, cancelBatchRequestSchema } from './batch-request.dto';
+import { createBatchRequestSchema, cancelBatchRequestSchema, getBatchRequestsSchema, getBatchRequestTargetsSchema } from './batch-request.dto';
 
 const router = Router();
 const batchRequestController = new BatchRequestController();
@@ -16,8 +16,8 @@ const batchRequestController = new BatchRequestController();
 
 router.use(authenticate);
 
-// HR Only
-router.use(authorize(['HR']));
+// HR and Admin Only
+router.use(authorize(['HR', 'Admin']));
 
 /**
  * @openapi
@@ -58,6 +58,30 @@ router.use(authorize(['HR']));
  *         description: Forbidden (Not HR)
  */
 router.post('/', validate(createBatchRequestSchema), batchRequestController.create);
+
+/**
+ * @openapi
+ * /api/batch-requests:
+ *   get:
+ *     summary: List batch requests
+ *     tags: [Batch Request]
+ *     responses:
+ *       200:
+ *         description: List of batch requests
+ */
+router.get('/', validate(getBatchRequestsSchema), batchRequestController.getAll);
+
+/**
+ * @openapi
+ * /api/batch-requests/{id}/targets:
+ *   get:
+ *     summary: List targets of a batch request
+ *     tags: [Batch Request]
+ *     responses:
+ *       200:
+ *         description: List of targets
+ */
+router.get('/:id/targets', validate(getBatchRequestTargetsSchema), batchRequestController.getTargets);
 
 /**
  * @openapi

@@ -29,7 +29,7 @@ router.use(authenticate);
  *       401:
  *         description: Unauthorized
  */
-router.get('/me', authorize(['Employee']), cvController.getMyCVs);
+router.get('/me', authorize(['Employee', 'HR', 'Admin']), cvController.getMyCVs);
 
 /**
  * @openapi
@@ -53,7 +53,7 @@ router.get('/me', authorize(['Employee']), cvController.getMyCVs);
  *       400:
  *         description: Bad request
  */
-router.post('/', authorize(['Employee']), validate(createCVSchema), cvController.createCV);
+router.post('/', authorize(['Employee', 'HR', 'Admin']), validate(createCVSchema), cvController.createCV);
 
 /**
  * @openapi
@@ -142,7 +142,7 @@ router.get('/:id', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(
  *       400:
  *         description: Bad request
  */
-router.put('/:id/draft', authorize(['Employee']), validate(updateDraftSchema), cvController.updateDraftById);
+router.put('/:id/draft', authorize(['Employee', 'HR', 'Admin']), validate(updateDraftSchema), cvController.updateDraftById);
 
 /**
  * @openapi
@@ -163,7 +163,7 @@ router.put('/:id/draft', authorize(['Employee']), validate(updateDraftSchema), c
  *       400:
  *         description: Bad request (No changes to publish)
  */
-router.post('/:id/publish', authorize(['Employee']), validate(publishCVSchema), cvController.publish);
+router.post('/:id/publish', authorize(['Employee', 'HR', 'Admin']), validate(publishCVSchema), cvController.publish);
 
 /**
  * @openapi
@@ -186,7 +186,7 @@ router.post('/:id/publish', authorize(['Employee']), validate(publishCVSchema), 
  *       404:
  *         description: CV not found
  */
-router.get('/:id/diff', cvController.diff);
+router.get('/:id/diff', authorize(['Employee', 'TechLead', 'HR', 'Admin']), cvController.diff);
 
 /**
  * @openapi
@@ -205,7 +205,7 @@ router.get('/:id/diff', cvController.diff);
  *       200:
  *         description: List of versions retrieved
  */
-router.get('/:id/versions', authorize(['Employee']), validate(getCVByIdSchema), cvController.getCVVersions);
+router.get('/:id/versions', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getCVVersions);
 
 /**
  * @openapi
@@ -230,7 +230,7 @@ router.get('/:id/versions', authorize(['Employee']), validate(getCVByIdSchema), 
  *       200:
  *         description: Version details retrieved
  */
-router.get('/:id/versions/:versionId', authorize(['Employee']), validate(cvVersionParamsSchema), cvController.getCVVersionById);
+router.get('/:id/versions/:versionId', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(cvVersionParamsSchema), cvController.getCVVersionById);
 
 /**
  * @openapi
@@ -257,7 +257,7 @@ router.get('/:id/versions/:versionId', authorize(['Employee']), validate(cvVersi
  *       400:
  *         description: Cannot edit pending CV
  */
-router.post('/:id/versions/:versionId/restore', authorize(['Employee']), validate(cvVersionParamsSchema), cvController.restoreCVVersion);
+router.post('/:id/versions/:versionId/restore', authorize(['Employee', 'HR', 'Admin']), validate(cvVersionParamsSchema), cvController.restoreCVVersion);
 
 /**
  * @openapi
@@ -288,6 +288,6 @@ router.post('/:id/versions/:versionId/restore', authorize(['Employee']), validat
  *       400:
  *         description: Cannot overwrite pending CV
  */
-router.post('/:id/localizations/copy', authorize(['Employee']), validate(copyLocalizationSchema), cvController.copyLocalization);
+router.post('/:id/localizations/copy', authorize(['Employee', 'HR', 'Admin']), validate(copyLocalizationSchema), cvController.copyLocalization);
 
 export default router;

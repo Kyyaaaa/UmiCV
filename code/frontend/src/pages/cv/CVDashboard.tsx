@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Plus, Edit3, History, Globe, Clock, ChevronRight } from 'lucide-react';
 import { cvService } from '../../services/cv.service';
+import { workflowService } from '../../services/workflow.service';
+import { useAuth } from '../../hooks/useAuth';
 import { CVProfile } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 
@@ -18,25 +20,39 @@ export function CVDashboard() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState('vi');
 
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
+  const isManager = user?.role === 'HR' || user?.role === 'Admin' || user?.role === 'TechLead';
+
   const availableLanguages = [
     { code: 'vi', label: 'Tiếng Việt' },
     { code: 'en', label: 'English' },
     { code: 'jp', label: 'Tiếng Nhật' }
-  ].filter(lang => !cvs.some(cv => cv.languageCode === lang.code));
+  ].filter(lang => activeTab === 'my' && !cvs.some(cv => cv.languageCode === lang.code));
 
   useEffect(() => {
     fetchCVs();
-  }, []);
+  }, [activeTab]);
 
   const fetchCVs = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await cvService.getMyCVs();
+      setCVs([]); // Clear while loading
+      
+      let resData = [];
+      if (activeTab === 'my') {
+        const res = await cvService.getMyCVs();
+        resData = res.data;
+      } else {
+        // Fetch all CVs in scope
+        const res = await workflowService.searchCVs({});
+        resData = res.data;
+      }
       
       // Fetch details for each CV to get sectionsData
       const detailedCVs = await Promise.all(
-        res.data.map(async (cv) => {
+        resData.map(async (cv) => {
           try {
             const detailRes = await cvService.getCVById(cv.id);
             return detailRes.data;
@@ -76,17 +92,44 @@ export function CVDashboard() {
     <div className="max-w-7xl mx-auto">
       <PageHeader 
         title="Quản lý CV" 
-        description="Quản lý kho hồ sơ nhân sự với trải nghiệm chỉnh sửa trực quan" 
+        description={activeTab === 'my' ? "Quản lý kho hồ sơ nhân sự của bạn" : "Quản lý hồ sơ nhân sự trong phạm vi quyền hạn"} 
         actions={
-          <Button onClick={() => {
-            if (availableLanguages.length > 0) setSelectedLang(availableLanguages[0].code);
-            setCreateModalOpen(true);
-          }}>
-            <Plus size={16} className="mr-2" />
-            Tạo Workspace Mới
-          </Button>
+          activeTab === 'my' ? (
+            <Button onClick={() => {
+              if (availableLanguages.length > 0) setSelectedLang(availableLanguages[0].code);
+              setCreateModalOpen(true);
+            }}>
+              <Plus size={16} className="mr-2" />
+              Tạo Workspace Mới
+            </Button>
+          ) : null
         }
       />
+
+      {isManager && (
+        <div className="mb-6 flex space-x-1 rounded-xl bg-slate-100 p-1 max-w-sm">
+          <button
+            className={`w-full rounded-lg py-2 text-sm font-medium leading-5 ${
+              activeTab === 'my'
+                ? 'bg-white text-blue-700 shadow'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+            }`}
+            onClick={() => setActiveTab('my')}
+          >
+            CV của tôi
+          </button>
+          <button
+            className={`w-full rounded-lg py-2 text-sm font-medium leading-5 ${
+              activeTab === 'all'
+                ? 'bg-white text-blue-700 shadow'
+                : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+            }`}
+            onClick={() => setActiveTab('all')}
+          >
+            CV nhân sự
+          </button>
+        </div>
+      )}
 
       <div className="mb-6 flex gap-4">
         <input 

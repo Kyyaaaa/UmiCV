@@ -40,10 +40,11 @@ export class CVController {
 
   async updateDraftById(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const cvId = req.params.id;
     const data = req.body;
 
-    const cv = await cvService.updateDraftById(cvId, userId, data);
+    const cv = await cvService.updateDraftById(cvId, userId, role, data);
 
     res.status(200).json({
       success: true,
@@ -53,8 +54,9 @@ export class CVController {
 
   async getCVVersions(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const cvId = req.params.id;
-    const versions = await cvService.getCVVersions(cvId, userId);
+    const versions = await cvService.getCVVersions(cvId, userId, role);
 
     res.status(200).json({
       success: true,
@@ -64,8 +66,9 @@ export class CVController {
 
   async getCVVersionById(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const { id, versionId } = req.params;
-    const version = await cvService.getCVVersionById(id, versionId, userId);
+    const version = await cvService.getCVVersionById(id, versionId, userId, role);
 
     res.status(200).json({
       success: true,
@@ -75,8 +78,9 @@ export class CVController {
 
   async restoreCVVersion(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const { id, versionId } = req.params;
-    const cv = await cvService.restoreCVVersion(id, versionId, userId);
+    const cv = await cvService.restoreCVVersion(id, versionId, userId, role);
 
     res.status(200).json({
       success: true,
@@ -86,9 +90,10 @@ export class CVController {
 
   async publish(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const cvId = req.params.id;
     
-    const cv = await cvService.publishCV(cvId, userId);
+    const cv = await cvService.publishCV(cvId, userId, role);
 
     res.status(200).json({
       success: true,
@@ -114,10 +119,11 @@ export class CVController {
 
   async copyLocalization(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
+    const role = req.user!.role;
     const sourceCvId = req.params.id;
     const { targetLanguageCode } = req.body;
 
-    const result = await cvService.copyLocalization(sourceCvId, targetLanguageCode, userId);
+    const result = await cvService.copyLocalization(sourceCvId, targetLanguageCode, userId, role);
 
     res.status(200).json({
       success: true,

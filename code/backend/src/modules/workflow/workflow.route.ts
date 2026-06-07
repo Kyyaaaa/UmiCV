@@ -75,7 +75,7 @@ router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema
  *       404:
  *         description: CV not found
  */
-router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchema), workflowController.approveCV);
+router.post('/:id/approve', authorize(['TechLead', 'HR', 'Admin']), validate(approveSchema), workflowController.approveCV);
 
 /**
  * @openapi
@@ -111,7 +111,7 @@ router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchem
  *       404:
  *         description: CV not found
  */
-router.post('/:id/reject', authorize(['TechLead', 'HR']), validate(rejectSchema), workflowController.rejectCV);
+router.post('/:id/reject', authorize(['TechLead', 'HR', 'Admin']), validate(rejectSchema), workflowController.rejectCV);
 
 /**
  * @openapi

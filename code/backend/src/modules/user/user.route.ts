@@ -21,9 +21,8 @@ const userController = new UserController();
  *   description: Administrator user management operations
  */
 
-// All endpoints require authentication and Admin role
+// All endpoints require authentication
 router.use(authenticate);
-router.use(authorize(['Admin']));
 
 /**
  * @openapi
@@ -58,7 +57,7 @@ router.use(authorize(['Admin']));
  *       200:
  *         description: A list of users
  */
-router.get('/', validate(queryUsersSchema), userController.getUsers);
+router.get('/', authorize(['Admin', 'HR', 'TechLead']), validate(queryUsersSchema), userController.getUsers);
 
 /**
  * @openapi
@@ -100,7 +99,7 @@ router.get('/', validate(queryUsersSchema), userController.getUsers);
  *       400:
  *         description: Invalid input or duplicate username/email
  */
-router.post('/', validate(createUserSchema), userController.createUser);
+router.post('/', authorize(['Admin']), validate(createUserSchema), userController.createUser);
 
 /**
  * @openapi
@@ -121,7 +120,7 @@ router.post('/', validate(createUserSchema), userController.createUser);
  *       404:
  *         description: User not found
  */
-router.get('/:id', validate(userIdParamSchema), userController.getUserById);
+router.get('/:id', authorize(['Admin', 'HR', 'TechLead']), validate(userIdParamSchema), userController.getUserById);
 
 /**
  * @openapi
@@ -160,7 +159,7 @@ router.get('/:id', validate(userIdParamSchema), userController.getUserById);
  *       404:
  *         description: User not found
  */
-router.put('/:id', validate(updateUserSchema), userController.updateUser);
+router.put('/:id', authorize(['Admin']), validate(updateUserSchema), userController.updateUser);
 
 /**
  * @openapi
@@ -181,7 +180,7 @@ router.put('/:id', validate(updateUserSchema), userController.updateUser);
  *       404:
  *         description: User not found
  */
-router.patch('/:id/lock', validate(userIdParamSchema), userController.lockUser);
+router.patch('/:id/lock', authorize(['Admin']), validate(userIdParamSchema), userController.lockUser);
 
 /**
  * @openapi
@@ -202,7 +201,7 @@ router.patch('/:id/lock', validate(userIdParamSchema), userController.lockUser);
  *       404:
  *         description: User not found
  */
-router.patch('/:id/unlock', validate(userIdParamSchema), userController.unlockUser);
+router.patch('/:id/unlock', authorize(['Admin']), validate(userIdParamSchema), userController.unlockUser);
 
 /**
  * @openapi
@@ -235,7 +234,7 @@ router.patch('/:id/unlock', validate(userIdParamSchema), userController.unlockUs
  *       404:
  *         description: User not found
  */
-router.post('/:id/reset-password', validate(resetPasswordSchema), userController.resetPassword);
+router.post('/:id/reset-password', authorize(['Admin']), validate(resetPasswordSchema), userController.resetPassword);
 
 /**
  * @openapi
@@ -268,6 +267,6 @@ router.post('/:id/reset-password', validate(resetPasswordSchema), userController
  *       404:
  *         description: User not found
  */
-router.patch('/:id/role', validate(changeRoleSchema), userController.changeRole);
+router.patch('/:id/role', authorize(['Admin']), validate(changeRoleSchema), userController.changeRole);
 
 export default router;

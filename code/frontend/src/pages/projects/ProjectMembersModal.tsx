@@ -122,46 +122,39 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
         <div>
           <h4 className="font-medium text-sm text-slate-800 mb-3">Danh sách thành viên ({members.length})</h4>
           
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="bg-slate-50 border border-slate-200 rounded-md overflow-hidden max-h-96 overflow-y-auto">
             {isLoading ? (
               <div className="p-8 text-center text-slate-500">Đang tải...</div>
             ) : members.length === 0 ? (
               <div className="p-8 text-center text-slate-500">Dự án chưa có thành viên nào</div>
             ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Nhân sự</th>
-                    <th className="px-4 py-3 font-medium">Vai trò</th>
-                    <th className="px-4 py-3 font-medium">Ngày tham gia</th>
-                    <th className="px-4 py-3 text-right font-medium">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {members.map(member => (
-                    <tr key={member.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-900">
-                        {member.user?.fullName}
-                      </td>
-                      <td className="px-4 py-3 text-slate-500">
-                        {member.user?.role}
-                      </td>
-                      <td className="px-4 py-3 text-slate-500">
-                        {new Date(member.joinedAt).toLocaleDateString('vi-VN')}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleRemoveMember(member.userId)}
-                        >
-                          <Trash2 size={16} className="text-red-500" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ul className="divide-y divide-slate-200">
+                {members.map(member => (
+                  <li key={member.id} className="p-3 flex items-center gap-3 hover:bg-white transition-colors">
+                    <img 
+                      src={member.user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.user?.fullName || 'User')}&background=random`} 
+                      alt={member.user?.fullName}
+                      className="w-8 h-8 rounded-full border border-slate-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{member.user?.fullName}</p>
+                      <p className="text-xs text-slate-500 truncate">{member.user?.email}</p>
+                    </div>
+                    <div className="text-xs text-slate-500 hidden sm:block">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded mr-2 font-medium">{member.user?.role}</span>
+                      Tham gia: {new Date(member.joinedAt).toLocaleDateString('vi-VN')}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.userId)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>

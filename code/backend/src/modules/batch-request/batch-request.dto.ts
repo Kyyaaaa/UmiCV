@@ -15,4 +15,22 @@ export const cancelBatchRequestSchema = z.object({
   }),
 });
 
+export const getBatchRequestsSchema = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    keyword: z.string().optional(),
+    status: z.enum(['Active', 'Cancelled']).optional(),
+  }),
+});
+
+export const getBatchRequestTargetsSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid batch ID format'),
+  }),
+  query: z.object({
+    status: z.enum(['Outdated', 'Updated']).optional(),
+  }),
+});
+
 export type CreateBatchRequestInput = z.infer<typeof createBatchRequestSchema>['body'];

@@ -66,14 +66,14 @@ export class CVService {
     return cv;
   }
 
-  async updateDraftById(id: string, userId: string, data: UpdateDraftInput) {
+  async updateDraftById(id: string, userId: string, role: string, data: UpdateDraftInput) {
     const existing = await prisma.cVProfile.findUnique({ where: { id } });
 
     if (!existing) {
       throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     }
 
-    if (existing.userId !== userId) {
+    if (existing.userId !== userId && !['HR', 'Admin'].includes(role)) {
       throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
     }
 
@@ -90,10 +90,18 @@ export class CVService {
     });
   }
 
-  async getCVVersions(cvId: string, userId: string) {
+  async getCVVersions(cvId: string, userId: string, role: string) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
-    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
 
     return prisma.cVVersionHistory.findMany({
       where: { cvProfileId: cvId },
@@ -106,10 +114,18 @@ export class CVService {
     });
   }
 
-  async getCVVersionById(cvId: string, versionId: string, userId: string) {
+  async getCVVersionById(cvId: string, versionId: string, userId: string, role: string) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
-    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
 
     const version = await prisma.cVVersionHistory.findUnique({
       where: { id: versionId },
@@ -122,10 +138,12 @@ export class CVService {
     return version;
   }
 
-  async restoreCVVersion(cvId: string, versionId: string, userId: string) {
+  async restoreCVVersion(cvId: string, versionId: string, userId: string, role: string) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
-    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    if (cv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
 
     if (cv.status === CVStatus.PendingApproval) {
       throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
@@ -148,7 +166,7 @@ export class CVService {
     });
   }
 
-  async publishCV(cvId: string, userId: string) {
+  async publishCV(cvId: string, userId: string, role: string) {
     const cv = await prisma.cVProfile.findUnique({
       where: { id: cvId },
       include: {
@@ -160,7 +178,9 @@ export class CVService {
     });
 
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
-    if (cv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    if (cv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
 
     if (cv.status === CVStatus.PendingApproval) {
       throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
@@ -200,12 +220,21 @@ export class CVService {
       const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
       where.userId = { in: memberIds };
       
-      // Exclude CVs already processed by another Tech Lead (First-Come, First-Serve)
-      where.approvalLogs = {
-        none: { level: 1 }
-      };
+      if (status === 'PendingApproval') {
+        const excludedRows = await prisma.$queryRaw<{id: string}[]>`
+          SELECT DISTINCT cv.id 
+          FROM cv_profiles cv
+          JOIN approval_logs al ON cv.id = al.cv_profile_id
+          WHERE al.level = 1 
+            AND cv.submitted_at IS NOT NULL
+            AND al.created_at >= cv.submitted_at
+        `;
+        const excludedIds = excludedRows.map(r => r.id);
+        if (excludedIds.length > 0) {
+          where.id = { notIn: excludedIds };
+        }
+      }
     }
-    // HR and Admin can see all
 
     if (status) {
       where.status = status;
@@ -298,10 +327,12 @@ export class CVService {
     return diffChanges;
   }
 
-  async copyLocalization(sourceCvId: string, targetLanguageCode: string, userId: string) {
+  async copyLocalization(sourceCvId: string, targetLanguageCode: string, userId: string, role: string) {
     const sourceCv = await prisma.cVProfile.findUnique({ where: { id: sourceCvId } });
     if (!sourceCv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
-    if (sourceCv.userId !== userId) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    if (sourceCv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
 
     let targetCv = await prisma.cVProfile.findUnique({
       where: {
