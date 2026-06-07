@@ -77,9 +77,9 @@ export class WorkflowService {
         throw new BadRequestError('CV đã được HR duyệt, không thể duyệt lại cấp 1.');
       }
 
-      const hasLevel1 = logs.some(l => l.level === 1 && l.action === ApprovalAction.Approve);
-      if (hasLevel1) {
-        throw new BadRequestError('CV đã được duyệt cấp 1, không thể duyệt lại.');
+      const hasProcessed = logs.some(l => l.level === 1);
+      if (hasProcessed) {
+        throw new BadRequestError('CV này đã được một Tech Lead khác xử lý.');
       }
     }
 
@@ -141,6 +141,20 @@ export class WorkflowService {
     }
 
     await this.verifyApproverScope(cv.userId, approverId, level);
+
+    const logs = await prisma.approvalLog.findMany({ 
+      where: { 
+        cvProfileId: cvId,
+        ...(cv.submittedAt ? { createdAt: { gte: cv.submittedAt } } : {})
+      } 
+    });
+
+    if (level === 1) {
+      const hasProcessed = logs.some(l => l.level === 1);
+      if (hasProcessed) {
+        throw new BadRequestError('CV này đã được một Tech Lead khác xử lý.');
+      }
+    }
 
     // Log rejection
     await prisma.approvalLog.create({

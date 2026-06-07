@@ -27,6 +27,7 @@ export function ApprovalDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [approveError, setApproveError] = useState('');
+  const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -50,6 +51,14 @@ export function ApprovalDetailPage() {
     }
   };
 
+  const showRaceConditionToast = () => {
+    setToastMessage({ title: 'Thao tác thất bại: CV này đã được một Tech Lead khác xử lý trước đó.', type: 'error' });
+    setTimeout(() => {
+      setToastMessage(null);
+      navigate('/workflow');
+    }, 2500);
+  };
+
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
@@ -61,7 +70,13 @@ export function ApprovalDetailPage() {
       navigate('/workflow');
     } catch (err: any) {
       console.error('Approve failed', err);
-      setApproveError(err.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt.');
+      const msg = err.response?.data?.message || '';
+      if (err.response?.status === 400 && (msg.includes('được duyệt') || msg.includes('khác xử lý') || msg.includes('trạng thái'))) {
+        setIsApproveOpen(false);
+        showRaceConditionToast();
+      } else {
+        setApproveError(msg || 'Có lỗi xảy ra khi phê duyệt.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -79,9 +94,15 @@ export function ApprovalDetailPage() {
       await workflowService.rejectCV(id, rejectReason);
       setIsRejectOpen(false);
       navigate('/workflow');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Reject failed', err);
-      setError('Có lỗi xảy ra khi từ chối');
+      const msg = err.response?.data?.message || '';
+      if (err.response?.status === 400 && (msg.includes('được duyệt') || msg.includes('khác xử lý') || msg.includes('trạng thái'))) {
+        setIsRejectOpen(false);
+        showRaceConditionToast();
+      } else {
+        setError(msg || 'Có lỗi xảy ra khi từ chối');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -93,6 +114,14 @@ export function ApprovalDetailPage() {
 
   return (
     <div>
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 rounded-md shadow-lg p-4 max-w-sm ${toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
+          <div className="flex items-start">
+            {toastMessage.type === 'error' ? <X className="h-5 w-5 mr-2 text-red-400" /> : <Check className="h-5 w-5 mr-2 text-green-400" />}
+            <p className="text-sm font-medium">{toastMessage.title}</p>
+          </div>
+        </div>
+      )}
       <div className="mb-4">
         <button 
           onClick={() => navigate('/workflow')}

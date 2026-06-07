@@ -59,5 +59,26 @@ describe('WorkflowService', () => {
       }));
       expect(prismaMock.$transaction).toHaveBeenCalled();
     });
+    it('should throw BadRequestError if another TechLead already processed CV (Race Condition)', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval, versionNumber: 0 } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'techlead-2', role: 'TechLead' } as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+
+      await expect(workflowService.approveCV('cv-1', 'techlead-2', { level: 1 }))
+        .rejects.toThrow('CV này đã được một Tech Lead khác xử lý.');
+    });
+  });
+
+  describe('rejectCV', () => {
+    it('should throw BadRequestError if another TechLead already processed CV (Race Condition)', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'techlead-2', role: 'TechLead' } as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+
+      await expect(workflowService.rejectCV('cv-1', 'techlead-2', { reason: 'Reject' }, 1))
+        .rejects.toThrow('CV này đã được một Tech Lead khác xử lý.');
+    });
   });
 });

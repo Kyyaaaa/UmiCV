@@ -199,6 +199,11 @@ export class CVService {
       });
       const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
       where.userId = { in: memberIds };
+      
+      // Exclude CVs already processed by another Tech Lead (First-Come, First-Serve)
+      where.approvalLogs = {
+        none: { level: 1 }
+      };
     }
     // HR and Admin can see all
 
