@@ -14,7 +14,13 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('error') === 'locked') {
+      return 'Phiên đăng nhập đã hết hạn hoặc tài khoản của bạn đã bị khóa bởi Quản trị viên.';
+    }
+    return null;
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -23,13 +23,15 @@ export class UserService {
     keyword?: string;
     role?: UserRole;
     status?: UserStatus;
+    departmentId?: string;
   }) {
-    const { page, limit, keyword, role, status } = params;
+    const { page, limit, keyword, role, status, departmentId } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.UserWhereInput = {
       ...(role && { role }),
       ...(status && { status }),
+      ...(departmentId && { departmentId }),
       ...(keyword && {
         OR: [
           { email: { contains: keyword, mode: 'insensitive' } },
@@ -126,7 +128,10 @@ export class UserService {
   }
 
   async lockUser(id: string) {
-    await this.getUserById(id);
+    const targetUser = await this.getUserById(id);
+    if (targetUser.role === 'Admin') {
+      throw new BadRequestError('Không thể khóa tài khoản Quản trị viên');
+    }
     const user = await prisma.user.update({
       where: { id },
       data: {

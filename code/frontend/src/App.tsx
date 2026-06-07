@@ -28,6 +28,8 @@ import { RoleRoute } from './routes/RoleRoute';
 
 // User Management
 import { UserListPage } from './pages/users/UserListPage';
+import { DepartmentListPage } from './pages/departments/DepartmentListPage';
+import { ProjectListPage } from './pages/projects/ProjectListPage';
 
 // Notifications & Profile
 import { NotificationCenterPage } from './pages/notifications/NotificationCenterPage';
@@ -56,7 +58,14 @@ const router = createBrowserRouter([
             ]
           },
           
-          { path: "users", element: <UserListPage /> },
+          {
+            element: <RoleRoute allowedRoles={['Admin']} />,
+            children: [
+              { path: "users", element: <UserListPage /> },
+              { path: "departments", element: <DepartmentListPage /> },
+              { path: "projects", element: <ProjectListPage /> },
+            ]
+          },
           
           { path: "notifications", element: <NotificationCenterPage /> },
           { path: "profile", element: <UserProfilePage /> }

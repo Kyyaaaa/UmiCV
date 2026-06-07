@@ -5,6 +5,8 @@ import {
   FileText, 
   CheckSquare, 
   Users, 
+  Building2,
+  FolderKanban,
   Bell, 
   User, 
   LogOut,
@@ -14,10 +16,12 @@ import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/auth.service';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/cv', icon: FileText, label: 'Quản lý CV' },
-  { to: '/workflow', icon: CheckSquare, label: 'Phê duyệt' },
-  { to: '/users', icon: Users, label: 'Nhân sự' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
+  { to: '/cv', icon: FileText, label: 'Quản lý CV', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
+  { to: '/workflow', icon: CheckSquare, label: 'Phê duyệt', roles: ['Admin', 'HR', 'TechLead'] },
+  { to: '/users', icon: Users, label: 'Nhân sự', roles: ['Admin'] },
+  { to: '/departments', icon: Building2, label: 'Phòng ban', roles: ['Admin'] },
+  { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin'] },
 ];
 
 export function PrivateLayout() {
@@ -51,7 +55,7 @@ export function PrivateLayout() {
           <h1 className="text-2xl font-bold tracking-tight text-blue-600">UmiCV</h1>
         </div>
         <nav className="flex flex-col gap-1 p-4">
-          {navItems.map((item) => (
+          {navItems.filter(item => !user || item.roles.includes(user.role)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

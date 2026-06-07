@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../../components/common/PageHeader';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { SearchBox } from '../../components/common/SearchBox';
@@ -6,28 +6,65 @@ import { FilterPanel } from '../../components/common/FilterPanel';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { mockUsers, mockDepartments } from '../../mocks/users.mock';
-import { User } from '../../types';
+import { User, Department } from '../../types';
 import { Plus, Edit2, Lock, Unlock } from 'lucide-react';
 import { UserFormModal } from './UserFormModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { userService } from '../../services/user.service';
+import { departmentService } from '../../services/department.service';
+import { useAuth } from '../../hooks/useAuth';
 
 export function UserListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [page, setPage] = useState(1);
   
+  const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
+  const { user: currentUser } = useAuth();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   const [isLockOpen, setIsLockOpen] = useState(false);
   const [userToLock, setUserToLock] = useState<User | null>(null);
 
-  const filteredUsers = mockUsers.filter(u => {
-    const matchesSearch = u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter ? u.role === roleFilter : true;
-    return matchesSearch && matchesRole;
-  });
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [searchTerm, roleFilter, page]);
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await departmentService.getDepartments();
+      setDepartments(res.data);
+    } catch (error) {
+      console.error('Failed to fetch departments:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const res = await userService.getUsers({
+        page,
+        limit: 10,
+        search: searchTerm,
+        role: roleFilter
+      });
+      setUsers(res.data || []);
+      setTotalItems(res.total || 0);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const columns: Column<User>[] = [
     {
@@ -50,7 +87,7 @@ export function UserListPage() {
     {
       key: 'department',
       header: 'Phòng ban',
-      render: (u) => mockDepartments.find(d => d.id === u.departmentId)?.name || '-',
+      render: (u) => departments.find(d => d.id === u.departmentId)?.name || '-',
     },
     {
       key: 'role',
@@ -77,6 +114,8 @@ export function UserListPage() {
           <Button 
             variant="ghost" 
             size="sm" 
+            disabled={u.id === currentUser?.id || u.role === 'Admin'}
+            title={u.id === currentUser?.id ? "Không thể khóa tài khoản của chính mình" : (u.role === 'Admin' ? "Không thể khóa tài khoản Quản trị viên" : (u.status === 'Active' ? 'Khóa' : 'Mở khóa'))}
             onClick={(e) => { 
               e.stopPropagation(); 
               setUserToLock(u); 
@@ -84,8 +123,8 @@ export function UserListPage() {
             }}
           >
             {u.status === 'Active' 
-              ? <Lock size={16} className="text-red-500" /> 
-              : <Unlock size={16} className="text-green-500" />
+              ? <Lock size={16} className={u.id === currentUser?.id || u.role === 'Admin' ? "text-slate-300" : "text-red-500"} /> 
+              : <Unlock size={16} className={u.id === currentUser?.id || u.role === 'Admin' ? "text-slate-300" : "text-green-500"} />
             }
           </Button>
         </div>
@@ -96,11 +135,24 @@ export function UserListPage() {
   const handleSaveUser = () => {
     setIsFormOpen(false);
     setSelectedUser(null);
+    fetchUsers(); // Refresh list after save
   };
 
-  const handleToggleLock = () => {
-    setIsLockOpen(false);
-    setUserToLock(null);
+  const handleToggleLock = async () => {
+    if (!userToLock) return;
+    try {
+      if (userToLock.status === 'Active') {
+        await userService.lockUser(userToLock.id);
+      } else {
+        await userService.unlockUser(userToLock.id);
+      }
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to toggle lock status:', error);
+    } finally {
+      setIsLockOpen(false);
+      setUserToLock(null);
+    }
   };
 
   return (
@@ -135,16 +187,45 @@ export function UserListPage() {
         </div>
       </FilterPanel>
 
-      <DataTable
-        columns={columns}
-        data={filteredUsers}
-        keyExtractor={(item) => item.id}
-      />
+      <div className={isLoading ? "opacity-50 pointer-events-none" : ""}>
+        <DataTable
+          columns={columns}
+          data={users}
+          keyExtractor={(item) => item.id}
+        />
+        
+        {totalItems > 0 && (
+          <div className="mt-4 flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-lg">
+            <div className="text-sm text-slate-500">
+              Hiển thị <span className="font-medium">{(page - 1) * 10 + 1}</span> đến <span className="font-medium">{Math.min(page * 10, totalItems)}</span> trong <span className="font-medium">{totalItems}</span> nhân sự
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Trước
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page * 10 >= totalItems}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <UserFormModal 
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         user={selectedUser}
+        departments={departments}
         onSave={handleSaveUser}
       />
 

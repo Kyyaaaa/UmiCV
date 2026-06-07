@@ -15,38 +15,38 @@ export const customZodErrorMap: z.ZodErrorMap = (issue, ctx) => {
     case z.ZodIssueCode.invalid_string:
       if (typeof issue.validation === 'string') {
         if (issue.validation === 'email') {
-          message = 'Email không đúng định dạng';
+          message = 'không đúng định dạng email';
         } else if (issue.validation === 'uuid') {
-          message = 'Định dạng UUID không hợp lệ';
+          message = 'không hợp lệ';
         } else {
-          message = `Dữ liệu không hợp lệ (${issue.validation})`;
+          message = `không hợp lệ (${issue.validation})`;
         }
       } else {
-        message = 'Chuỗi không đúng định dạng';
+        message = 'không đúng định dạng';
       }
       break;
 
     case z.ZodIssueCode.too_small:
       if (issue.type === 'string') {
-        message = `Chuỗi phải chứa ít nhất ${issue.minimum} ký tự`;
+        message = `phải chứa ít nhất ${issue.minimum} ký tự`;
       } else if (issue.type === 'number') {
-        message = `Giá trị phải lớn hơn hoặc bằng ${issue.minimum}`;
+        message = `phải lớn hơn hoặc bằng ${issue.minimum}`;
       } else if (issue.type === 'array') {
-        message = `Mảng phải chứa ít nhất ${issue.minimum} phần tử`;
+        message = `phải chứa ít nhất ${issue.minimum} phần tử`;
       } else {
-        message = 'Giá trị quá nhỏ';
+        message = 'quá nhỏ';
       }
       break;
 
     case z.ZodIssueCode.too_big:
       if (issue.type === 'string') {
-        message = `Chuỗi chứa tối đa ${issue.maximum} ký tự`;
+        message = `chỉ được chứa tối đa ${issue.maximum} ký tự`;
       } else if (issue.type === 'number') {
-        message = `Giá trị phải nhỏ hơn hoặc bằng ${issue.maximum}`;
+        message = `phải nhỏ hơn hoặc bằng ${issue.maximum}`;
       } else if (issue.type === 'array') {
-        message = `Mảng chứa tối đa ${issue.maximum} phần tử`;
+        message = `chỉ được chứa tối đa ${issue.maximum} phần tử`;
       } else {
-        message = 'Giá trị quá lớn';
+        message = 'quá lớn';
       }
       break;
 

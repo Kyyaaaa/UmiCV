@@ -37,6 +37,8 @@ import cvRoutes from './modules/cv/cv.route';
 import workflowRoutes from './modules/workflow/workflow.route';
 import batchRequestRoutes from './modules/batch-request/batch-request.route';
 import userRoutes from './modules/user/user.route';
+import departmentRoutes from './modules/department/department.route';
+import projectRoutes from './modules/project/project.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -44,6 +46,8 @@ app.use('/api/cvs', cvRoutes);
 app.use('/api/cvs', workflowRoutes); 
 app.use('/api/batch-requests', batchRequestRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Error Handling
 app.use(errorHandler);

@@ -16,6 +16,25 @@ export interface Department {
   name: string;
   code: string;
   parentDepartmentId: string | null;
+  children?: Department[]; // For tree structure
+  childDepartments?: Department[]; // Added by backend getDepartmentTree
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  code: string;
+  techLeadId: string;
+  techLead?: User; // joined relation
+  createdAt?: string;
+}
+
+export interface ProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  user?: User; // joined relation
+  joinedAt: string;
 }
 
 export type CVStatus = 'Draft' | 'PendingApproval' | 'Outdated' | 'Updated' | 'Cancelled';

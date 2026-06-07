@@ -6,7 +6,14 @@ const userService = new UserService();
 
 export class UserController {
   async getUsers(req: Request, res: Response) {
-    const result = await userService.getUsers(req.query as any);
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const keyword = req.query.keyword as string;
+    const role = req.query.role as any;
+    const status = req.query.status as any;
+    const departmentId = req.query.departmentId as string;
+
+    const result = await userService.getUsers({ page, limit, keyword, role, status, departmentId });
     res.status(200).json({ success: true, ...result });
   }
 
@@ -25,7 +32,10 @@ export class UserController {
     res.status(200).json({ success: true, data: result });
   }
 
-  async lockUser(req: Request, res: Response) {
+  async lockUser(req: any, res: Response) {
+    if (req.user?.userId === req.params.id) {
+      return res.status(400).json({ success: false, message: 'Bạn không thể khóa tài khoản của chính mình.' });
+    }
     const result = await userService.lockUser(req.params.id);
     res.status(200).json({ success: true, message: MESSAGES.USER.LOCK_SUCCESS, data: result });
   }

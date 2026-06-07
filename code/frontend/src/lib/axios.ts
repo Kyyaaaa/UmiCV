@@ -21,6 +21,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    // Check if account is locked
+    if (error.response?.status === 401 && error.response?.data?.message === 'Tài khoản của bạn đã bị khóa') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login?error=locked';
+      return Promise.reject(error);
+    }
+
     // Handle 401 Unauthorized errors and refresh token logic
     if (
       error.response?.status === 401 && 

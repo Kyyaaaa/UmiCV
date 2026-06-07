@@ -8,6 +8,7 @@ export const queryUsersSchema = z.object({
     keyword: z.string().optional(),
     role: z.nativeEnum(UserRole).optional(),
     status: z.nativeEnum(UserStatus).optional(),
+    departmentId: z.string().uuid().optional(),
   }),
 });
 
