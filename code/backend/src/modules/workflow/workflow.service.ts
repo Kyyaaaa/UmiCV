@@ -1,6 +1,6 @@
 import prisma from '../../config/db';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
-import { CVStatus, ApprovalAction } from '@prisma/client';
+import { CVStatus, ApprovalAction, TargetStatus, BatchRequestStatus } from '@prisma/client';
 import { ApproveInput, RejectInput, SubmitDraftInput } from './workflow.dto';
 import { MESSAGES } from '../../constants/messages';
 
@@ -112,8 +112,18 @@ export class WorkflowService {
     // If level 2 (HR), we publish
     if (data.level === 2) {
       const updatedVersion = cv.versionNumber + 1;
-      
-      await prisma.$transaction([
+
+      const activeTargets = await prisma.batchRequestTarget.findMany({
+        where: {
+          userId: cv.userId,
+          status: TargetStatus.Outdated,
+          batchRequest: { status: BatchRequestStatus.Active }
+        },
+        select: { batchRequestId: true }
+      });
+      const batchIds = activeTargets.map(t => t.batchRequestId);
+
+      const transactions: any[] = [
         prisma.cVProfile.update({
           where: { id: cvId },
           data: {
@@ -128,8 +138,25 @@ export class WorkflowService {
             versionNumber: updatedVersion,
             snapshotData: cv.sectionsData as any,
           },
-        }),
-      ]);
+        })
+      ];
+
+      if (batchIds.length > 0) {
+        transactions.push(
+          prisma.batchRequestTarget.updateMany({
+            where: {
+              userId: cv.userId,
+              batchRequestId: { in: batchIds }
+            },
+            data: { 
+              status: TargetStatus.Updated, 
+              updatedAt: new Date() 
+            }
+          })
+        );
+      }
+      
+      await prisma.$transaction(transactions);
     }
 
     return { message: MESSAGES.WORKFLOW.APPROVE_SUCCESS };

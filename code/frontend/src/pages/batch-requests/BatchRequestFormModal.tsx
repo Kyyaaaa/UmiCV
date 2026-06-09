@@ -80,6 +80,12 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
     setSelectedUsers(next);
   };
 
+  const getLocalMinTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,6 +96,11 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
     
     if (!formData.deadline) {
       setError('Vui lòng chọn hạn chót cho chiến dịch');
+      return;
+    }
+
+    if (new Date(formData.deadline).getTime() <= Date.now()) {
+      setError('Hạn chót phải lớn hơn thời gian hiện tại');
       return;
     }
     
@@ -154,6 +165,7 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
             <Input 
               label="Hạn chót (*)" 
               type="datetime-local"
+              min={getLocalMinTime()}
               value={formData.deadline}
               onChange={e => setFormData({...formData, deadline: e.target.value})}
             />
