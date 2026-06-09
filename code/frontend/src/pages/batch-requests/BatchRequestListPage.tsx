@@ -80,7 +80,7 @@ export function BatchRequestListPage() {
         return (
           <div className="w-48">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-600">{req.completedCount} / {req.targetCount} hoàn thành</span>
+              <span className="text-slate-600">{req.completedCount} / {req.targetCount} Hoàn thành</span>
               <span className="font-medium">{percent}%</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-1.5">

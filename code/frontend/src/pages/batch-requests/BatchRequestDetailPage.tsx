@@ -157,7 +157,7 @@ export function BatchRequestDetailPage() {
         </div>
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
           <p className="text-sm text-slate-500 mb-1">Tiến độ tổng quan</p>
-          <p className="text-lg font-medium text-blue-600">{request.completedCount} / {request.targetCount} hoàn thành</p>
+          <p className="text-lg font-medium text-blue-600">{request.completedCount} / {request.targetCount} Hoàn thành</p>
         </div>
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
           <p className="text-sm text-slate-500 mb-1">Ngày tạo</p>

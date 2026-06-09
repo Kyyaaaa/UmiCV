@@ -62,7 +62,18 @@ export class BatchRequestService {
       }),
     ]);
 
-    return { total, page, limit, data };
+    const dataWithCounts = await Promise.all(data.map(async (batch) => {
+      const completedCount = await prisma.batchRequestTarget.count({
+        where: { batchRequestId: batch.id, status: 'Updated' }
+      });
+      return {
+        ...batch,
+        targetCount: batch._count.targets,
+        completedCount
+      };
+    }));
+
+    return { total, page, limit, data: dataWithCounts };
   }
 
   async getBatchRequestTargets(batchId: string, params: { status?: string }) {
