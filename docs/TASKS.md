@@ -160,3 +160,67 @@ Giai đoạn này tập trung vào việc định hình lại Role-Based Access 
   - Đăng nhập dưới quyền Admin: Thử sửa một bản nháp CV của nhân viên khác. Thử thao tác duyệt CV trực tiếp cấp 1 và cấp 2.
 - [x] **TASK-5.6: Kiểm thử phân quyền của Tech Lead**
   - Đăng nhập dưới quyền Tech Lead: Kiểm tra chỉ xem được CV của nhân viên trong dự án. Thử duyệt một CV đang ở trạng thái PendingApproval và đảm bảo log lưu đúng level 1.
+
+---
+
+## 👤 Phase 1.6: Chức năng Tự quản lý Hồ sơ Cá nhân (User Profile Self-Management)
+
+Phần này bổ sung tính năng cho phép người dùng (tất cả các Role) có thể tự xem và chỉnh sửa thông tin cá nhân cơ bản của chính mình (như đổi mật khẩu, thông tin liên hệ, v.v.).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-1.17: Xây dựng API lấy thông tin cá nhân (`GET /api/users/me`)**
+  - Xây dựng endpoint `GET /api/users/me` dựa vào `userId` lấy từ JWT token (Auth Middleware).
+  - Trả về thông tin của User hiện tại kèm theo thông tin `Department` tương ứng (Join với bảng departments). Loại bỏ `password_hash` khỏi kết quả.
+- [x] **TASK-1.18: Xây dựng API tự cập nhật thông tin (`PUT /api/users/me` và `PUT /api/users/me/password`)**
+  - Xây dựng endpoint `PUT /api/users/me`: Cho phép user sửa các thông tin cơ bản (không bao gồm role và department_id để tránh leo thang đặc quyền).
+  - Xây dựng endpoint `PUT /api/users/me/password`: Yêu cầu nhập mật khẩu cũ (oldPassword) và mật khẩu mới (newPassword). Validate mã hóa bcrypt trước khi đổi.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-1.19: Giao diện Trang Cá Nhân (Profile Page)**
+  - Xây dựng trang `/profile` có thể truy cập được từ Menu người dùng (Avatar Dropdown góc phải trên cùng).
+  - Tích hợp API `GET /api/users/me` để hiển thị thông tin Read-only (Role, Phòng ban) và thông tin có thể sửa.
+  - Tích hợp API `PUT /api/users/me` vào Form lưu thông tin.
+- [x] **TASK-1.20: Giao diện Đổi Mật Khẩu (Change Password Modal/Tab)**
+  - Xây dựng form đổi mật khẩu bao gồm 3 trường: Mật khẩu hiện tại, Mật khẩu mới, Xác nhận mật khẩu mới.
+  - Tích hợp API `PUT /api/users/me/password`, xử lý báo lỗi nếu sai mật khẩu cũ.
+  - Xử lý hành động: Tự động Logout hoặc giữ nguyên đăng nhập sau khi đổi thành công (tùy theo logic bảo mật của hệ thống).
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-1.21: Kiểm thử bảo mật & Leo thang đặc quyền**
+  - Đăng nhập với tư cách Employee. Gọi API `PUT /api/users/me` qua Postman, cố tình truyền thêm trường `role: "Admin"` hoặc đổi `department_id`.
+  - Xác nhận Backend chặn các trường này và không thực sự cập nhật vào DB.
+- [x] **TASK-1.22: Kiểm thử luồng Đổi mật khẩu (E2E)**
+  - Sử dụng UI trang Profile đổi mật khẩu mới.
+  - Đăng xuất ra và thử đăng nhập lại bằng mật khẩu cũ (Đảm bảo thất bại). Đăng nhập lại bằng mật khẩu mới (Đảm bảo thành công).
+
+---
+
+## 🛠️ Phase 6: Tối ưu hóa Error Message & Inline Validation (UX Refactoring)
+
+Giai đoạn này tập trung vào việc làm rõ các thông báo lỗi từ Backend và nâng cấp trải nghiệm người dùng (UX) trên Frontend bằng cách hiển thị lỗi trực tiếp dưới từng ô nhập liệu (Inline Validation).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-6.1: Cập nhật Error Middleware**
+  - Trong `error.middleware.ts`, sửa logic xử lý `ZodError`. Lấy lỗi đầu tiên trong mảng `err.errors` để làm `message` chính cấp cao nhất trả về cho Frontend (VD: `"Lỗi tại trường email: không đúng định dạng email"`).
+- [x] **TASK-6.2: Cập nhật Global Zod Error Map**
+  - Trong `zod.ts`, Việt hóa và làm rõ nghĩa các câu thông báo ở nhánh `default` và `custom` (thay cho chữ "Dữ liệu không hợp lệ" chung chung).
+- [x] **TASK-6.3: Tinh chỉnh Business Logic Errors trong Services**
+  - Rà soát các `BadRequestError` trong các service (VD: `project.service.ts`, `department.service.ts`). Thêm thông tin định danh (ID, mã code) vào thông báo lỗi để người dùng biết chính xác đối tượng nào đang bị lỗi (Lưu ý: Ngoại trừ lỗi Đăng nhập).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-6.4: Hỗ trợ đọc mảng `errors` từ API Response**
+  - Đảm bảo cơ chế Axios hoặc Form Submit có thể lấy được mảng `errors` (chứa `field` và `message`) từ payload 400 Bad Request của Backend.
+- [x] **TASK-6.5: Triển khai Inline Validation trên các Form chính**
+  - Cập nhật các Form quan trọng (Tạo User, Sửa Profile, Quản lý Phòng ban, Tạo Chiến dịch) để ánh xạ trường `field` bị lỗi vào ô Input tương ứng, hiển thị text đỏ bên dưới ô nhập liệu.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-6.6: Kiểm thử luồng Inline Validation**
+  - Cố tình nhập sai định dạng email hoặc thiếu trường bắt buộc trên Form. Xác nhận UI hiển thị đúng lỗi dưới ô input tương ứng thay vì chỉ hiển thị một Toast "Dữ liệu không hợp lệ".
+- [x] **TASK-6.7: Kiểm thử Business Error Messages**
+  - Thử các nghiệp vụ lỗi như thêm User không tồn tại vào Project. Xác nhận Toast báo lỗi chứa thông điệp có định danh cụ thể của User đó.

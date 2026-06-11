@@ -50,11 +50,11 @@ export class ProjectService {
 
   async createProject(data: CreateProjectInput) {
     const existing = await prisma.project.findUnique({ where: { code: data.code } });
-    if (existing) throw new BadRequestError('Mã dự án đã tồn tại.');
+    if (existing) throw new BadRequestError(`Mã dự án đã tồn tại (${data.code}).`);
 
     const techLead = await prisma.user.findUnique({ where: { id: data.techLeadId } });
-    if (!techLead) throw new BadRequestError('Tech Lead không tồn tại.');
-    if (techLead.role !== 'TechLead') throw new BadRequestError('User được chọn không phải là Tech Lead.');
+    if (!techLead) throw new BadRequestError(`Tech Lead không tồn tại (ID: ${data.techLeadId}).`);
+    if (techLead.role !== 'TechLead') throw new BadRequestError(`User được chọn không phải là Tech Lead (ID: ${data.techLeadId}).`);
 
     return prisma.project.create({ data });
   }
@@ -64,13 +64,13 @@ export class ProjectService {
 
     if (data.code) {
       const existing = await prisma.project.findUnique({ where: { code: data.code } });
-      if (existing && existing.id !== id) throw new BadRequestError('Mã dự án đã tồn tại.');
+      if (existing && existing.id !== id) throw new BadRequestError(`Mã dự án đã tồn tại (${data.code}).`);
     }
 
     if (data.techLeadId) {
       const techLead = await prisma.user.findUnique({ where: { id: data.techLeadId } });
-      if (!techLead) throw new BadRequestError('Tech Lead không tồn tại.');
-      if (techLead.role !== 'TechLead') throw new BadRequestError('User được chọn không phải là Tech Lead.');
+      if (!techLead) throw new BadRequestError(`Tech Lead không tồn tại (ID: ${data.techLeadId}).`);
+      if (techLead.role !== 'TechLead') throw new BadRequestError(`User được chọn không phải là Tech Lead (ID: ${data.techLeadId}).`);
     }
 
     return prisma.project.update({
@@ -108,7 +108,7 @@ export class ProjectService {
     });
 
     if (users.length !== data.userIds.length) {
-      throw new BadRequestError('Một hoặc nhiều user không tồn tại hoặc đã bị khóa.');
+      throw new BadRequestError('Một hoặc nhiều user không tồn tại hoặc đã bị khóa (Vui lòng kiểm tra lại danh sách ID).');
     }
 
     // Insert ignore/upsert using Prisma createMany (PostgreSQL specific skipDuplicates)
@@ -131,7 +131,7 @@ export class ProjectService {
     });
 
     if (!member) {
-      throw new BadRequestError('User không nằm trong dự án này.');
+      throw new BadRequestError(`User không nằm trong dự án này (UserID: ${userId}).`);
     }
 
     await prisma.projectMember.delete({

@@ -15,7 +15,7 @@ describe('BatchRequestService', () => {
     it('should return paginated batch requests', async () => {
       prismaMock.batchRequest.count.mockResolvedValue(1);
       prismaMock.batchRequest.findMany.mockResolvedValue([
-        { id: 'batch-1', title: 'Update CV' } as any
+        { id: 'batch-1', title: 'Update CV', _count: { targets: 0 } } as any
       ]);
 
       const result = await service.getBatchRequests({ page: 1, limit: 10 });

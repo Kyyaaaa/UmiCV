@@ -5,6 +5,7 @@ import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { User, Department } from '../../types';
 import { userService } from '../../services/user.service';
+import { handleApiError } from '../../utils/error.util';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
   const isEdit = Boolean(user);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     username: '',
@@ -49,6 +51,7 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
       });
     }
     setError('');
+    setFieldErrors({});
   }, [user, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,24 +72,9 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
       }
       onSave();
     } catch (err: any) {
-      if (err.response?.data?.errors && err.response.data.errors.length > 0) {
-        const fieldLabels: Record<string, string> = {
-          username: 'Tên đăng nhập',
-          email: 'Email',
-          fullName: 'Họ và tên',
-          password: 'Mật khẩu',
-          departmentId: 'Phòng ban',
-          role: 'Vai trò'
-        };
-        const detailErrors = err.response.data.errors.map((e: any) => {
-          const rawField = e.field.replace(/^(body\.|query\.|params\.)/, '');
-          const label = fieldLabels[rawField] || rawField;
-          return `${label} ${e.message}`;
-        }).join(', ');
-        setError(`${err.response?.data?.message} - Chi tiết: ${detailErrors}`);
-      } else {
-        setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu nhân sự');
-      }
+      const { globalError, fieldErrors } = handleApiError(err, 'Có lỗi xảy ra khi lưu nhân sự');
+      setError(globalError);
+      setFieldErrors(fieldErrors);
     } finally {
       setIsLoading(false);
     }
@@ -110,21 +98,29 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
       }
     >
       <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+        {error && Object.keys(fieldErrors).length === 0 && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input 
             label="Họ và tên" 
             required 
             value={formData.fullName}
-            onChange={e => setFormData({...formData, fullName: e.target.value})}
+            error={fieldErrors.fullName}
+            onChange={e => {
+              setFormData({...formData, fullName: e.target.value});
+              if (fieldErrors.fullName) setFieldErrors({...fieldErrors, fullName: ''});
+            }}
           />
           <Input 
             label="Tên đăng nhập" 
             required 
             value={formData.username}
+            error={fieldErrors.username}
             readOnly={isEdit}
             disabled={isEdit}
-            onChange={e => setFormData({...formData, username: e.target.value})}
+            onChange={e => {
+              setFormData({...formData, username: e.target.value});
+              if (fieldErrors.username) setFieldErrors({...fieldErrors, username: ''});
+            }}
           />
         </div>
         <Input 
@@ -132,7 +128,11 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
           label="Email" 
           required 
           value={formData.email}
-          onChange={e => setFormData({...formData, email: e.target.value})}
+          error={fieldErrors.email}
+          onChange={e => {
+            setFormData({...formData, email: e.target.value});
+            if (fieldErrors.email) setFieldErrors({...fieldErrors, email: ''});
+          }}
         />
         {!isEdit && (
           <Input 
@@ -140,7 +140,11 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
             label="Mật khẩu (Tối thiểu 6 ký tự)" 
             required 
             value={formData.password}
-            onChange={e => setFormData({...formData, password: e.target.value})}
+            error={fieldErrors.password}
+            onChange={e => {
+              setFormData({...formData, password: e.target.value});
+              if (fieldErrors.password) setFieldErrors({...fieldErrors, password: ''});
+            }}
           />
         )}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -148,7 +152,11 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
             label="Phòng ban" 
             required
             value={formData.departmentId}
-            onChange={e => setFormData({...formData, departmentId: e.target.value})}
+            error={fieldErrors.departmentId}
+            onChange={e => {
+              setFormData({...formData, departmentId: e.target.value});
+              if (fieldErrors.departmentId) setFieldErrors({...fieldErrors, departmentId: ''});
+            }}
             options={[
               { value: '', label: 'Chọn phòng ban...' },
               ...departments.map(d => ({ value: d.id, label: d.name }))
@@ -158,7 +166,11 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
             label="Vai trò" 
             required
             value={formData.role}
-            onChange={e => setFormData({...formData, role: e.target.value})}
+            error={fieldErrors.role}
+            onChange={e => {
+              setFormData({...formData, role: e.target.value});
+              if (fieldErrors.role) setFieldErrors({...fieldErrors, role: ''});
+            }}
             options={[
               { value: 'Admin', label: 'Quản trị viên' },
               { value: 'HR', label: 'Nhân sự (HR)' },

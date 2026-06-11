@@ -59,11 +59,11 @@ export const customZodErrorMap: z.ZodErrorMap = (issue, ctx) => {
       break;
 
     case z.ZodIssueCode.custom:
-      message = issue.message || 'Dữ liệu không hợp lệ';
+      message = issue.message || 'Lỗi dữ liệu tùy chỉnh (không thỏa mãn điều kiện nghiệp vụ)';
       break;
 
     default:
-      message = ctx.defaultError || 'Dữ liệu không hợp lệ';
+      message = ctx.defaultError || 'Định dạng dữ liệu không được hỗ trợ hoặc không hợp lệ';
   }
 
   return { message };

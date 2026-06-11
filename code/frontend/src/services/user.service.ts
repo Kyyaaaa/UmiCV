@@ -52,5 +52,20 @@ export const userService = {
   unlockUser: async (id: string): Promise<ApiResponse<User>> => {
     const response = await apiClient.patch<ApiResponse<User>>(`/users/${id}/unlock`);
     return response.data;
+  },
+
+  getMe: async (): Promise<ApiResponse<User>> => {
+    const response = await apiClient.get<ApiResponse<User>>('/users/me');
+    return response.data;
+  },
+
+  updateMe: async (data: any): Promise<ApiResponse<User>> => {
+    const response = await apiClient.put<ApiResponse<User>>('/users/me', data);
+    return response.data;
+  },
+
+  updatePassword: async (data: any): Promise<ApiResponse<any>> => {
+    const response = await apiClient.put<ApiResponse<any>>('/users/me/password', data);
+    return response.data;
   }
 };

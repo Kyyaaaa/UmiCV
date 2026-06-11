@@ -7,6 +7,7 @@ import { batchRequestService } from '../../services/batch-request.service';
 import { departmentService } from '../../services/department.service';
 import { userService } from '../../services/user.service';
 import { Department, User } from '../../types';
+import { handleApiError } from '../../utils/error.util';
 
 interface BatchRequestFormModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface BatchRequestFormModalProps {
 export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestFormModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     title: '',
@@ -41,6 +43,7 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
       setSelectedDeptId('');
       setAvailableUsers([]);
       setError('');
+      setFieldErrors({});
       
       departmentService.getDepartmentTree().then(res => {
         const flatten = (depts: Department[], level = 0): any[] => {
@@ -91,16 +94,19 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
     
     if (!formData.title.trim()) {
       setError('Vui lòng nhập tên chiến dịch');
+      setFieldErrors({ title: 'Tên chiến dịch không được để trống' });
       return;
     }
     
     if (!formData.deadline) {
       setError('Vui lòng chọn hạn chót cho chiến dịch');
+      setFieldErrors({ deadline: 'Hạn chót không được để trống' });
       return;
     }
 
     if (new Date(formData.deadline).getTime() <= Date.now()) {
       setError('Hạn chót phải lớn hơn thời gian hiện tại');
+      setFieldErrors({ deadline: 'Hạn chót không hợp lệ' });
       return;
     }
     
@@ -121,12 +127,9 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
       });
       onSave();
     } catch (err: any) {
-      if (err.response?.data?.errors && err.response.data.errors.length > 0) {
-        const detailErrors = err.response.data.errors.map((e: any) => e.message).join(', ');
-        setError(`${err.response?.data?.message} - Chi tiết: ${detailErrors}`);
-      } else {
-        setError(err.response?.data?.message || 'Có lỗi xảy ra khi tạo chiến dịch');
-      }
+      const { globalError, fieldErrors: apiFieldErrors } = handleApiError(err, 'Có lỗi xảy ra khi tạo chiến dịch');
+      setError(globalError);
+      setFieldErrors(apiFieldErrors);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +153,7 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
       }
     >
       <form id="batch-request-form" onSubmit={handleSubmit} className="space-y-6">
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200">{error}</div>}
+        {error && Object.keys(fieldErrors).length === 0 && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200">{error}</div>}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-1 md:col-span-2">
@@ -158,7 +161,11 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
               label="Tên chiến dịch (*)" 
               placeholder="VD: Cập nhật CV đợt đánh giá Q3/2026"
               value={formData.title}
-              onChange={e => setFormData({...formData, title: e.target.value})}
+              error={fieldErrors.title}
+              onChange={e => {
+                setFormData({...formData, title: e.target.value});
+                if (fieldErrors.title) setFieldErrors({...fieldErrors, title: ''});
+              }}
             />
           </div>
           <div className="col-span-1">
@@ -167,7 +174,11 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
               type="datetime-local"
               min={getLocalMinTime()}
               value={formData.deadline}
-              onChange={e => setFormData({...formData, deadline: e.target.value})}
+              error={fieldErrors.deadline}
+              onChange={e => {
+                setFormData({...formData, deadline: e.target.value});
+                if (fieldErrors.deadline) setFieldErrors({...fieldErrors, deadline: ''});
+              }}
             />
           </div>
           <div className="col-span-1 md:col-span-2">
@@ -175,7 +186,11 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
               label="Mô tả (Không bắt buộc)" 
               placeholder="Ghi chú thêm về chiến dịch này"
               value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
+              error={fieldErrors.description}
+              onChange={e => {
+                setFormData({...formData, description: e.target.value});
+                if (fieldErrors.description) setFieldErrors({...fieldErrors, description: ''});
+              }}
             />
           </div>
         </div>

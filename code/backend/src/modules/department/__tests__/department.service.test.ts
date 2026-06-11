@@ -49,8 +49,9 @@ describe('DepartmentService', () => {
       prismaMock.department.findUnique.mockResolvedValue({ id: 'dep-1' } as any);
       prismaMock.user.count.mockResolvedValue(1);
 
-      await expect(service.deleteDepartment('dep-1'))
-        .rejects.toThrow('Không thể xóa phòng ban đang có nhân viên trực thuộc.');
+      await expect(service.deleteDepartment('dep-1')).rejects.toThrow(
+        'Không thể xóa phòng ban đang có nhân viên trực thuộc (DepartmentID: dep-1).'
+      );
     });
   });
 });

@@ -174,4 +174,36 @@ export class UserService {
     });
     return exclude(user, ['passwordHash']);
   }
+
+  async updateMe(id: string, data: { fullName?: string; email?: string }) {
+    await this.getUserById(id);
+    if (data.email) {
+      const existing = await prisma.user.findUnique({ where: { email: data.email } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestError('Email đã được sử dụng bởi người khác');
+      }
+    }
+    const user = await prisma.user.update({
+      where: { id },
+      data,
+    });
+    return exclude(user, ['passwordHash']);
+  }
+
+  async changeMyPassword(id: string, oldPassword: string, newPassword: string) {
+    const user = await prisma.user.findUnique({ where: { id, deletedAt: null } });
+    if (!user) throw new NotFoundError(MESSAGES.USER.NOT_FOUND);
+
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch) throw new BadRequestError('Mật khẩu hiện tại không chính xác');
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+    return exclude(updatedUser, ['passwordHash']);
+  }
 }

@@ -5,6 +5,7 @@ import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { Department } from '../../types';
 import { departmentService } from '../../services/department.service';
+import { handleApiError } from '../../utils/error.util';
 
 interface DepartmentFormModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function DepartmentFormModal({ isOpen, onClose, department, departmentsLi
   const isEdit = Boolean(department);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<{name: string, code: string, parentDepartmentId: string}>({
     name: '',
@@ -40,6 +42,7 @@ export function DepartmentFormModal({ isOpen, onClose, department, departmentsLi
       });
     }
     setError('');
+    setFieldErrors({});
   }, [department, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,21 +64,9 @@ export function DepartmentFormModal({ isOpen, onClose, department, departmentsLi
       }
       onSave();
     } catch (err: any) {
-      if (err.response?.data?.errors && err.response.data.errors.length > 0) {
-        const fieldLabels: Record<string, string> = {
-          name: 'Tên phòng ban',
-          code: 'Mã phòng ban',
-          parentDepartmentId: 'Phòng ban cha'
-        };
-        const detailErrors = err.response.data.errors.map((e: any) => {
-          const rawField = e.field.replace(/^(body\.|query\.|params\.)/, '');
-          const label = fieldLabels[rawField] || rawField;
-          return `${label} ${e.message}`;
-        }).join(', ');
-        setError(`${err.response?.data?.message} - Chi tiết: ${detailErrors}`);
-      } else {
-        setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu phòng ban');
-      }
+      const { globalError, fieldErrors: apiFieldErrors } = handleApiError(err, 'Có lỗi xảy ra khi lưu phòng ban');
+      setError(globalError);
+      setFieldErrors(apiFieldErrors);
     } finally {
       setIsLoading(false);
     }
@@ -102,26 +93,38 @@ export function DepartmentFormModal({ isOpen, onClose, department, departmentsLi
       }
     >
       <form id="department-form" onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+        {error && Object.keys(fieldErrors).length === 0 && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
         
         <Input 
           label="Tên phòng ban" 
           required 
           value={formData.name}
-          onChange={e => setFormData({...formData, name: e.target.value})}
+          error={fieldErrors.name}
+          onChange={e => {
+            setFormData({...formData, name: e.target.value});
+            if (fieldErrors.name) setFieldErrors({...fieldErrors, name: ''});
+          }}
         />
         
         <Input 
           label="Mã phòng ban" 
           required 
           value={formData.code}
-          onChange={e => setFormData({...formData, code: e.target.value})}
+          error={fieldErrors.code}
+          onChange={e => {
+            setFormData({...formData, code: e.target.value});
+            if (fieldErrors.code) setFieldErrors({...fieldErrors, code: ''});
+          }}
         />
         
         <Select 
           label="Phòng ban cha" 
           value={formData.parentDepartmentId}
-          onChange={e => setFormData({...formData, parentDepartmentId: e.target.value})}
+          error={fieldErrors.parentDepartmentId}
+          onChange={e => {
+            setFormData({...formData, parentDepartmentId: e.target.value});
+            if (fieldErrors.parentDepartmentId) setFieldErrors({...fieldErrors, parentDepartmentId: ''});
+          }}
           options={[
             { value: '', label: 'Không có (Cấp cao nhất)' },
             ...availableParents.map(d => ({ value: d.id, label: d.name }))

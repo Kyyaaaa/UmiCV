@@ -59,3 +59,17 @@ export const userIdParamSchema = z.object({
     id: z.string().uuid(),
   }),
 });
+
+export const updateMeSchema = z.object({
+  body: z.object({
+    fullName: z.string().min(1).max(255).optional(),
+    email: z.string().email().max(255).optional(),
+  }).strict(),
+});
+
+export const changeMyPasswordSchema = z.object({
+  body: z.object({
+    oldPassword: z.string().min(1),
+    newPassword: z.string().min(6),
+  }),
+});

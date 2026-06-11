@@ -49,6 +49,7 @@ describe('WorkflowService', () => {
       prismaMock.user.findUnique.mockResolvedValue({ id: 'hr-1', role: 'HR' } as any);
       prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
       prismaMock.projectMember.findFirst.mockResolvedValue({} as any); // has tech lead
+      prismaMock.batchRequestTarget.findMany.mockResolvedValue([]);
       prismaMock.$transaction.mockResolvedValue([] as any);
 
       const result = await workflowService.approveCV('cv-1', 'hr-1', { level: 2 });

@@ -26,8 +26,9 @@ describe('ProjectService', () => {
       prismaMock.project.findUnique.mockResolvedValue(null as any);
       prismaMock.user.findUnique.mockResolvedValue({ id: 'emp-1', role: 'Employee' } as any);
 
-      await expect(service.createProject({ name: 'P1', code: 'P1', techLeadId: 'emp-1' }))
-        .rejects.toThrow('User được chọn không phải là Tech Lead.');
+      await expect(service.createProject({ name: 'P1', code: 'P1', techLeadId: 'emp-1' } as any)).rejects.toThrow(
+        'User được chọn không phải là Tech Lead (ID: emp-1).'
+      );
     });
   });
 
@@ -47,8 +48,9 @@ describe('ProjectService', () => {
       prismaMock.project.findUnique.mockResolvedValue({ id: 'proj-1' } as any);
       prismaMock.user.findMany.mockResolvedValue([{ id: 'emp-1' }] as any);
 
-      await expect(service.assignMembers('proj-1', { userIds: ['emp-1', 'emp-2'] }))
-        .rejects.toThrow('Một hoặc nhiều user không tồn tại hoặc đã bị khóa.');
+      await expect(service.assignMembers('proj-1', { userIds: ['emp-1', 'emp-2'] })).rejects.toThrow(
+        'Một hoặc nhiều user không tồn tại hoặc đã bị khóa (Vui lòng kiểm tra lại danh sách ID).'
+      );
     });
   });
 });

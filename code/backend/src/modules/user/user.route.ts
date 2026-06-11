@@ -9,6 +9,8 @@ import {
   userIdParamSchema,
   resetPasswordSchema,
   changeRoleSchema,
+  updateMeSchema,
+  changeMyPasswordSchema,
 } from './user.dto';
 
 const router = Router();
@@ -23,6 +25,70 @@ const userController = new UserController();
 
 // All endpoints require authentication
 router.use(authenticate);
+
+/**
+ * @openapi
+ * /api/users/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [User Profile]
+ *     responses:
+ *       200:
+ *         description: Current user details
+ */
+router.get('/me', userController.getMe);
+
+/**
+ * @openapi
+ * /api/users/me:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [User Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
+router.put('/me', validate(updateMeSchema), userController.updateMe);
+
+/**
+ * @openapi
+ * /api/users/me/password:
+ *   put:
+ *     summary: Change current user password
+ *     tags: [User Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Incorrect current password
+ */
+router.put('/me/password', validate(changeMyPasswordSchema), userController.changeMyPassword);
 
 /**
  * @openapi

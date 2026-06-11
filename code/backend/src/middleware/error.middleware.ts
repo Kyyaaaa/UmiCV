@@ -12,9 +12,11 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   if (err instanceof ZodError) {
+    const firstError = err.errors[0];
+    const message = firstError ? `Lỗi tại trường ${firstError.path.join('.')}: ${firstError.message}` : MESSAGES.COMMON.VALIDATION_FAILED;
     return res.status(400).json({
       success: false,
-      message: MESSAGES.COMMON.VALIDATION_FAILED,
+      message,
       errors: err.errors.map(e => ({ field: e.path.join('.'), message: e.message })),
     });
   }

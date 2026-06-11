@@ -69,7 +69,7 @@ export class DepartmentService {
     });
 
     if (existing) {
-      throw new BadRequestError('Mã phòng ban đã tồn tại.');
+      throw new BadRequestError(`Mã phòng ban đã tồn tại (${data.code}).`);
     }
 
     if (data.parentDepartmentId) {
@@ -77,7 +77,7 @@ export class DepartmentService {
         where: { id: data.parentDepartmentId },
       });
       if (!parent) {
-        throw new BadRequestError('Không tìm thấy phòng ban cha.');
+        throw new BadRequestError(`Không tìm thấy phòng ban cha (ID: ${data.parentDepartmentId}).`);
       }
     }
 
@@ -94,13 +94,13 @@ export class DepartmentService {
         where: { code: data.code },
       });
       if (existing) {
-        throw new BadRequestError('Mã phòng ban đã tồn tại.');
+        throw new BadRequestError(`Mã phòng ban đã tồn tại (${data.code}).`);
       }
     }
 
     if (data.parentDepartmentId !== undefined && data.parentDepartmentId !== department.parentDepartmentId) {
       if (data.parentDepartmentId === id) {
-        throw new BadRequestError('Phòng ban cha không thể là chính nó.');
+        throw new BadRequestError(`Phòng ban cha không thể là chính nó (ID: ${id}).`);
       }
 
       if (data.parentDepartmentId) {
@@ -108,7 +108,7 @@ export class DepartmentService {
         let currentParentId: string | null = data.parentDepartmentId;
         while (currentParentId) {
           if (currentParentId === id) {
-            throw new BadRequestError('Không thể gán phòng ban cha là một trong các phòng ban con.');
+            throw new BadRequestError(`Không thể gán phòng ban cha là một trong các phòng ban con (ID: ${data.parentDepartmentId}).`);
           }
           const parentDept: Department | null = await prisma.department.findUnique({ where: { id: currentParentId } });
           currentParentId = parentDept?.parentDepartmentId || null;
@@ -131,7 +131,7 @@ export class DepartmentService {
     });
 
     if (userCount > 0) {
-      throw new BadRequestError('Không thể xóa phòng ban đang có nhân viên trực thuộc.');
+      throw new BadRequestError(`Không thể xóa phòng ban đang có nhân viên trực thuộc (DepartmentID: ${id}).`);
     }
 
     // Kiểm tra xem có phòng ban con nào không
@@ -140,7 +140,7 @@ export class DepartmentService {
     });
 
     if (childCount > 0) {
-      throw new BadRequestError('Không thể xóa phòng ban đang có phòng ban con trực thuộc. Vui lòng di chuyển các phòng ban con trước.');
+      throw new BadRequestError(`Không thể xóa phòng ban đang có phòng ban con trực thuộc (DepartmentID: ${id}). Vui lòng di chuyển các phòng ban con trước.`);
     }
 
     await prisma.department.delete({
