@@ -224,3 +224,31 @@ Giai đoạn này tập trung vào việc làm rõ các thông báo lỗi từ B
   - Cố tình nhập sai định dạng email hoặc thiếu trường bắt buộc trên Form. Xác nhận UI hiển thị đúng lỗi dưới ô input tương ứng thay vì chỉ hiển thị một Toast "Dữ liệu không hợp lệ".
 - [x] **TASK-6.7: Kiểm thử Business Error Messages**
   - Thử các nghiệp vụ lỗi như thêm User không tồn tại vào Project. Xác nhận Toast báo lỗi chứa thông điệp có định danh cụ thể của User đó.
+
+---
+
+## 🛡️ Phase 1.7: Cơ chế cách ly tài khoản Admin (Admin Isolation)
+
+Bổ sung rào chắn bảo mật không cho phép Admin thao tác sửa, khóa, hay xóa lên tài khoản của một Admin khác.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-1.23: Cập nhật API Update/Delete User**
+  - Chỉnh sửa `user.service.ts` tại các hàm `updateUser` và `deleteUser`.
+  - Logic: Nếu `targetUser.role === 'Admin'` và `req.user.id !== targetUser.id`, bắn lỗi `403 Forbidden` với thông báo "Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác."
+- [x] **TASK-1.24: Cập nhật API Lock/Unlock User**
+  - Thực hiện logic tương tự cho các hàm `lockUser` và `unlockUser` trong `user.service.ts`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-1.25: Disable các thao tác trên giao diện Quản lý Người dùng**
+  - Sửa đổi file `UserManagementPage.tsx` hoặc Component render danh sách Users.
+  - Lấy `currentUser` từ Auth context. Nếu một row có `role === 'Admin'` và `id !== currentUser.id`, tiến hành làm mờ (disable) các nút Sửa, Khóa, Xóa ở cột hành động.
+  - Bổ sung Tooltip giải thích lý do disable: "Không thể thao tác trên tài khoản Quản trị viên khác".
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-1.26: Kiểm thử bảo mật (E2E / API level)**
+  - Đăng nhập Admin A. Truy cập giao diện Quản lý Người dùng, xác nhận các nút hành động trên dòng của Admin B đã bị khóa.
+  - Thử lấy Access Token của Admin A và gọi API qua Postman để Xóa / Khóa Admin B. Xác nhận hệ thống trả về HTTP 403.
+  - Kiểm tra Admin A tự sửa profile của chính mình qua `/api/users/me` vẫn hoạt động bình thường.

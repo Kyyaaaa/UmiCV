@@ -1,6 +1,6 @@
 import prisma from '../../config/db';
 import { UserRole, UserStatus, Prisma } from '@prisma/client';
-import { BadRequestError, NotFoundError } from '../../errors/AppError';
+import { BadRequestError, NotFoundError, ForbiddenError } from '../../errors/AppError';
 import bcrypt from 'bcrypt';
 import { MESSAGES } from '../../constants/messages';
 
@@ -107,9 +107,12 @@ export class UserService {
     return exclude(user, ['passwordHash']);
   }
 
-  async updateUser(id: string, data: any) {
+  async updateUser(id: string, data: any, executorId?: string) {
     // Ensure user exists
-    await this.getUserById(id);
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
 
     try {
       const user = await prisma.user.update({
@@ -127,8 +130,11 @@ export class UserService {
     }
   }
 
-  async lockUser(id: string) {
+  async lockUser(id: string, executorId?: string) {
     const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
     if (targetUser.role === 'Admin') {
       throw new BadRequestError('Không thể khóa tài khoản Quản trị viên');
     }
@@ -142,8 +148,11 @@ export class UserService {
     return exclude(user, ['passwordHash']);
   }
 
-  async unlockUser(id: string) {
-    await this.getUserById(id);
+  async unlockUser(id: string, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -154,8 +163,11 @@ export class UserService {
     return exclude(user, ['passwordHash']);
   }
 
-  async resetPassword(id: string, newPassword: string) {
-    await this.getUserById(id);
+  async resetPassword(id: string, newPassword: string, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
@@ -166,8 +178,11 @@ export class UserService {
     return exclude(user, ['passwordHash']);
   }
 
-  async changeRole(id: string, role: UserRole) {
-    await this.getUserById(id);
+  async changeRole(id: string, role: UserRole, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
     const user = await prisma.user.update({
       where: { id },
       data: { role },

@@ -102,33 +102,40 @@ export function UserListPage() {
     {
       key: 'actions',
       header: '',
-      render: (u) => (
-        <div className="flex justify-end gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={(e) => { e.stopPropagation(); setSelectedUser(u); setIsFormOpen(true); }}
-          >
-            <Edit2 size={16} className="text-slate-500" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            disabled={u.id === currentUser?.id || u.role === 'Admin'}
-            title={u.id === currentUser?.id ? "Không thể khóa tài khoản của chính mình" : (u.role === 'Admin' ? "Không thể khóa tài khoản Quản trị viên" : (u.status === 'Active' ? 'Khóa' : 'Mở khóa'))}
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              setUserToLock(u); 
-              setIsLockOpen(true); 
-            }}
-          >
-            {u.status === 'Active' 
-              ? <Lock size={16} className={u.id === currentUser?.id || u.role === 'Admin' ? "text-slate-300" : "text-red-500"} /> 
-              : <Unlock size={16} className={u.id === currentUser?.id || u.role === 'Admin' ? "text-slate-300" : "text-green-500"} />
-            }
-          </Button>
-        </div>
-      ),
+      render: (u) => {
+        const isAdminButNotMe = u.role === 'Admin' && u.id !== currentUser?.id;
+        const isMe = u.id === currentUser?.id;
+
+        return (
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              disabled={isAdminButNotMe}
+              title={isAdminButNotMe ? "Không thể thao tác trên tài khoản Quản trị viên khác" : "Sửa"}
+              onClick={(e) => { e.stopPropagation(); setSelectedUser(u); setIsFormOpen(true); }}
+            >
+              <Edit2 size={16} className={isAdminButNotMe ? "text-slate-300" : "text-slate-500"} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              disabled={isMe || isAdminButNotMe}
+              title={isMe ? "Không thể khóa tài khoản của chính mình" : (isAdminButNotMe ? "Không thể thao tác trên tài khoản Quản trị viên khác" : (u.status === 'Active' ? 'Khóa' : 'Mở khóa'))}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setUserToLock(u); 
+                setIsLockOpen(true); 
+              }}
+            >
+              {u.status === 'Active' 
+                ? <Lock size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-red-500"} /> 
+                : <Unlock size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-green-500"} />
+              }
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 

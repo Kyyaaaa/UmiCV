@@ -46,8 +46,8 @@ export class UserController {
     res.status(201).json({ success: true, data: result });
   }
 
-  async updateUser(req: Request, res: Response) {
-    const result = await userService.updateUser(req.params.id, req.body);
+  async updateUser(req: any, res: Response) {
+    const result = await userService.updateUser(req.params.id, req.body, req.user!.userId);
     res.status(200).json({ success: true, data: result });
   }
 
@@ -55,22 +55,22 @@ export class UserController {
     if (req.user?.userId === req.params.id) {
       return res.status(400).json({ success: false, message: 'Bạn không thể khóa tài khoản của chính mình.' });
     }
-    const result = await userService.lockUser(req.params.id);
+    const result = await userService.lockUser(req.params.id, req.user!.userId);
     res.status(200).json({ success: true, message: MESSAGES.USER.LOCK_SUCCESS, data: result });
   }
 
-  async unlockUser(req: Request, res: Response) {
-    const result = await userService.unlockUser(req.params.id);
+  async unlockUser(req: any, res: Response) {
+    const result = await userService.unlockUser(req.params.id, req.user!.userId);
     res.status(200).json({ success: true, message: MESSAGES.USER.UNLOCK_SUCCESS, data: result });
   }
 
-  async resetPassword(req: Request, res: Response) {
-    await userService.resetPassword(req.params.id, req.body.newPassword);
+  async resetPassword(req: any, res: Response) {
+    await userService.resetPassword(req.params.id, req.body.newPassword, req.user!.userId);
     res.status(200).json({ success: true, message: MESSAGES.USER.RESET_PASSWORD_SUCCESS });
   }
 
-  async changeRole(req: Request, res: Response) {
-    const result = await userService.changeRole(req.params.id, req.body.role);
+  async changeRole(req: any, res: Response) {
+    const result = await userService.changeRole(req.params.id, req.body.role, req.user!.userId);
     res.status(200).json({ success: true, message: MESSAGES.USER.CHANGE_ROLE_SUCCESS, data: result });
   }
 }
