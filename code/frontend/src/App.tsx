@@ -20,6 +20,7 @@ import { CVDashboard } from './pages/cv/CVDashboard';
 import { CVWorkspace } from './pages/cv/CVWorkspace';
 import { DiffViewerPage } from './pages/cv/DiffViewerPage';
 import { PublishReviewPage } from './pages/cv/PublishReviewPage';
+import { QuickCVMockup } from './pages/cv/QuickCVMockup';
 
 // Workflow
 import { ApprovalRequestListPage } from './pages/workflow/ApprovalRequestListPage';
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: "cv/:id/workspace", element: <CVWorkspace /> },
           { path: "cv/:id/diff", element: <DiffViewerPage /> },
           { path: "cv/:id/publish", element: <PublishReviewPage /> },
+          { path: "mockup/edit-cv", element: <QuickCVMockup /> },
           
           {
             element: <RoleRoute allowedRoles={['TechLead', 'HR', 'Admin']} />,

@@ -27,6 +27,9 @@ export function CVWorkspace() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Mobile Tabs
+  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
+
   // Preview Mode States
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CVSections | null>(null);
@@ -236,6 +239,9 @@ export function CVWorkspace() {
     });
     setIsDirty(true);
     setActiveSection(sectionId);
+    setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleRenameCustomSection = (oldKey: string, newKey: string) => {
@@ -371,6 +377,22 @@ export function CVWorkspace() {
         </div>
       </div>
 
+      {/* Mobile Tab Bar */}
+      <div className="lg:hidden flex border-b border-slate-200 bg-slate-50 shrink-0">
+        <button
+          className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'edit' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
+          onClick={() => setMobileTab('edit')}
+        >
+          Chỉnh sửa
+        </button>
+        <button
+          className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'preview' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
+          onClick={() => setMobileTab('preview')}
+        >
+          Xem trước
+        </button>
+      </div>
+
       {/* Workspace Body (3 Columns) */}
       <div className="flex-1 flex overflow-x-auto overflow-y-hidden">
         {viewMode === 'history' ? (
@@ -381,17 +403,22 @@ export function CVWorkspace() {
             onRestoreVersion={handleRestoreVersion}
           />
         ) : (
-          <WorkspaceSidebar
-            activeSection={activeSection}
-            onSectionSelect={setActiveSection}
-            data={cvData.sectionsData}
-            onAddSection={handleAddCustomSection}
-            onRenameSection={handleRenameCustomSection}
-            onReorderCustomSections={handleReorderCustomSections}
-          />
+          <div className={`${mobileTab === 'edit' ? 'block' : 'hidden'} lg:block shrink-0`}>
+            <WorkspaceSidebar
+              activeSection={activeSection}
+              onSectionSelect={(id) => {
+                setActiveSection(id);
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              data={cvData.sectionsData}
+              onAddSection={handleAddCustomSection}
+              onRenameSection={handleRenameCustomSection}
+              onReorderCustomSections={handleReorderCustomSections}
+            />
+          </div>
         )}
 
-        <div className="flex-1 flex flex-col overflow-hidden relative min-w-[450px]">
+        <div className={`flex-1 flex-col overflow-hidden relative min-w-[320px] lg:min-w-[450px] ${mobileTab === 'edit' ? 'flex' : 'hidden lg:flex'}`}>
           {viewMode === 'history' && (
             <div className="bg-blue-50 border-b border-blue-200 p-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-sm z-10 shrink-0">
               <span className="text-blue-800 font-medium">Bạn đang xem phiên bản lịch sử. Các thao tác chỉnh sửa tạm thời bị khóa.</span>
@@ -422,9 +449,11 @@ export function CVWorkspace() {
           )}
         </div>
 
-        <CVPreviewPanel
-          data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
-        />
+        <div className={`flex-1 border-l border-slate-200 min-w-[320px] lg:min-w-[450px] ${mobileTab === 'preview' ? 'block' : 'hidden lg:block'}`}>
+          <CVPreviewPanel
+            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+          />
+        </div>
       </div>
 
       <CopyLocalizationModal

@@ -40,8 +40,34 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
     onChange('personalInfo', { ...(data.personalInfo || {}), [field]: value });
   };
 
-  const renderSection = () => {
-    switch (activeSection) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const sectionRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the entry that is intersecting the most or first intersecting
+        const intersectingEntry = entries.find((entry) => entry.isIntersecting);
+        if (intersectingEntry && onSectionChange) {
+          onSectionChange(intersectingEntry.target.id);
+        }
+      },
+      {
+        root: containerRef.current,
+        rootMargin: '-20% 0px -60% 0px',
+        threshold: 0
+      }
+    );
+
+    Object.values(sectionRefs.current).forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [onSectionChange, data]); // Re-run when data changes (custom sections added)
+
+  const renderSectionContent = (sectionKey: string) => {
+    switch (sectionKey) {
       case 'personalInfo':
         return (
           <div className="space-y-6">
@@ -401,17 +427,17 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
         
       default:
         // Handle Custom Dynamic Sections
-        const customData = (data || {})[activeSection] || [];
+        const customData = (data || {})[sectionKey] || [];
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 mb-1 capitalize">{activeSection}</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-1 capitalize">{sectionKey}</h2>
                 <p className="text-sm text-slate-500">Mục tùy chỉnh do bạn tự tạo.</p>
               </div>
               <button 
                 onClick={() => {
-                  onChange(activeSection, undefined);
+                  onChange(sectionKey, undefined);
                 }}
                 disabled={disabled}
                 className="text-red-600 text-sm font-medium px-3 py-1.5 rounded-md hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors disabled:opacity-50"
@@ -428,7 +454,7 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
                     onChange={(e) => {
                       const newData = [...customData];
                       newData[index] = { ...newData[index], title: e.target.value };
-                      onChange(activeSection, newData);
+                      onChange(sectionKey, newData);
                     }}
                     disabled={disabled}
                   />
@@ -440,7 +466,7 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
                       onChange={(e) => {
                         const newData = [...customData];
                         newData[index] = { ...newData[index], description: e.target.value };
-                        onChange(activeSection, newData);
+                        onChange(sectionKey, newData);
                       }}
                       disabled={disabled}
                     />
@@ -448,7 +474,7 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
                   <button 
                     onClick={() => {
                       const newData = customData.filter((_: any, i: number) => i !== index);
-                      onChange(activeSection, newData);
+                      onChange(sectionKey, newData);
                     }}
                     disabled={disabled}
                     className="text-red-500 text-sm font-medium hover:underline disabled:opacity-50"
@@ -460,12 +486,12 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
               <button 
                 onClick={() => {
                   const newData = [...customData, { title: '', description: '' }];
-                  onChange(activeSection, newData);
+                  onChange(sectionKey, newData);
                 }}
                 className="w-full py-2 border-2 border-dashed border-blue-200 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50" 
                 disabled={disabled}
               >
-                + Thêm nội dung mới vào {activeSection}
+                + Thêm nội dung mới vào {sectionKey}
               </button>
             </div>
           </div>
@@ -473,30 +499,51 @@ export function CVEditorPanel({ activeSection, data, onChange, onSectionChange, 
     }
   };
 
+  const standardKeys = ['personalInfo', 'skills', 'experience', 'education', 'projects'];
+  const allSectionKeys = [
+    ...standardKeys,
+    ...Object.keys(data || {}).filter(k => !standardKeys.includes(k))
+  ];
+
+  const handleScrollToSection = (id: string) => {
+    const el = sectionRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+    if (onSectionChange) onSectionChange(id);
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto bg-white p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="flex-1 overflow-y-auto bg-white p-8 relative scroll-smooth" ref={containerRef}>
+      <div className="max-w-2xl mx-auto space-y-16 pb-32">
         {disabled && (
-          <div className="flex gap-2 border-b border-slate-200 pb-4 mb-6 overflow-x-auto whitespace-nowrap hide-scrollbar">
-            {[
-              { id: 'personalInfo', label: 'Thông tin cá nhân' },
-              { id: 'skills', label: 'Kỹ năng' },
-              { id: 'experience', label: 'Kinh nghiệm' },
-              { id: 'education', label: 'Học vấn' },
-              { id: 'projects', label: 'Dự án' },
-              ...Object.keys(data || {}).filter(k => !['personalInfo', 'skills', 'experience', 'education', 'projects'].includes(k)).map(k => ({ id: k, label: k }))
-            ].map(s => (
+          <div className="flex gap-2 border-b border-slate-200 pb-4 mb-6 overflow-x-auto whitespace-nowrap hide-scrollbar sticky top-0 bg-white z-10">
+            {allSectionKeys.map(k => (
               <button
-                key={s.id}
-                onClick={() => onSectionChange?.(s.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${activeSection === s.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                key={k}
+                onClick={() => handleScrollToSection(k)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${activeSection === k ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
-                {s.label}
+                {k === 'personalInfo' ? 'Thông tin cá nhân' : 
+                 k === 'skills' ? 'Kỹ năng' :
+                 k === 'experience' ? 'Kinh nghiệm' :
+                 k === 'education' ? 'Học vấn' :
+                 k === 'projects' ? 'Dự án' : k}
               </button>
             ))}
           </div>
         )}
-        {renderSection()}
+        
+        {allSectionKeys.map(key => (
+          <div 
+            key={key} 
+            id={key}
+            ref={(el) => { sectionRefs.current[key] = el; }}
+            className="scroll-mt-8"
+          >
+            {renderSectionContent(key)}
+          </div>
+        ))}
       </div>
     </div>
   );

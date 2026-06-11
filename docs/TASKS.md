@@ -252,3 +252,30 @@ Bổ sung rào chắn bảo mật không cho phép Admin thao tác sửa, khóa,
   - Đăng nhập Admin A. Truy cập giao diện Quản lý Người dùng, xác nhận các nút hành động trên dòng của Admin B đã bị khóa.
   - Thử lấy Access Token của Admin A và gọi API qua Postman để Xóa / Khóa Admin B. Xác nhận hệ thống trả về HTTP 403.
   - Kiểm tra Admin A tự sửa profile của chính mình qua `/api/users/me` vẫn hoạt động bình thường.
+
+---
+
+## 🎨 Phase 7: Tái cấu trúc UX/UI CV Editor (Continuous Scrolling)
+
+Dựa trên việc tham khảo dự án `quickcv`, giai đoạn này sẽ thay đổi cách người dùng tương tác với Workspace từ việc bấm tab để chuyển form (rời rạc) sang việc cuộn một danh sách form dài (liền mạch).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-7.1: Chuyển đổi Layout của `CVWorkspace.tsx`**
+  - Cập nhật cấu trúc màn hình Desktop từ 3 cột xuống còn 2 phần chính: Cột trái (Form nhập liệu) và Cột phải (Preview).
+  - Tích hợp logic Responsive: Đối với màn hình Mobile/Tablet, sử dụng giao diện dạng Tabs (Tab "Chỉnh sửa" / Tab "Xem trước").
+- [x] **TASK-7.2: Cải tạo `WorkspaceSidebar.tsx` thành Anchor Links**
+  - Sidebar không còn lưu trữ state `activeSection` để render form cục bộ nữa.
+  - Thay vào đó, khi click vào mục trên Sidebar, tiến hành thực thi Smooth Scroll tới thẻ ID chứa form tương ứng trong `CVEditorPanel`.
+- [x] **TASK-7.3: Render dạng cuộn trong `CVEditorPanel.tsx`**
+  - Xóa logic `if/else` để render từng form lẻ.
+  - Thay bằng cơ chế render toàn bộ các form (`PersonalInfo`, `Experience`, `Education`, `Skills`,...) theo chiều dọc, phân tách nhau bằng khoảng trắng (gap) và có `id` rõ ràng để Sidebar trỏ tới.
+  - Đảm bảo việc truyền hàm `handleSectionDataChange` cho từng phần không bị ảnh hưởng.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-7.4: Kiểm thử trải nghiệm và tính liền mạch**
+  - Xác nhận người dùng có thể dùng chuột cuộn mượt mà từ đầu đến cuối CV Editor mà không cần click Sidebar.
+  - Bấm vào một mục trên Sidebar và chắc chắn màn hình cuộn đúng vị trí Form đó.
+  - Thay đổi kích thước trình duyệt về Mobile và kiểm tra Tab Chỉnh sửa/Preview có hoạt động chính xác không.
+  - Nhập liệu và đảm bảo tính năng **Auto-save / Lưu nháp** vẫn đồng bộ dữ liệu đúng như cũ.
