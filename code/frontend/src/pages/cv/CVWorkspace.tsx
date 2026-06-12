@@ -43,6 +43,7 @@ export function CVWorkspace() {
   const [isCopying, setIsCopying] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string, type: 'success' | 'error' } | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Restore Version States
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -170,6 +171,26 @@ export function CVWorkspace() {
       console.error('Lưu nháp thất bại:', err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!id || id === 'new') return;
+    try {
+      setIsPublishing(true);
+      if (isDirty) {
+        await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
+        setIsDirty(false);
+        setLastSaved(new Date());
+      }
+      await cvService.publishCV(id);
+      showToast('Nộp CV thành công. Vui lòng chờ phê duyệt!');
+      fetchCV();
+    } catch (err: any) {
+      console.error('Lỗi khi nộp CV:', err);
+      showToast('Không thể nộp CV: ' + (err.response?.data?.message || err.message), 'error');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -340,8 +361,16 @@ export function CVWorkspace() {
           >
             Lịch sử
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval'}>
+          <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval' || cvData.status === 'Updated'}>
             {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={handlePublish} 
+            disabled={isPublishing || viewMode === 'history' || cvData.status === 'PendingApproval' || cvData.status === 'Updated'}
+            className={cvData.status === 'PendingApproval' ? 'bg-amber-500 hover:bg-amber-600 text-white border-transparent' : cvData.status === 'Updated' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent' : 'bg-green-600 hover:bg-green-700 text-white border-transparent'}
+          >
+            {isPublishing ? 'Đang nộp...' : cvData.status === 'PendingApproval' ? 'Đang chờ duyệt' : cvData.status === 'Updated' ? 'Đã duyệt' : 'Nộp CV'}
           </Button>
           <Button
             onClick={handleDownloadPdf}

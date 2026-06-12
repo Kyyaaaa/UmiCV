@@ -320,7 +320,7 @@ export const CVPdfDocument = ({ data }: CVPdfDocumentProps) => {
               <Text style={styles.sectionTitle}>Experience :</Text>
             </View>
             {experience.map((exp: any, idx: number) => (
-              <View key={idx} style={styles.experienceItem}>
+              <View key={idx} style={styles.experienceItem} wrap={false}>
                 <View style={styles.experienceHeader}>
                   <Text style={styles.experienceRoleCompany}>
                     <Text style={{ fontWeight: 700 }}>{exp.title}</Text>
@@ -348,7 +348,7 @@ export const CVPdfDocument = ({ data }: CVPdfDocumentProps) => {
             </View>
             <View style={styles.educationGrid}>
               {education.map((edu: any, idx: number) => (
-                <View key={idx} style={styles.educationItem}>
+                <View key={idx} style={styles.educationItem} wrap={false}>
                   <View style={styles.educationHeader}>
                     <Text style={styles.educationSchool}>{edu.institution}</Text>
                     <Text style={styles.experienceDate}>{edu.date}</Text>
@@ -400,14 +400,16 @@ export const CVPdfDocument = ({ data }: CVPdfDocumentProps) => {
             </View>
             <View style={styles.projectList}>
               {projects.map((proj: any, idx: number) => (
-                <View key={idx} style={styles.projectItem}>
+                <View key={idx} style={styles.projectItem} wrap={false}>
                   <View style={styles.projectHeader}>
                     <View style={styles.projectHeaderLeft}>
                       <Text style={styles.projectName}>{proj.name}</Text>
                     </View>
                     {proj.link ? <Link src={proj.link} style={styles.projectLink}>Link</Link> : null}
                   </View>
-                  <Text style={styles.projectDescription}>{proj.desc}</Text>
+                  <View style={styles.projectDescription} wrap={false}>
+                    <Text>{proj.desc}</Text>
+                  </View>
                 </View>
               ))}
             </View>
