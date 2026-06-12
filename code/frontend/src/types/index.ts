@@ -54,16 +54,20 @@ export interface CVProfile {
 
 export interface CVSections {
   personalInfo: {
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
-    title: string;
-    summary: string;
+    role: string;
+    about: string;
+    location: string;
+    website: string;
+    github: string;
+    linkedin: string;
   };
-  skills: { name: string; level: string }[];
-  experience: { company: string; role: string; startDate: string; endDate: string; description: string }[];
-  projects: { name: string; role: string; technologies: string[]; description: string }[];
-  education: { school: string; degree: string; year: string }[];
+  skills: { name: string }[];
+  experience: { company: string; title: string; date: string; desc: string }[];
+  projects: { name: string; link: string; desc: string }[];
+  education: { institution: string; date: string; qualification: string }[];
   [key: string]: any; // Support for custom dynamic sections
 }
 

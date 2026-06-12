@@ -3,14 +3,15 @@ import { useParams, useNavigate, useSearchParams, useBlocker } from 'react-route
 import { CVProfile, CVSections } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { ArrowLeft, Share } from 'lucide-react';
-import { WorkspaceSidebar } from '../../components/cv-workspace/WorkspaceSidebar';
+import { ArrowLeft, Share, Settings, Eye, Edit2 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
 import { CVEditorPanel } from '../../components/cv-workspace/CVEditorPanel';
 import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
 import { DraftIndicator } from '../../components/cv-workspace/DraftIndicator';
 import { LanguageSwitcher } from '../../components/cv-workspace/LanguageSwitcher';
 import { VersionHistorySidebar } from '../../components/cv-workspace/VersionHistorySidebar';
 import { CopyLocalizationModal } from '../../components/cv-workspace/CopyLocalizationModal';
+import { CVPdfDocument } from '../../components/cv-workspace/CVPdfDocument';
 import { cvService } from '../../services/cv.service';
 
 export function CVWorkspace() {
@@ -27,8 +28,10 @@ export function CVWorkspace() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mobile Tabs
-  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
+  // Layout States
+  const [layoutMode, setLayoutMode] = useState<'split' | 'tabs'>('split');
+  const [activeTab, setActiveTab] = useState<'editor' | 'viewer'>('editor');
+  const [scale, setScale] = useState(100);
 
   // Preview Mode States
   const [previewVersionId, setPreviewVersionId] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export function CVWorkspace() {
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string, type: 'success' | 'error' } | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   // Restore Version States
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -64,7 +68,7 @@ export function CVWorkspace() {
       const res = await cvService.getCVById(id!);
 
       const defaultSections: CVSections = {
-        personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
+        personalInfo: { name: '', email: '', phone: '', role: '', about: '', location: '', website: '', github: '', linkedin: '' },
         skills: [],
         experience: [],
         projects: [],
@@ -106,7 +110,7 @@ export function CVWorkspace() {
       const res = await cvService.getVersionById(id, versionId);
 
       const defaultSections: CVSections = {
-        personalInfo: { fullName: '', email: '', phone: '', title: '', summary: '' },
+        personalInfo: { name: '', email: '', phone: '', role: '', about: '', location: '', website: '', github: '', linkedin: '' },
         skills: [],
         experience: [],
         projects: [],
@@ -169,6 +173,29 @@ export function CVWorkspace() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      const dataToRender = viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData;
+      const doc = <CVPdfDocument data={dataToRender} />;
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `CV_${cvData?.sectionsData?.personalInfo?.name || 'Umi'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error('Lỗi tạo PDF:', err);
+      showToast('Lỗi khi tải PDF. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       isDirty &&
@@ -226,74 +253,7 @@ export function CVWorkspace() {
     setIsDirty(true);
   };
 
-  const handleAddCustomSection = (sectionId: string) => {
-    setCvData(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        sectionsData: {
-          ...prev.sectionsData,
-          [sectionId]: []
-        }
-      };
-    });
-    setIsDirty(true);
-    setActiveSection(sectionId);
-    setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
 
-  const handleRenameCustomSection = (oldKey: string, newKey: string) => {
-    setCvData(prev => {
-      if (!prev) return prev;
-      const newSections = { ...prev.sectionsData };
-      if (newSections[oldKey] !== undefined) {
-        newSections[newKey] = newSections[oldKey];
-        delete newSections[oldKey];
-      }
-      return {
-        ...prev,
-        sectionsData: newSections
-      };
-    });
-    setIsDirty(true);
-    if (activeSection === oldKey) {
-      setActiveSection(newKey);
-    }
-  };
-
-  const handleReorderCustomSections = (newOrder: string[]) => {
-    setCvData(prev => {
-      if (!prev) return prev;
-      const baseSections: any = {};
-
-      const standardKeys = ['personalInfo', 'skills', 'experience', 'education', 'projects'];
-      standardKeys.forEach(key => {
-        if (prev.sectionsData[key]) {
-          baseSections[key] = prev.sectionsData[key];
-        }
-      });
-
-      newOrder.forEach(key => {
-        if (prev.sectionsData[key]) {
-          baseSections[key] = prev.sectionsData[key];
-        }
-      });
-
-      Object.keys(prev.sectionsData).forEach(key => {
-        if (!baseSections[key]) {
-          baseSections[key] = prev.sectionsData[key];
-        }
-      });
-
-      return {
-        ...prev,
-        sectionsData: baseSections
-      };
-    });
-    setIsDirty(true);
-  };
 
   const handleCopyLocalization = async (langCode: string) => {
     if (!id) return;
@@ -311,27 +271,46 @@ export function CVWorkspace() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden">
-      {/* Workspace Header */}
-      <div className="min-h-[56px] py-2 border-b border-slate-200 px-4 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white z-20">
-        <div className="flex flex-wrap items-center gap-4">
+    <div className="flex flex-col h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden custom-font-inter">
+      {/* Top Navigation Bar */}
+      <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 sticky top-0 z-50">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/cv')}
             className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <span className="font-semibold text-sm text-slate-800">
-            {cvData.sectionsData?.personalInfo?.fullName || 'CV Chưa Đặt Tên'}
-          </span>
+          <div className="font-bold text-lg text-blue-600 truncate max-w-[200px]">
+            {cvData.sectionsData?.personalInfo?.name || 'CV Chưa Đặt Tên'}
+          </div>
           <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
             v{cvData.versionNumber}
           </span>
           <DraftIndicator isDirty={isDirty} lastSavedAt={lastSaved} isSaving={isSaving} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex gap-4 items-center">
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-sm font-medium">Zoom: {scale}%</span>
+            <input
+              type="range"
+              min="50"
+              max="150"
+              value={scale}
+              onChange={(e) => setScale(Number(e.target.value))}
+              className="w-24"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLayoutMode(layoutMode === 'split' ? 'tabs' : 'split')}
+            className="hidden md:flex"
+          >
+            Toggle Mode (Currently {layoutMode})
+          </Button>
+          <div className="h-6 w-px bg-slate-300 hidden md:block"></div>
           <LanguageSwitcher
             currentLanguage={cvData.languageCode}
             onLanguageSelect={(lang) => {
@@ -345,115 +324,146 @@ export function CVWorkspace() {
               }
             }}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (viewMode === 'history') {
-                  setSearchParams({});
-                  setPreviewVersionId(null);
-                  setPreviewData(null);
-                } else {
-                  setSearchParams({ tab: 'history' });
-                }
-              }}
-              className={viewMode === 'history' ? 'bg-slate-100' : ''}
-            >
-              Lịch sử
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval'}>
-              {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate(`/cv/${cvData.id}/publish`)}
-              disabled={viewMode === 'history' || isDirty || cvData.status === 'PendingApproval'}
-            >
-              <Share size={14} className="mr-2" />
-              Publish CV
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (viewMode === 'history') {
+                setSearchParams({});
+                setPreviewVersionId(null);
+                setPreviewData(null);
+              } else {
+                setSearchParams({ tab: 'history' });
+              }
+            }}
+            className={viewMode === 'history' ? 'bg-slate-100' : ''}
+          >
+            Lịch sử
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval'}>
+            {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
+          </Button>
+          <Button
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf || viewMode === 'history'}
+            className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-9 px-3 ${viewMode === 'history' ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+            {isDownloadingPdf ? 'Đang tạo PDF...' : 'Tải PDF'}
+          </Button>
         </div>
       </div>
 
-      {/* Mobile Tab Bar */}
-      <div className="lg:hidden flex border-b border-slate-200 bg-slate-50 shrink-0">
-        <button
-          className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'edit' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
-          onClick={() => setMobileTab('edit')}
-        >
-          Chỉnh sửa
-        </button>
-        <button
-          className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${mobileTab === 'preview' ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
-          onClick={() => setMobileTab('preview')}
-        >
-          Xem trước
-        </button>
-      </div>
-
-      {/* Workspace Body (3 Columns) */}
-      <div className="flex-1 flex overflow-x-auto overflow-y-hidden">
-        {viewMode === 'history' ? (
+      <div className="flex-1 flex overflow-hidden">
+        {viewMode === 'history' && (
           <VersionHistorySidebar
             cvId={id!}
             selectedVersionId={previewVersionId}
             onSelectVersion={loadVersionPreview}
             onRestoreVersion={handleRestoreVersion}
           />
-        ) : (
-          <div className={`${mobileTab === 'edit' ? 'block' : 'hidden'} lg:block shrink-0`}>
-            <WorkspaceSidebar
-              activeSection={activeSection}
-              onSectionSelect={(id) => {
-                setActiveSection(id);
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              data={cvData.sectionsData}
-              onAddSection={handleAddCustomSection}
-              onRenameSection={handleRenameCustomSection}
-              onReorderCustomSections={handleReorderCustomSections}
-            />
-          </div>
         )}
-
-        <div className={`flex-1 flex-col overflow-hidden relative min-w-[320px] lg:min-w-[450px] ${mobileTab === 'edit' ? 'flex' : 'hidden lg:flex'}`}>
-          {viewMode === 'history' && (
-            <div className="bg-blue-50 border-b border-blue-200 p-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-sm z-10 shrink-0">
-              <span className="text-blue-800 font-medium">Bạn đang xem phiên bản lịch sử. Các thao tác chỉnh sửa tạm thời bị khóa.</span>
-              <Button size="sm" variant="outline" className="bg-white whitespace-nowrap self-start sm:self-auto" onClick={() => {
-                setSearchParams({});
-                setPreviewVersionId(null);
-                setPreviewData(null);
-              }}>
-                Quay lại Bản Nháp
-              </Button>
+        
+        {layoutMode === 'split' ? (
+          /* Split Mode Layout */
+          <div className="grid grid-cols-1 lg:grid-cols-2 w-full h-full">
+            <div className="overflow-y-auto h-full p-5 custom-scrollbar bg-slate-100">
+              {viewMode === 'history' && (
+                <div className="bg-blue-50 border-b border-blue-200 p-3 mb-4 rounded flex flex-col justify-between items-center gap-2 text-sm z-10 shrink-0">
+                  <span className="text-blue-800 font-medium">Đang xem lịch sử</span>
+                  <Button size="sm" variant="outline" className="bg-white" onClick={() => {
+                    setSearchParams({});
+                    setPreviewVersionId(null);
+                    setPreviewData(null);
+                  }}>
+                    Quay lại Bản Nháp
+                  </Button>
+                </div>
+              )}
+              <CVEditorPanel
+                activeSection={activeSection}
+                data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+                onChange={handleSectionDataChange}
+                onSectionChange={setActiveSection}
+                disabled={viewMode === 'history'}
+              />
             </div>
-          )}
 
-          <CVEditorPanel
-            activeSection={activeSection}
-            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
-            onChange={handleSectionDataChange}
-            onSectionChange={setActiveSection}
-            disabled={viewMode === 'history'}
-          />
-
-          {isPreviewLoading && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
-              <div className="bg-white p-4 rounded-lg shadow-lg flex items-center text-slate-600">
-                <span className="animate-pulse">Đang tải nội dung phiên bản...</span>
+            <div className="h-full overflow-auto pt-5 flex justify-center items-start custom-scrollbar bg-slate-200 relative">
+              {isPreviewLoading && (
+                <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
+                  <span className="animate-pulse text-slate-600 font-medium p-4 bg-white rounded shadow-sm">Đang tải nội dung phiên bản...</span>
+                </div>
+              )}
+              <CVPreviewPanel
+                data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+                scale={scale}
+              />
+            </div>
+          </div>
+        ) : (
+          /* Tabs Mode Layout */
+          <div className="w-full h-full flex flex-col bg-slate-100 overflow-y-auto custom-scrollbar">
+            <div className="flex justify-center my-6 shrink-0">
+              <div className="bg-slate-200 p-1 rounded-lg inline-flex">
+                <button
+                  onClick={() => setActiveTab('editor')}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-md font-medium transition-colors ${activeTab === 'editor' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                >
+                  <Edit2 size={16} /> Editor
+                </button>
+                <button
+                  onClick={() => setActiveTab('viewer')}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-md font-medium transition-colors ${activeTab === 'viewer' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                >
+                  <Eye size={16} /> Viewer
+                </button>
               </div>
             </div>
-          )}
-        </div>
 
-        <div className={`flex-1 border-l border-slate-200 min-w-[320px] lg:min-w-[450px] ${mobileTab === 'preview' ? 'block' : 'hidden lg:block'}`}>
-          <CVPreviewPanel
-            data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
-          />
-        </div>
+            <div className="max-w-[1000px] mx-auto w-full px-4 pb-10">
+              {activeTab === 'editor' && (
+                <div className="w-full">
+                  {viewMode === 'history' && (
+                    <div className="bg-blue-50 border-b border-blue-200 p-3 mb-4 rounded flex flex-col justify-between items-center gap-2 text-sm z-10 shrink-0">
+                      <span className="text-blue-800 font-medium">Đang xem lịch sử</span>
+                      <Button size="sm" variant="outline" className="bg-white" onClick={() => {
+                        setSearchParams({});
+                        setPreviewVersionId(null);
+                        setPreviewData(null);
+                      }}>
+                        Quay lại Bản Nháp
+                      </Button>
+                    </div>
+                  )}
+                  <CVEditorPanel
+                    activeSection={activeSection}
+                    data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+                    onChange={handleSectionDataChange}
+                    onSectionChange={setActiveSection}
+                    disabled={viewMode === 'history'}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'viewer' && (
+                <div className="flex justify-center relative">
+                  {isPreviewLoading && (
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
+                      <span className="animate-pulse text-slate-600 font-medium p-4 bg-white rounded shadow-sm">Đang tải nội dung phiên bản...</span>
+                    </div>
+                  )}
+                  <CVPreviewPanel
+                    data={viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData}
+                    scale={scale}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <CopyLocalizationModal
@@ -508,6 +518,26 @@ export function CVWorkspace() {
           {toastMessage.title}
         </div>
       )}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        .custom-font-inter {
+          font-family: 'Inter', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #cbd5e1;
+          border-radius: 20px;
+        }
+      `}} />
     </div>
   );
 }

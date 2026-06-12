@@ -7,12 +7,53 @@ export const createCVSchema = z.object({
   }),
 });
 
+const personalInfoSchema = z.object({
+  name: z.string().nullish(),
+  about: z.string().nullish(),
+  role: z.string().nullish(),
+  email: z.string().nullish(),
+  phone: z.string().nullish(),
+  location: z.string().nullish(),
+  website: z.string().nullish(),
+  github: z.string().nullish(),
+  linkedin: z.string().nullish(),
+}).strict();
+
+const experienceSchema = z.object({
+  company: z.string().nullish(),
+  title: z.string().nullish(),
+  date: z.string().nullish(),
+  desc: z.string().nullish(),
+}).strict();
+
+const educationSchema = z.object({
+  institution: z.string().nullish(),
+  date: z.string().nullish(),
+  qualification: z.string().nullish(),
+}).strict();
+
+const projectSchema = z.object({
+  name: z.string().nullish(),
+  link: z.string().nullish(),
+  desc: z.string().nullish(),
+}).strict();
+
+const skillSchema = z.object({
+  name: z.string().nullish(),
+}).strict();
+
 export const updateDraftSchema = z.object({
   params: z.object({
     id: z.string().uuid(),
   }),
   body: z.object({
-    sectionsData: z.record(z.any()),
+    sectionsData: z.object({
+      personalInfo: personalInfoSchema.optional(),
+      skills: z.array(skillSchema).optional(),
+      experience: z.array(experienceSchema).optional(),
+      education: z.array(educationSchema).optional(),
+      projects: z.array(projectSchema).optional(),
+    }).strict(),
   }),
 });
 

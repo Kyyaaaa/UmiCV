@@ -279,3 +279,100 @@ Dựa trên việc tham khảo dự án `quickcv`, giai đoạn này sẽ thay �
   - Bấm vào một mục trên Sidebar và chắc chắn màn hình cuộn đúng vị trí Form đó.
   - Thay đổi kích thước trình duyệt về Mobile và kiểm tra Tab Chỉnh sửa/Preview có hoạt động chính xác không.
   - Nhập liệu và đảm bảo tính năng **Auto-save / Lưu nháp** vẫn đồng bộ dữ liệu đúng như cũ.
+
+---
+
+## 📄 Phase 8: Thiết kế lại CV Workspace & Tích hợp chức năng Xuất PDF
+
+Giai đoạn này sẽ đồng bộ hoàn toàn thiết kế của CV Workspace theo bản thiết kế `QuickCVMockup.tsx`, loại bỏ sidebar và bổ sung thư viện xuất PDF native bằng `@react-pdf/renderer`.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-8.1: Thêm cơ chế Validate cấu trúc CV**
+  - Bổ sung xác thực cấu trúc `sectionsData` khi gọi API lưu CV (Draft / Submit). Chỉ cho phép các trường mặc định (`personalInfo`, `skills`, `experience`, `education`, `projects`), từ chối lưu dữ liệu với cấu trúc custom ngoài danh sách định sẵn.
+  - Xóa bỏ các API liên quan đến Custom Sections (nếu có riêng).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-8.2: Thiết kế lại Layout `CVWorkspace.tsx` & Xóa Sidebar**
+  - Gỡ bỏ hoàn toàn component `WorkspaceSidebar`.
+  - Bổ sung Top Navigation Bar chứa nút Zoom (`scale`), Chuyển đổi View Mode (`split`/`tabs`), và nút Export PDF.
+  - Áp dụng cấu trúc lưới (Grid) để phân chia Editor và Previewer tuân thủ thiết kế từ `QuickCVMockup.tsx`.
+- [x] **TASK-8.3: Cập nhật UI của `CVEditorPanel.tsx`**
+  - Xóa bỏ mọi logic liên quan đến việc render "Custom Sections".
+  - Áp dụng phong cách UI dạng khối thẻ (Card) trắng viền xám bóng đổ (shadow-sm) cho từng Section (Thông tin cá nhân, Kỹ năng, Kinh nghiệm, v.v.).
+- [x] **TASK-8.4: Tích hợp `@react-pdf/renderer` & Render PDF**
+  - Cài đặt thư viện `@react-pdf/renderer`.
+  - Viết mới component `CVPdfDocument.tsx` dựa trên các tag `<Document>`, `<Page>`, `<View>`, `<Text>` để tái tạo lại giao diện của `ResumeViewer`.
+  - Tích hợp hook xuất PDF vào nút Download PDF trên Toolbar.
+  - Đảm bảo font chữ Tiếng Việt được đăng ký (registerFont) để không bị lỗi ký tự khi tạo PDF.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-8.5: Kiểm thử UI Layout & Validation**
+  - Xác nhận CV Workspace hiển thị giống mockup, các nút Zoom và thay đổi view Mode (Tabs/Split) chạy chính xác.
+  - Gửi payload độc hại lên Backend chứa "Custom Section" kiểm tra xem API có chặn đứng không (Validation).
+- [x] **TASK-8.6: Kiểm thử File PDF Xuất ra**
+  - Nhập dữ liệu tiếng Việt có dấu, độ dài nhiều trang.
+  - Nhấn Download PDF và xác nhận File PDF không bị vỡ font tiếng Việt.
+  - Xác nhận file PDF phân trang (page break) hợp lý và giống nhất có thể so với bản Preview trên trình duyệt.
+
+---
+
+## 🎨 Phase 9: Đồng bộ Cấu trúc Dữ liệu và Responsive UI theo QuickCVMockup
+
+Giai đoạn này tập trung vào việc chuẩn hóa lại cấu trúc JSONB của CV để khớp 100% với dữ liệu mẫu trong `QuickCVMockup` (sửa tên trường, thêm trường icon), đồng thời fix các lỗi vỡ layout (spilling over) trên màn hình Editor.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-9.1: Cập nhật Type và Zod Schema cho cấu trúc CV mới**
+  - Đổi lại schema Validation trong Backend cho cấu trúc JSONB `sectionsData` để chấp nhận các trường mới:
+    - `personalInfo`: `name, about, role, email, phone, location, website, github, linkedin`
+    - `experience`: `company, title, date, desc`
+    - `education`: `institution, date, qualification`
+    - `projects`: `name, link, desc`
+    - `skills`: `name, icon` (nhận chuỗi string `<svg>`)
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-9.2: Cập nhật Data Types Frontend**
+  - Sửa đổi `export interface CVSections` trong `src/types/index.ts` để đồng bộ với cấu trúc mới của Mockup.
+- [x] **TASK-9.3: Đồng bộ Giao diện CVPreviewPanel**
+  - Thay thế toàn bộ mã nguồn của `CVPreviewPanel.tsx` bằng component `ResumeViewer` từ `QuickCVMockup.tsx`.
+  - Đảm bảo font chữ `Inter` và CSS inlines được giữ nguyên. Tích hợp dữ liệu thật từ `cvData` vào Preview thay cho dữ liệu cứng.
+  - Áp dụng state `scale` từ Zoom Slider để thu phóng Preview chính xác.
+- [x] **TASK-9.4: Sửa form nhập liệu và Fix lỗi Tràn Component**
+  - Cập nhật lại các input trong `CVEditorPanel.tsx` (Personal, Exp, Edu, Project) theo đúng bộ field mới.
+  - Form **Kỹ năng (Skills)**: Thêm Input/Textarea cho phép nhập chuỗi `<svg>`.
+  - Sửa các lỗi tràn giao diện (Overflow) bằng CSS (thêm `overflow-hidden`, `min-w`, `flex-wrap`...) để responsive trên màn hình nhỏ và tránh tràn do Zoom.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-9.5: Kiểm thử Cấu trúc Dữ liệu & UI**
+  - Thử tạo CV mới, điền các trường `location`, `github`, `linkedin` xem có lưu đúng xuống Backend không.
+  - Lấy mã thẻ `<svg>` và paste vào form Skills, đảm bảo hiển thị đúng kích thước logo trên Preview.
+  - Phóng to Zoom lên 150% và test trên màn hình nhỏ xem có nút bấm/Form nào bị lỗi tràn (spilling) ra ngoài không.
+
+---
+
+## 🗑️ Phase 9.1: Loại bỏ tính năng nhập SVG Icon
+
+Giai đoạn nhỏ này giải quyết yêu cầu gỡ bỏ tính năng dán mã SVG cho phần Kỹ năng (Skills) nhằm đơn giản hóa quá trình nhập liệu.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-9.6: Xóa trường Icon khỏi Schema**
+  - Cập nhật lại Zod Schema trong các API quản lý CV (nếu có validate `sectionsData`), gỡ bỏ trường `icon` ra khỏi object `skills`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-9.7: Gỡ giao diện nhập và render SVG**
+  - Sửa lại `export interface CVSections` trong `src/types/index.ts`, đổi `skills: { name: string; icon: string }[]` thành `skills: { name: string }[]`.
+  - Trong `CVEditorPanel.tsx` (hoặc form con tương ứng), xóa bỏ các thẻ `<textarea>` hay `<input>` đang dùng để nhập SVG code.
+  - Trong `CVPreviewPanel.tsx` và `CVPdfDocument.tsx`, xóa logic render HTML thẻ `<svg>` bên cạnh tên kỹ năng. Điều chỉnh lại căn lề/khoảng cách của text sao cho các nhãn kỹ năng (badge) trông cân đối khi không có icon.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-9.8: Kiểm thử hồi quy UI Kỹ năng**
+  - Thêm thử vài kỹ năng mới, xác nhận form không còn ô nhập icon.
+  - Xem thử bản Preview và file PDF xuất ra để đảm bảo các nhãn kỹ năng không bị lỗi Layout khi mất đoạn thẻ icon.
