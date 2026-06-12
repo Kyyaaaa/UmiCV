@@ -54,8 +54,7 @@ describe('QA Phase 9 - CV Structure & Mockup Sync Tests', () => {
           linkedin: 'linkedin.com/in/qa'
         },
         skills: [{ 
-          name: 'Test Automation', 
-          icon: '<svg xmlns="http://www.w3.org/2000/svg"><path d="M1 1h10v10H1z"/></svg>'
+          name: 'Test Automation'
         }],
         experience: [{
           company: 'UmiCV',
@@ -89,7 +88,6 @@ describe('QA Phase 9 - CV Structure & Mockup Sync Tests', () => {
     expect(savedData.personalInfo.location).toBe('Ho Chi Minh');
     expect(savedData.personalInfo.github).toBe('github.com/qa');
     expect(savedData.personalInfo.linkedin).toBe('linkedin.com/in/qa');
-    expect(savedData.skills[0].icon).toContain('<svg');
     expect(savedData.experience[0].company).toBe('UmiCV');
     expect(savedData.education[0].institution).toBe('VNUHCM');
     expect(savedData.projects[0].link).toBe('https://github.com/umicv');

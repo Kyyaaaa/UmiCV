@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { BatchRequestController } from './batch-request.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { createBatchRequestSchema, cancelBatchRequestSchema, getBatchRequestsSchema, getBatchRequestTargetsSchema } from './batch-request.dto';
+import { createBatchRequestSchema, cancelBatchRequestSchema, getBatchRequestsSchema, getBatchRequestTargetsSchema, remindTargetSchema } from './batch-request.dto';
 
 const router = Router();
 const batchRequestController = new BatchRequestController();
@@ -105,5 +105,34 @@ router.get('/:id/targets', validate(getBatchRequestTargetsSchema), batchRequestC
  *         description: Batch request not found
  */
 router.post('/:id/cancel', validate(cancelBatchRequestSchema), batchRequestController.cancel);
+
+/**
+ * @openapi
+ * /api/batch-requests/{id}/targets/{userId}/remind:
+ *   post:
+ *     summary: Send a reminder email to a specific target
+ *     tags: [Batch Request]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Reminder email sent successfully
+ *       400:
+ *         description: Target is not outdated
+ *       404:
+ *         description: Target not found
+ */
+router.post('/:id/targets/:userId/remind', validate(remindTargetSchema), batchRequestController.remind);
 
 export default router;

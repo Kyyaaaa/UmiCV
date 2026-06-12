@@ -17,6 +17,8 @@ export function BatchRequestDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
+  const [remindingTargets, setRemindingTargets] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (id) {
@@ -65,6 +67,22 @@ export function BatchRequestDetailPage() {
     }
   };
 
+  const handleRemind = async (userId: string) => {
+    if (!id) return;
+    try {
+      setRemindingTargets(prev => ({ ...prev, [userId]: true }));
+      await batchRequestService.remindTarget(id, userId);
+      setToastMessage({ title: 'Đã gửi email nhắc nhở', type: 'success' });
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error('Lỗi khi gửi nhắc nhở', err);
+      setToastMessage({ title: 'Lỗi khi gửi nhắc nhở', type: 'error' });
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setRemindingTargets(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const columns: Column<BatchRequestTarget>[] = [
     {
       key: 'user',
@@ -110,6 +128,24 @@ export function BatchRequestDetailPage() {
           {new Date(target.updatedAt).toLocaleString('vi-VN')}
         </span>
       )
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (target) => (
+        <div className="flex justify-end">
+          {target.status === 'Outdated' && request?.status === 'Active' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleRemind(target.userId)}
+              disabled={remindingTargets[target.userId]}
+            >
+              {remindingTargets[target.userId] ? 'Đang gửi...' : 'Nhắc nhở'}
+            </Button>
+          )}
+        </div>
+      )
     }
   ];
 
@@ -122,7 +158,15 @@ export function BatchRequestDetailPage() {
   }
 
   return (
-    <div>
+    <div className="relative">
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 rounded-md shadow-lg p-4 max-w-sm ${toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
+          <div className="flex items-start">
+            <p className="text-sm font-medium">{toastMessage.title}</p>
+          </div>
+        </div>
+      )}
+
       <Button 
         variant="ghost" 
         size="sm" 

@@ -16,6 +16,18 @@ import { DiffChange } from '../../types/cv';
 import { useAuth } from '../../hooks/useAuth';
 import { pdf } from '@react-pdf/renderer';
 
+const formatDiffValue = (val: any) => {
+  if (val === null || val === undefined) return 'null';
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch {
+      return String(val);
+    }
+  }
+  return String(val);
+};
+
 export function ApprovalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -212,7 +224,7 @@ export function ApprovalDetailPage() {
             <div className="flex items-center gap-2">
               {diffData && diffData.length > 0 && (
                 <Button 
-                  variant={showDiff ? "default" : "outline"} 
+                  variant={showDiff ? "primary" : "outline"} 
                   size="sm" 
                   onClick={() => setShowDiff(!showDiff)}
                   className={`h-8 ${showDiff ? 'bg-blue-600 text-white' : ''}`}
@@ -256,19 +268,19 @@ export function ApprovalDetailPage() {
                         [{d.type === 'added' ? 'Thêm mới' : d.type === 'removed' ? 'Đã xóa' : 'Chỉnh sửa'}] {d.path}
                       </span>
                       {d.type === 'modified' && (
-                        <div className="text-xs space-y-1">
-                          <div className="text-red-500 bg-red-50 p-1 rounded">Cũ: "{String(d.oldValue)}"</div>
-                          <div className="text-green-600 bg-green-50 p-1 rounded">Mới: "{String(d.newValue)}"</div>
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(d.oldValue)}</pre>
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(d.newValue)}</pre>
                         </div>
                       )}
                       {d.type === 'added' && (
-                        <div className="text-xs space-y-1">
-                          <div className="text-green-600 bg-green-50 p-1 rounded">Mới: "{String(d.newValue)}"</div>
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(d.newValue)}</pre>
                         </div>
                       )}
                       {d.type === 'removed' && (
-                        <div className="text-xs space-y-1">
-                          <div className="text-red-500 bg-red-50 p-1 rounded">Đã xóa: "{String(d.oldValue)}"</div>
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(d.oldValue)}</pre>
                         </div>
                       )}
                     </li>

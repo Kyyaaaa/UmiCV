@@ -38,4 +38,13 @@ export class BatchRequestController {
     const result = await batchRequestService.cancelBatchRequest(batchId, hrUserId);
     res.status(200).json({ success: true, ...result });
   }
+
+  async remind(req: AuthRequest, res: Response) {
+    const hrUserId = req.user!.userId;
+    const batchId = req.params.id;
+    const targetUserId = req.params.userId;
+
+    const result = await batchRequestService.remindTarget(batchId, targetUserId, hrUserId);
+    res.status(200).json({ success: true, ...result });
+  }
 }

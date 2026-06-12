@@ -13,13 +13,23 @@ describe('QA Phase 8 - CV Structure Validation Tests', () => {
       .post('/api/auth/login')
       .send({ username: 'admin', password: 'password123' });
     
+    let userId: string;
     if (login.status !== 200) {
       const loginFallback = await request(API_URL)
         .post('/api/auth/login')
         .send({ username: 'admin', password: '123456' });
       userToken = loginFallback.body?.data?.accessToken;
+      userId = loginFallback.body?.data?.user?.id;
     } else {
       userToken = login.body?.data?.accessToken;
+      userId = login.body?.data?.user?.id;
+    }
+
+    // Delete existing CV for the user if exists
+    if (userId) {
+      await prisma.cVProfile.deleteMany({
+        where: { userId }
+      });
     }
 
     // 2. Create a Draft CV
@@ -29,6 +39,9 @@ describe('QA Phase 8 - CV Structure Validation Tests', () => {
       .send({ languageCode: 'vi' });
 
     cvId = createRes.body?.data?.id;
+    if (!cvId) {
+      console.log('PHASE 8 CREATE ERROR:', createRes.status, createRes.body);
+    }
   });
 
   afterAll(async () => {
@@ -42,7 +55,7 @@ describe('QA Phase 8 - CV Structure Validation Tests', () => {
   it('TASK-8.5: API should reject payload containing custom/unknown sections', async () => {
     const maliciousPayload = {
       sectionsData: {
-        personalInfo: { fullName: 'Test User' },
+        personalInfo: { name: 'Test User' },
         hackedSection: 'This is malicious data' // Custom section not allowed by schema
       }
     };
@@ -61,8 +74,8 @@ describe('QA Phase 8 - CV Structure Validation Tests', () => {
   it('TASK-8.5: API should accept payload with valid sections only', async () => {
     const validPayload = {
       sectionsData: {
-        personalInfo: { fullName: 'Test User' },
-        skills: [{ name: 'React', level: 'Senior' }]
+        personalInfo: { name: 'Test User' },
+        skills: [{ name: 'React' }]
       }
     };
 
@@ -70,6 +83,10 @@ describe('QA Phase 8 - CV Structure Validation Tests', () => {
       .put(`/api/cvs/${cvId}/draft`)
       .set('Authorization', `Bearer ${userToken}`)
       .send(validPayload);
+
+    if (res.status !== 200) {
+      console.log('PHASE 8 ERROR:', JSON.stringify(res.body, null, 2));
+    }
 
     expect(res.status).toBe(200);
     expect(res.body.data.sectionsData.skills[0].name).toBe('React');

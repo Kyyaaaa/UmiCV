@@ -17,4 +17,8 @@ export const batchRequestService = {
   cancelBatchRequest: (id: string) => {
     return api.post<{ success: boolean; data: BatchRequest }>(`/batch-requests/${id}/cancel`);
   },
+
+  remindTarget: (id: string, userId: string) => {
+    return api.post<{ success: boolean; message: string }>(`/batch-requests/${id}/targets/${userId}/remind`);
+  },
 };

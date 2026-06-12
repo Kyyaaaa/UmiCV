@@ -4,6 +4,8 @@ import { SearchInput, CreateCVInput, UpdateDraftInput } from './cv.dto';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
 import { MESSAGES } from '../../constants/messages';
 import { generateDiff } from './cv.diff';
+import { emailQueue } from '../notification/notification.queue';
+import { getSubmitCVTemplate } from '../notification/mailer';
 
 export class CVService {
   async getMyCVs(userId: string) {
@@ -174,6 +176,7 @@ export class CVService {
           orderBy: { versionNumber: 'desc' },
           take: 1,
         },
+        user: true,
       },
     });
 
@@ -194,13 +197,25 @@ export class CVService {
       throw new BadRequestError('NO_CHANGES_TO_PUBLISH');
     }
 
-    return prisma.cVProfile.update({
+    const updatedCv = await prisma.cVProfile.update({
       where: { id: cvId },
       data: {
         status: CVStatus.PendingApproval,
         submittedAt: new Date(),
       },
     });
+
+    // Notify HR
+    const hrUsers = await prisma.user.findMany({ where: { role: 'HR' } });
+    for (const hr of hrUsers) {
+      await emailQueue.add('submit-cv', {
+        to: hr.email,
+        subject: `New CV Submitted by ${cv.user.username}`,
+        body: getSubmitCVTemplate(cv.user.username, cvId),
+      });
+    }
+
+    return updatedCv;
   }
 
   async searchCVs(query: SearchInput, requestUserId: string, requestUserRole: string) {

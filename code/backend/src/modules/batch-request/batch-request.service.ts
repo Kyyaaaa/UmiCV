@@ -1,6 +1,6 @@
 import prisma from '../../config/db';
 import { CreateBatchRequestInput } from './batch-request.dto';
-import { NotFoundError } from '../../errors/AppError';
+import { NotFoundError, BadRequestError } from '../../errors/AppError';
 import { BatchRequestStatus, CVStatus, TargetStatus, Prisma } from '@prisma/client';
 import { MESSAGES } from '../../constants/messages';
 
@@ -135,5 +135,49 @@ export class BatchRequestService {
     });
 
     return { message: MESSAGES.BATCH_REQUEST.CANCEL_SUCCESS };
+  }
+
+  async remindTarget(batchId: string, targetUserId: string, hrUserId: string) {
+    const target = await prisma.batchRequestTarget.findUnique({
+      where: {
+        batchRequestId_userId: {
+          batchRequestId: batchId,
+          userId: targetUserId,
+        },
+      },
+      include: { user: true, batchRequest: true },
+    });
+
+    if (!target) {
+      throw new NotFoundError('Target not found');
+    }
+
+    if (target.status !== TargetStatus.Outdated) {
+      throw new BadRequestError('Target is not outdated');
+    }
+
+    // Call emailQueue
+    // To avoid circular dependency or import issues, we can just import it here
+    const { emailQueue } = require('../notification/notification.queue');
+    const { getRemindCVTemplate } = require('../notification/mailer');
+
+    await emailQueue.add('send-reminder', {
+      to: target.user.email,
+      subject: `Reminder: Please update your CV for ${target.batchRequest.title}`,
+      body: getRemindCVTemplate(target.batchRequest.title, target.batchRequest.deadline.toString()),
+    });
+
+    // Update notifiedAt
+    await prisma.batchRequestTarget.update({
+      where: {
+        batchRequestId_userId: {
+          batchRequestId: batchId,
+          userId: targetUserId,
+        },
+      },
+      data: { notifiedAt: new Date() },
+    });
+
+    return { message: 'Reminder email sent successfully' };
   }
 }

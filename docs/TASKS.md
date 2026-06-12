@@ -376,3 +376,40 @@ Giai đoạn nhỏ này giải quyết yêu cầu gỡ bỏ tính năng dán mã
 - [x] **TASK-9.8: Kiểm thử hồi quy UI Kỹ năng**
   - Thêm thử vài kỹ năng mới, xác nhận form không còn ô nhập icon.
   - Xem thử bản Preview và file PDF xuất ra để đảm bảo các nhãn kỹ năng không bị lỗi Layout khi mất đoạn thẻ icon.
+
+---
+
+## 🕒 Phase 5: Notifications & Cronjob (Hệ thống Bất đồng bộ)
+
+Xây dựng Worker và Queue (Redis/BullMQ) chạy ngầm không ảnh hưởng UI. Giai đoạn này tập trung vào luồng gửi Email tự động và lập lịch Cronjob.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-5.1: Cài đặt và cấu hình Redis/BullMQ/Nodemailer**
+  - Cài đặt các package cần thiết: `bullmq`, `ioredis`, `nodemailer`, `mailtrap`.
+  - Thiết lập module Mailer sử dụng `MAILTRAP_API_KEY` đã có trong `.env`.
+  - Khởi tạo kết nối Redis và cấu hình Queue (VD: `emailQueue`).
+- [x] **TASK-5.2: Xây dựng Email Worker**
+  - Tạo Worker để lắng nghe `emailQueue`.
+  - Thiết kế logic render nội dung email tùy thuộc vào loại sự kiện:
+    - Gửi mail báo cho HR/Tech Lead khi có CV mới.
+    - Gửi mail báo cho Nhân viên khi CV bị Reject.
+- [x] **TASK-5.3: Tích hợp Queue vào luồng API CV**
+  - Trong các hàm xử lý nộp CV (Submit CV) và từ chối CV (Reject CV) ở Service, bổ sung logic đẩy (push) Job vào `emailQueue` thay vì gọi gửi mail đồng bộ.
+- [x] **TASK-5.4: Thiết lập Daily Cronjob**
+  - Sử dụng BullMQ Repeatable Jobs (hoặc `node-cron`) để tạo tác vụ chạy định kỳ vào 8:00 sáng mỗi ngày.
+  - Logic Cronjob: Quét bảng `BatchRequestTarget`, tìm các target đang ở trạng thái `Outdated` sắp tới deadline, sau đó đẩy Job gửi mail hối thúc (Remind) vào `emailQueue`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-5.5: Thêm nút Gửi Hối thúc (Manual Remind) trên UI**
+  - Tại giao diện Chi tiết Chiến dịch (Batch Request Details), thêm một nút "Nhắc nhở" bên cạnh các nhân viên đang nợ CV (trạng thái `Outdated`).
+  - Gọi API backend (cần Backend bổ sung API này) để đẩy ngay một Job nhắc nhở vào Queue mà không cần đợi tới 8:00 sáng. Hiển thị Toast thông báo "Đã gửi email nhắc nhở".
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-5.6: Kiểm thử hiệu năng (Async test)**
+  - Click Submit / Reject CV trên giao diện, đo thời gian response của API. Phải đảm bảo API phản hồi cực nhanh (<300ms) trong khi hệ thống gửi mail vẫn đang chạy ngầm.
+  - Kiểm tra hòm thư Mailtrap xem có nhận được đúng nội dung email không.
+- [x] **TASK-5.7: Kiểm thử Cronjob**
+  - Giả lập thời gian chạy Cronjob (hoặc điều chỉnh lịch Cron về `* * * * *` chạy mỗi phút) để xác nhận hệ thống tự động quét DB và đẩy email hối thúc chính xác.

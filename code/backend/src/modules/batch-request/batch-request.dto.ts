@@ -15,6 +15,13 @@ export const cancelBatchRequestSchema = z.object({
   }),
 });
 
+export const remindTargetSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('Invalid batch ID format'),
+    userId: z.string().uuid('Invalid user ID format'),
+  }),
+});
+
 export const getBatchRequestsSchema = z.object({
   query: z.object({
     page: z.string().optional(),

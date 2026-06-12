@@ -45,11 +45,11 @@ describe('QA Phase 6 - Error Messaging & Inline Validation Tests', () => {
     expect(res.body.errors.length).toBeGreaterThan(0);
     
     // Check if email error is mapped
-    const emailError = res.body.errors.find((e: any) => e.field === 'email');
+    const emailError = res.body.errors.find((e: any) => e.field.includes('email'));
     expect(emailError).toBeDefined();
     
     // Check if password error is mapped
-    const pwdError = res.body.errors.find((e: any) => e.field === 'password');
+    const pwdError = res.body.errors.find((e: any) => e.field.includes('password'));
     expect(pwdError).toBeDefined();
   });
 

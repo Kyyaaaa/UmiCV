@@ -3,6 +3,8 @@ import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/App
 import { CVStatus, ApprovalAction, TargetStatus, BatchRequestStatus } from '@prisma/client';
 import { ApproveInput, RejectInput, SubmitDraftInput } from './workflow.dto';
 import { MESSAGES } from '../../constants/messages';
+import { emailQueue } from '../notification/notification.queue';
+import { getRejectCVTemplate } from '../notification/mailer';
 
 export class WorkflowService {
   async submitDraft(userId: string, data: SubmitDraftInput) {
@@ -163,7 +165,10 @@ export class WorkflowService {
   }
 
   async rejectCV(cvId: string, approverId: string, data: RejectInput, level: number) {
-    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    const cv = await prisma.cVProfile.findUnique({ 
+      where: { id: cvId },
+      include: { user: true }
+    });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     if (cv.status !== CVStatus.PendingApproval) {
       throw new BadRequestError(MESSAGES.WORKFLOW.NOT_PENDING);
@@ -203,6 +208,13 @@ export class WorkflowService {
       data: {
         status: CVStatus.Draft,
       },
+    });
+
+    // Notify the user about rejection
+    await emailQueue.add('reject-cv', {
+      to: cv.user.email,
+      subject: `Your CV has been rejected`,
+      body: getRejectCVTemplate(data.reason),
     });
 
     return { message: MESSAGES.WORKFLOW.REJECT_SUCCESS };
