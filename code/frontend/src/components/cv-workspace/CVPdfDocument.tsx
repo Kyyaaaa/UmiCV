@@ -85,12 +85,17 @@ const styles = StyleSheet.create({
   experienceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    flexWrap: 'wrap'
   },
   experienceRoleCompany: {
     fontSize: 14,
-    color: '#334155'
+    color: '#334155',
+    flex: 1,
+    minWidth: '60%',
+    marginRight: 8,
+    marginBottom: 4
   },
   experienceDate: {
     fontSize: 11,
@@ -99,7 +104,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
     color: '#64748b',
-    fontWeight: 700
+    fontWeight: 700,
+    flexShrink: 0
   },
   experienceDescription: {
     fontSize: 13,
@@ -120,12 +126,17 @@ const styles = StyleSheet.create({
   educationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4
+    alignItems: 'flex-start',
+    marginBottom: 4,
+    flexWrap: 'wrap'
   },
   educationSchool: {
     fontSize: 13,
-    color: '#334155'
+    color: '#334155',
+    flex: 1,
+    minWidth: '60%',
+    marginRight: 8,
+    marginBottom: 4
   },
   educationDegree: {
     fontSize: 12,

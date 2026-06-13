@@ -140,6 +140,37 @@ export class CVService {
     return version;
   }
 
+  async getLatestApprovedCV(cvId: string, userId: string, role: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    
+    // RBAC similar to getCVById
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
+
+    if (cv.versionNumber === 0) {
+      throw new NotFoundError('CV này chưa từng được duyệt');
+    }
+
+    const version = await prisma.cVVersionHistory.findFirst({
+      where: { cvProfileId: cvId },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    if (!version) {
+      throw new NotFoundError('CV này chưa từng được duyệt');
+    }
+
+    return version;
+  }
+
   async restoreCVVersion(cvId: string, versionId: string, userId: string, role: string) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
@@ -280,7 +311,7 @@ export class CVService {
         skip,
         take: limit,
         include: {
-          user: { select: { id: true, username: true, department: true } },
+          user: { select: { id: true, username: true, fullName: true, department: true } },
         },
       }),
     ]);

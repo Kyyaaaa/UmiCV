@@ -84,7 +84,7 @@ export function CVDashboard() {
 
   const filteredCVs = cvs.filter(cv => {
     if (!searchTerm) return true;
-    const name = cv.sectionsData?.personalInfo?.fullName || '';
+    const name = cv.sectionsData?.personalInfo?.name || '';
     return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -164,11 +164,11 @@ export function CVDashboard() {
                     </span>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-slate-900 line-clamp-1" title={cv.sectionsData?.personalInfo?.fullName || 'Chưa có tên'}>
-                    {cv.sectionsData?.personalInfo?.fullName || 'Chưa có tên'}
+                  <h3 className="text-lg font-bold text-slate-900 line-clamp-1" title={cv.sectionsData?.personalInfo?.name || 'Chưa có tên'}>
+                    {cv.sectionsData?.personalInfo?.name || 'Chưa có tên'}
                   </h3>
                   <p className="mt-1 text-sm font-medium text-blue-600 line-clamp-1">
-                    {cv.sectionsData?.personalInfo?.title || 'Chưa cập nhật chức danh'}
+                    {cv.sectionsData?.personalInfo?.role || 'Chưa cập nhật chức danh'}
                   </p>
                   
                   <div className="mt-4 flex items-center text-xs text-slate-500">
@@ -197,14 +197,25 @@ export function CVDashboard() {
                     >
                       <History size={14} className="mr-1.5" /> Lịch sử
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => navigate(`/cv/${cv.id}/publish`)}
-                    >
-                      <Globe size={14} className="mr-1.5" /> Publish
-                    </Button>
+                    {cv.versionNumber > 0 ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 px-2 whitespace-nowrap"
+                        onClick={() => navigate(`/cv/${cv.id}/view`)}
+                      >
+                        <Globe size={14} className="mr-1.5 shrink-0" /> Bản duyệt
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => navigate(`/cv/${cv.id}/publish`)}
+                      >
+                        <Globe size={14} className="mr-1.5" /> Publish
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

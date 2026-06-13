@@ -48,7 +48,9 @@ export interface CVProfile {
   sectionsData: CVSections;
   submittedAt: string | null;
   publishedAt: string | null;
+  createdAt: string;
   updatedAt: string;
+  user?: Partial<User> & { department?: Department };
   slaStatus?: 'Safe' | 'Warning' | 'Overdue';
 }
 

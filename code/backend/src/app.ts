@@ -39,6 +39,7 @@ import batchRequestRoutes from './modules/batch-request/batch-request.route';
 import userRoutes from './modules/user/user.route';
 import departmentRoutes from './modules/department/department.route';
 import projectRoutes from './modules/project/project.route';
+import notificationRoutes from './modules/notification/notification.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -48,6 +49,7 @@ app.use('/api/batch-requests', batchRequestRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error Handling
 app.use(errorHandler);

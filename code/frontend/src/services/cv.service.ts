@@ -62,5 +62,10 @@ export const cvService = {
   copyLocalization: async (id: string, targetLanguageCode: string): Promise<CreateCVResponse> => {
     const response = await apiClient.post<CreateCVResponse>(`/cvs/${id}/localizations/copy`, { targetLanguageCode });
     return response.data;
+  },
+
+  getLatestApprovedVersion: async (id: string): Promise<GetVersionByIdResponse> => {
+    const response = await apiClient.get<GetVersionByIdResponse>(`/cvs/${id}/latest-approved`);
+    return response.data;
   }
 };

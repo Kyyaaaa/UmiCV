@@ -178,7 +178,7 @@ export function CVWorkspace() {
     if (!id || id === 'new') return;
     try {
       setIsPublishing(true);
-      if (isDirty) {
+      if (isDirty && cvData) {
         await cvService.updateDraft(id, { sectionsData: cvData.sectionsData });
         setIsDirty(false);
         setLastSaved(new Date());
@@ -196,6 +196,7 @@ export function CVWorkspace() {
 
   const handleDownloadPdf = async () => {
     setIsDownloadingPdf(true);
+    if (!cvData) return;
     try {
       const dataToRender = viewMode === 'history' ? (previewData || cvData.sectionsData) : cvData.sectionsData;
       const doc = <CVPdfDocument data={dataToRender} />;
@@ -361,16 +362,16 @@ export function CVWorkspace() {
           >
             Lịch sử
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval' || cvData.status === 'Updated'}>
+          <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isSaving || !isDirty || viewMode === 'history' || cvData.status === 'PendingApproval'}>
             {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
           </Button>
           <Button 
             size="sm" 
             onClick={handlePublish} 
-            disabled={isPublishing || viewMode === 'history' || cvData.status === 'PendingApproval' || cvData.status === 'Updated'}
+            disabled={isPublishing || viewMode === 'history' || cvData.status === 'PendingApproval'}
             className={cvData.status === 'PendingApproval' ? 'bg-amber-500 hover:bg-amber-600 text-white border-transparent' : cvData.status === 'Updated' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent' : 'bg-green-600 hover:bg-green-700 text-white border-transparent'}
           >
-            {isPublishing ? 'Đang nộp...' : cvData.status === 'PendingApproval' ? 'Đang chờ duyệt' : cvData.status === 'Updated' ? 'Đã duyệt' : 'Nộp CV'}
+            {isPublishing ? 'Đang nộp...' : cvData.status === 'PendingApproval' ? 'Đang chờ duyệt' : cvData.status === 'Updated' ? (isDirty ? 'Cập nhật CV' : 'Đã duyệt') : 'Nộp CV'}
           </Button>
           <Button
             onClick={handleDownloadPdf}

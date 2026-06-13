@@ -93,7 +93,6 @@ export function PrivateLayout() {
               onClick={() => navigate('/notifications')}
             >
               <Bell size={20} />
-              <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500"></span>
             </button>
             
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">

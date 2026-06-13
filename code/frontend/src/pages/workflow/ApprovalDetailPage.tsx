@@ -51,12 +51,6 @@ export function ApprovalDetailPage() {
   const [approveError, setApproveError] = useState('');
   const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchData(id);
-    }
-  }, [id]);
-
   const fetchData = async (cvId: string) => {
     try {
       setIsLoading(true);
@@ -74,6 +68,12 @@ export function ApprovalDetailPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (id) {
+      fetchData(id);
+    }
+  }, [id]);
 
   const handleDownloadPdf = async () => {
     if (!cv) return;

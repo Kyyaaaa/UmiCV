@@ -38,6 +38,18 @@ export class CVController {
     });
   }
 
+  async getLatestApprovedCV(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const cvId = req.params.id;
+    const version = await cvService.getLatestApprovedCV(cvId, userId, role);
+
+    res.status(200).json({
+      success: true,
+      data: version,
+    });
+  }
+
   async updateDraftById(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
     const role = req.user!.role;

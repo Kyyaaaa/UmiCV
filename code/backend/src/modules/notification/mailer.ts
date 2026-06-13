@@ -4,35 +4,15 @@ import { env } from '../../config/env';
 
 let transport: nodemailer.Transporter;
 
-if (env.MAILTRAP_API_KEY && env.MAILTRAP_API_KEY.trim() !== '' && env.MAILTRAP_API_KEY !== 'undefined') {
-  try {
-    transport = nodemailer.createTransport(
-      MailtrapTransport({
-        token: env.MAILTRAP_API_KEY,
-      })
-    );
-  } catch (err) {
-    // Fallback if token is invalid format
-    transport = nodemailer.createTransport({
-      streamTransport: true,
-      newline: 'windows',
-    });
+// Dùng Ethereal Email để test luồng nhận mail thật
+transport = nodemailer.createTransport({
+  host: 'smtp.ethereal.email',
+  port: 587,
+  auth: {
+      user: 'ssotrkie6nuyh2hk@ethereal.email',
+      pass: 'X4nxJ7vTV1RBZ2NtBF'
   }
-} else {
-  // Fallback console transport for development if no key is provided
-  transport = nodemailer.createTransport({
-    streamTransport: true,
-    newline: 'windows',
-  });
-}
-
-// Override temporarily to force console log if Mailtrap is failing
-if (true) {
-  transport = nodemailer.createTransport({
-    streamTransport: true,
-    newline: 'windows',
-  });
-}
+});
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
   const sender = {
@@ -57,6 +37,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       }
     } else {
       console.log(`Email sent successfully to ${to}`);
+      console.log('Preview URL: ' + nodemailer.getTestMessageUrl(info));
     }
     return info;
   } catch (error) {

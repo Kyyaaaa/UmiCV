@@ -15,7 +15,7 @@ export function CVPreviewPanel({ data, scale = 100 }: CVPreviewPanelProps) {
   const projects = data?.projects || [];
 
   return (
-    <div className="bg-slate-200 flex flex-col h-full overflow-hidden items-center justify-start pt-8 pb-10 custom-scrollbar">
+    <div className="bg-slate-200 flex flex-col h-full overflow-y-auto items-center justify-start pt-8 pb-10 custom-scrollbar">
       <div
         className="bg-white shadow-xl origin-top transition-transform text-slate-800 flex flex-col custom-font-inter shrink-0"
         style={{
@@ -103,9 +103,9 @@ export function CVPreviewPanel({ data, scale = 100 }: CVPreviewPanelProps) {
               </h2>
               {experience.map((exp: any, idx: number) => (
                 <div key={idx} className="flex flex-col mb-5">
-                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
-                    <span className="text-[14px] text-slate-700 break-words flex-1"><strong>{exp.title}</strong>{exp.company ? ` - ${exp.company}` : ''}</span>
-                    <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">{exp.date}</span>
+                  <div className="flex justify-between items-start mb-1.5 flex-wrap gap-2">
+                    <span className="text-[14px] text-slate-700 break-words flex-1 min-w-[60%]"><strong>{exp.title}</strong>{exp.company ? ` - ${exp.company}` : ''}</span>
+                    <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap shrink-0">{exp.date}</span>
                   </div>
                   <div className="text-[13px] text-slate-600 space-y-1 font-normal whitespace-pre-wrap break-words pl-2 border-l-2 border-slate-200">
                     {exp.desc}
@@ -128,8 +128,8 @@ export function CVPreviewPanel({ data, scale = 100 }: CVPreviewPanelProps) {
                 {education.map((edu: any, idx: number) => (
                   <div key={idx} className="flex flex-col break-words">
                     <div className="flex justify-between items-start mb-1 gap-2 flex-wrap">
-                      <span className="text-[13px] text-slate-700 flex-1">{edu.institution}</span>
-                      <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap">{edu.date}</span>
+                      <span className="text-[13px] text-slate-700 flex-1 min-w-[60%] break-words">{edu.institution}</span>
+                      <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap shrink-0">{edu.date}</span>
                     </div>
                     <span className="text-slate-500 text-[12px] font-normal">{edu.qualification}</span>
                   </div>

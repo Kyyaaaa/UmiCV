@@ -9,35 +9,37 @@ export const mockCVs: CVProfile[] = [
     versionNumber: 1,
     sectionsData: {
       personalInfo: {
-        fullName: 'Alice Nguyen',
+        name: 'Alice Nguyen',
         email: 'emp1@umicv.com',
         phone: '0123456789',
-        title: 'Frontend Developer',
-        summary: 'A passionate developer with 2 years of experience in React.',
+        role: 'Frontend Developer',
+        about: 'A passionate developer with 2 years of experience in React.',
+        location: '',
+        website: '',
+        github: '',
+        linkedin: ''
       },
       skills: [
-        { name: 'React', level: 'Intermediate' },
-        { name: 'TypeScript', level: 'Intermediate' },
+        { name: 'React' },
+        { name: 'TypeScript' },
       ],
       experience: [
         {
           company: 'Tech Corp',
-          role: 'Junior Dev',
-          startDate: '2024-01-01',
-          endDate: 'Present',
-          description: 'Developed frontend features.',
+          title: 'Junior Dev',
+          date: '2024-01-01 - Present',
+          desc: 'Developed frontend features.',
         },
       ],
       projects: [
         {
           name: 'E-commerce Platform',
-          role: 'Frontend Dev',
-          technologies: ['React', 'Tailwind'],
-          description: 'Built a scalable e-commerce site.',
+          link: '',
+          desc: 'Built a scalable e-commerce site using React and Tailwind.',
         },
       ],
       education: [
-        { school: 'University of Technology', degree: 'BSc Computer Science', year: '2023' },
+        { institution: 'University of Technology', qualification: 'BSc Computer Science', date: '2023' },
       ],
     },
     submittedAt: new Date(Date.now() - 86400000).toISOString(),
@@ -52,24 +54,27 @@ export const mockCVs: CVProfile[] = [
     versionNumber: 3,
     sectionsData: {
       personalInfo: {
-        fullName: 'John Doe',
+        name: 'John Doe',
         email: 'techlead1@umicv.com',
         phone: '0987654321',
-        title: 'Senior Fullstack Engineer',
-        summary: 'Expert in Node.js and React with 8 years of experience.',
+        role: 'Senior Fullstack Engineer',
+        about: 'Expert in Node.js and React with 8 years of experience.',
+        location: '',
+        website: '',
+        github: '',
+        linkedin: ''
       },
       skills: [
-        { name: 'Node.js', level: 'Expert' },
-        { name: 'React', level: 'Expert' },
-        { name: 'AWS', level: 'Advanced' },
+        { name: 'Node.js' },
+        { name: 'React' },
+        { name: 'AWS' },
       ],
       experience: [
         {
           company: 'Umi Corp',
-          role: 'Tech Lead',
-          startDate: '2020-01-01',
-          endDate: 'Present',
-          description: 'Leading a team of 10 engineers.',
+          title: 'Tech Lead',
+          date: '2020-01-01 - Present',
+          desc: 'Leading a team of 10 engineers.',
         },
       ],
       projects: [],

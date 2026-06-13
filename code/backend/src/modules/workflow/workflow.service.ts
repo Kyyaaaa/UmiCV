@@ -140,6 +140,14 @@ export class WorkflowService {
             versionNumber: updatedVersion,
             snapshotData: cv.sectionsData as any,
           },
+        }),
+        prisma.notification.create({
+          data: {
+            title: 'CV Approved',
+            message: `Your CV (version ${updatedVersion}) has been approved and published successfully.`,
+            userId: cv.userId,
+            isGlobal: false,
+          }
         })
       ];
 
@@ -208,6 +216,16 @@ export class WorkflowService {
       data: {
         status: CVStatus.Draft,
       },
+    });
+
+    // Notify the user via In-App Notification
+    await prisma.notification.create({
+      data: {
+        title: 'CV Rejected',
+        message: `Your CV was rejected. Reason: ${data.reason}`,
+        userId: cv.userId,
+        isGlobal: false,
+      }
     });
 
     // Notify the user about rejection

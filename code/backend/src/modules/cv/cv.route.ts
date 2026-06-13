@@ -209,6 +209,27 @@ router.get('/:id/versions', authorize(['Employee', 'TechLead', 'HR', 'Admin']), 
 
 /**
  * @openapi
+ * /api/cvs/{id}/latest-approved:
+ *   get:
+ *     summary: Get the latest approved version of a CV
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Latest approved version details retrieved
+ *       404:
+ *         description: CV has never been approved
+ */
+router.get('/:id/latest-approved', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getLatestApprovedCV);
+
+/**
+ * @openapi
  * /api/cvs/{id}/versions/{versionId}:
  *   get:
  *     summary: Get specific CV version details

@@ -17,10 +17,6 @@ export function ApprovalRequestListPage() {
   const [pendingCVs, setPendingCVs] = useState<CVProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCVs();
-  }, []);
-
   const [errorMsg, setErrorMsg] = useState('');
 
   const fetchCVs = async () => {
@@ -41,11 +37,16 @@ export function ApprovalRequestListPage() {
     }
   };
 
+  useEffect(() => {
+    fetchCVs();
+  }, []);
+
   let filteredCVs = pendingCVs;
 
   if (searchTerm) {
     filteredCVs = filteredCVs.filter(cv => 
-      cv.sectionsData?.personalInfo?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
+      cv.user?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      cv.user?.username?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
 
@@ -62,15 +63,10 @@ export function ApprovalRequestListPage() {
       header: 'Người gửi',
       render: (cv) => (
         <div>
-          <p className="font-medium text-slate-900">{cv.sectionsData?.personalInfo?.fullName || 'Chưa cập nhật'}</p>
-          <p className="text-xs text-slate-500">{cv.sectionsData?.personalInfo?.email || ''}</p>
+          <p className="font-medium text-slate-900">{cv.user?.username || 'Unknown'}</p>
+          <p className="text-xs text-slate-500">{cv.user?.fullName || ''}</p>
         </div>
       ),
-    },
-    {
-      key: 'title',
-      header: 'Vị trí',
-      render: (cv) => cv.sectionsData?.personalInfo?.title || 'Chưa cập nhật',
     },
     {
       key: 'submittedAt',

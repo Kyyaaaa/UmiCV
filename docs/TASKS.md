@@ -413,3 +413,80 @@ Xây dựng Worker và Queue (Redis/BullMQ) chạy ngầm không ảnh hưởng 
   - Kiểm tra hòm thư Mailtrap xem có nhận được đúng nội dung email không.
 - [x] **TASK-5.7: Kiểm thử Cronjob**
   - Giả lập thời gian chạy Cronjob (hoặc điều chỉnh lịch Cron về `* * * * *` chạy mỗi phút) để xác nhận hệ thống tự động quét DB và đẩy email hối thúc chính xác.
+
+---
+
+## 🐞 Hotfix: Fix lỗi Disable nút thao tác trên Workspace
+
+Mục đích: Sửa lỗi Frontend khóa tính năng "Lưu nháp" và "Nộp CV" khi trạng thái của CV đã được duyệt (`CVStatus.Updated`).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-HOTFIX.1: Sửa logic disable nút trong `CVWorkspace.tsx`**
+  - Tìm nút **Lưu nháp** và **Nộp CV**.
+  - Gỡ bỏ điều kiện `cvData.status === 'Updated'` ra khỏi prop `disabled` để cho phép người dùng lưu nháp phiên bản mới sau khi CV cũ đã được duyệt.
+  - Sửa lại nội dung text hiển thị trên nút "Nộp CV" (hiện tại nếu trạng thái là `Updated` thì đang hiển thị "Đã duyệt", nhưng nếu người dùng sửa nháp thì nó nên trở lại thành "Nộp CV" hoặc "Cập nhật CV").
+
+---
+
+## 🔔 Phase 11: In-App Notifications
+
+Hệ thống thông báo In-App đơn giản, không theo dõi trạng thái Đã đọc/Chưa đọc. Hỗ trợ thông báo cá nhân (Private) và thông báo chung toàn hệ thống (Global).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-11.1: Cập nhật Schema & Khởi tạo Module**
+  - Đưa model `Notification` vào `schema.prisma` và chạy Prisma Push/Migrate.
+  - Khởi tạo Controller, Service, Route cho module Notification.
+- [x] **TASK-11.2: Xây dựng API Quản lý thông báo**
+  - `GET /api/notifications`: Lấy danh sách thông báo (Private + Global) sắp xếp theo thời gian mới nhất (`createdAt: 'desc'`).
+  - `POST /api/notifications/broadcast`: API dành cho Admin/HR để tạo thông báo với `isGlobal = true`.
+- [x] **TASK-11.3: Tích hợp vào Workflow CV hiện tại**
+  - Trong Service duyệt/từ chối CV, tự động tạo Notification cá nhân (gắn `userId`) thông báo kết quả cho chủ nhân CV.
+  - Nếu CV bị Reject, nội dung thông báo kèm lý do từ chối.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-11.4: Tích hợp Polling vào Topbar**
+  - Gỡ bỏ mock data trong `NotificationDropdown`. Dùng React Query gọi `GET /api/notifications` mỗi 30s (`refetchInterval: 30000`).
+  - Gỡ bỏ con số Badge đỏ (Unread Count) trên chuông thông báo (chỉ hiển thị icon chuông).
+  - Tích hợp link: Khi click vào Notification, nếu có trường `link`, tự động điều hướng sang trang tương ứng.
+- [x] **TASK-11.5: Giao diện Broadcast (Admin/HR)**
+  - Tạo Form trong màn hình Dashboard cho phép HR gửi "Thông báo toàn hệ thống" (gọi `POST /api/notifications/broadcast`).
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-11.6: Kiểm thử luồng thông báo**
+  - Đăng nhập HR từ chối CV, kiểm tra xem màn hình của Nhân viên có tự cập nhật thông báo mới (trong vòng 30s) trên danh sách thả xuống không.
+  - Dùng tài khoản Admin gửi Broadcast. Kiểm tra các tài khoản khác xem có hiện chung thông báo đó không.
+
+---
+
+## 👀 Phase 12: Xem phiên bản CV đã duyệt
+
+Cho phép người dùng (nhân sự hoặc quản lý) xem nhanh bản CV chính thức đang được sử dụng (bản đã được duyệt gần nhất), tách biệt với bản nháp đang chỉnh sửa dở dang trong Workspace.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-12.1: Bổ sung API lấy phiên bản đã duyệt gần nhất**
+  - Tạo endpoint `GET /api/cvs/:id/latest-approved`.
+  - Logic: Tìm trong bảng `CVVersionHistory` record có `cvProfileId = id` và `versionNumber` lớn nhất. 
+  - Nếu không tìm thấy (CV chưa từng được duyệt, `versionNumber = 0`), trả về lỗi 404.
+  - Quyền truy cập: Cùng rule truy cập như `getCVById` (Chủ nhân CV, TechLead của dự án, HR, Admin).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-12.2: Xây dựng trang Xem CV Read-only (CV Viewer)**
+  - Tạo Page mới `CVViewerPage.tsx` gắn với route `/cv/:id/view`.
+  - Gọi API `GET /api/cvs/:id/latest-approved`. 
+  - Truyền `snapshotData` vào component `<CVPreviewPanel>` để render giao diện CV (chỉ xem, không có công cụ chỉnh sửa). Có thêm nút "Tải PDF".
+- [x] **TASK-12.3: Bổ sung nút bấm vào Dashboard**
+  - Sửa `CVDashboard.tsx`.
+  - Nếu `cv.versionNumber > 0`, bổ sung nút **"Xem bản đã duyệt"** thay thế cho nút "Publish" (giữ cho giao diện gọn gàng).
+  - Khi click nút này, điều hướng tới `/cv/:id/view`.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-12.4: Kiểm thử hiển thị đúng Snapshot**
+  - Thực hiện kịch bản: Tạo CV -> Nộp -> Duyệt (Bản duyệt v1). Vào lại Workspace thêm "Kỹ năng mới" và lưu nháp.
+  - Ra Dashboard bấm "Xem bản đã duyệt". Xác nhận "Kỹ năng mới" không hiển thị ở đây (vì nó chỉ mới lưu nháp, chưa được duyệt).

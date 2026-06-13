@@ -37,4 +37,45 @@ describe('CVService', () => {
       );
     });
   });
+
+  describe('getLatestApprovedCV', () => {
+    it('should throw NotFoundError if CV does not exist', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue(null as any);
+
+      await expect(cvService.getLatestApprovedCV('cv-1', 'user-1', 'Employee'))
+        .rejects
+        .toThrow('Không tìm thấy hồ sơ CV');
+    });
+
+    it('should throw NotFoundError if versionNumber is 0', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', versionNumber: 0 } as any);
+
+      await expect(cvService.getLatestApprovedCV('cv-1', 'user-1', 'Employee'))
+        .rejects
+        .toThrow('CV này chưa từng được duyệt');
+    });
+
+    it('should throw NotFoundError if no version history found', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', versionNumber: 1 } as any);
+      prismaMock.cVVersionHistory.findFirst.mockResolvedValue(null as any);
+
+      await expect(cvService.getLatestApprovedCV('cv-1', 'user-1', 'Employee'))
+        .rejects
+        .toThrow('CV này chưa từng được duyệt');
+    });
+
+    it('should return the latest approved version', async () => {
+      const mockVersion = { id: 'v-1', versionNumber: 1, snapshotData: {} };
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', versionNumber: 1 } as any);
+      prismaMock.cVVersionHistory.findFirst.mockResolvedValue(mockVersion as any);
+
+      const result = await cvService.getLatestApprovedCV('cv-1', 'user-1', 'Employee');
+      
+      expect(result).toEqual(mockVersion);
+      expect(prismaMock.cVVersionHistory.findFirst).toHaveBeenCalledWith({
+        where: { cvProfileId: 'cv-1' },
+        orderBy: { versionNumber: 'desc' },
+      });
+    });
+  });
 });
