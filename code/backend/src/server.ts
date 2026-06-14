@@ -2,6 +2,7 @@ import app from './app';
 import { env } from './config/env';
 import prisma from './config/db';
 import { setupCronjobs } from './modules/notification/notification.cron';
+import { setupWorkflowCronjobs } from './modules/workflow/workflow.cron';
 
 const startServer = async () => {
   try {
@@ -10,6 +11,7 @@ const startServer = async () => {
     
     // Initialize cron jobs
     setupCronjobs();
+    setupWorkflowCronjobs();
 
     app.listen(env.PORT, () => {
       console.log(`🚀 Server is running in ${env.NODE_ENV} mode on port ${env.PORT}`);

@@ -525,3 +525,35 @@ Phục hồi dấu chấm đỏ báo hiệu có thông báo mới (giống Faceb
   - Dùng 2 trình duyệt: Trình duyệt A (Admin) gửi Broadcast. 
   - Xem Trình duyệt B (Nhân viên) sau tối đa 30s có tự nhảy ra dấu chấm đỏ không (không F5).
   - Bấm vào Chuông -> dấu đỏ mất. Tắt/Bật chuông lại -> dấu đỏ vẫn không hiện ra.
+
+---
+
+## ⏱️ Phase 14: Thực thi SLA Phê duyệt (SLA Enforcement)
+
+Chuyển đổi SLA từ trạng thái hiển thị thụ động sang luồng xử lý chủ động. Hệ thống sẽ có Cronjob tự động quét các CV quá hạn/sắp quá hạn và "thúc giục" Tech Lead hoặc HR.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-14.1: Xây dựng Logic Quét SLA (SLA Scanner)**
+  - Viết một Service (VD: `workflow.cron.ts`) tìm toàn bộ CV đang ở `PendingApproval`.
+  - Tính toán số giờ kể từ `submittedAt`. Lọc ra các CV thuộc diện Warning (>= 24h) và Overdue (>= 48h).
+  - Phân tích `approvalLogs` để tìm ra ai đang giữ trách nhiệm duyệt:
+    - Chưa có log cấp 1: Tìm ID của TechLead (thông qua project của User nộp CV).
+    - Đã duyệt cấp 1: Tìm ID của tất cả HR.
+- [x] **TASK-14.2: Tích hợp Cảnh báo & Đăng ký Cronjob**
+  - Dùng Module Notification (Phase 11) để tạo In-App Notification nhắc nhở đích danh những người duyệt này.
+  - Đồng thời đẩy 1 Job nhắc nhở vào `emailQueue`. *(Lưu ý: Do SMTP hiện đang lỗi, Mailer worker có thể fail, nhưng logic push queue vẫn cần viết đúng chuẩn).*
+  - Dùng BullMQ Repeatable Jobs (hoặc `node-cron`) hẹn lịch quét hàm này chạy định kỳ vào **8:00 sáng hàng ngày**.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-14.3: Bổ sung Cảnh báo SLA vào Màn hình Chi tiết**
+  - Sửa `ApprovalDetailPage.tsx`.
+  - Hiển thị một thanh Banner (Alert) màu Vàng hoặc Đỏ ngay sát dưới Header nếu CV đang xem ở trạng thái `Warning` hoặc `Overdue` SLA, nhằm tạo áp lực cho người duyệt xử lý ngay.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-14.4: Kiểm thử luồng quét SLA**
+  - Chỉnh sửa (mock) thời gian `submittedAt` của 1 CV dưới Database lùi về 30 tiếng trước (Warning) và 1 CV lùi về 50 tiếng (Overdue).
+  - Gọi chạy Cronjob bằng tay.
+  - Kiểm tra xem tài khoản TechLead tương ứng có nhận được chuông thông báo In-app "nhắc nhở duyệt" không.

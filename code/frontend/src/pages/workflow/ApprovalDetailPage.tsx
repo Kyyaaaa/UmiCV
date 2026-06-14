@@ -166,6 +166,19 @@ export function ApprovalDetailPage() {
     return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu...</div>;
   }
 
+  let slaStatus = 'Safe';
+  let slaMessage = '';
+  if (cv.status === 'PendingApproval' && cv.submittedAt) {
+    const diffHours = (new Date().getTime() - new Date(cv.submittedAt).getTime()) / (1000 * 60 * 60);
+    if (diffHours >= 48) {
+      slaStatus = 'Overdue';
+      slaMessage = 'CV này đã quá hạn xử lý (trên 48h). Yêu cầu ưu tiên phê duyệt ngay lập tức!';
+    } else if (diffHours >= 24) {
+      slaStatus = 'Warning';
+      slaMessage = 'CV này sắp hết hạn xử lý (trên 24h). Vui lòng kiểm tra và phê duyệt sớm.';
+    }
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {toastMessage && (
@@ -203,7 +216,18 @@ export function ApprovalDetailPage() {
         />
       </div>
 
-      <div className="flex-1 flex overflow-hidden gap-6 pb-6">
+      {slaStatus === 'Overdue' && (
+        <div className="mb-4 mx-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center shrink-0">
+          <span className="font-bold mr-2">CẢNH BÁO QUÁ HẠN (SLA):</span> {slaMessage}
+        </div>
+      )}
+      {slaStatus === 'Warning' && (
+        <div className="mb-4 mx-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 flex items-center shrink-0">
+          <span className="font-bold mr-2">CHÚ Ý SLA:</span> {slaMessage}
+        </div>
+      )}
+
+      <div className="flex-1 flex overflow-hidden gap-6 pb-6 px-4">
         {/* Main Content (CV Preview Panel) */}
         <div className="flex-1 flex flex-col bg-slate-50 border border-slate-200 rounded-lg overflow-hidden relative shadow-sm">
           {/* Preview Toolbar */}

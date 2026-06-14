@@ -183,12 +183,10 @@ export function CVWorkspace() {
         setIsDirty(false);
         setLastSaved(new Date());
       }
-      await cvService.publishCV(id);
-      showToast('Nộp CV thành công. Vui lòng chờ phê duyệt!');
-      fetchCV();
+      navigate(`/cv/${id}/publish`);
     } catch (err: any) {
       console.error('Lỗi khi nộp CV:', err);
-      showToast('Không thể nộp CV: ' + (err.response?.data?.message || err.message), 'error');
+      showToast('Không thể lưu nháp trước khi nộp: ' + (err.response?.data?.message || err.message), 'error');
     } finally {
       setIsPublishing(false);
     }
