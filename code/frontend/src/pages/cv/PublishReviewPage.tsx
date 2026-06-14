@@ -6,6 +6,18 @@ import { ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { cvService } from '../../services/cv.service';
 import { DiffChange } from '../../types/cv';
 
+const formatDiffValue = (val: any) => {
+  if (val === null || val === undefined) return 'null';
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch {
+      return String(val);
+    }
+  }
+  return String(val);
+};
+
 export function PublishReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -148,10 +160,20 @@ export function PublishReviewPage() {
                     <div>
                       <p className="font-semibold text-slate-700">{getDiffDescription(diff)}</p>
                       {diff.type === 'modified' && (
-                        <p className="text-xs font-mono text-slate-500 mt-1 bg-slate-100 p-1.5 rounded">
-                          <span className="line-through text-red-400 mr-2">{JSON.stringify(diff.oldValue)}</span>
-                          <span className="text-green-600">{JSON.stringify(diff.newValue)}</span>
-                        </p>
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(diff.oldValue)}</pre>
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(diff.newValue)}</pre>
+                        </div>
+                      )}
+                      {diff.type === 'added' && (
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(diff.newValue)}</pre>
+                        </div>
+                      )}
+                      {diff.type === 'removed' && (
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(diff.oldValue)}</pre>
+                        </div>
                       )}
                     </div>
                   </div>
