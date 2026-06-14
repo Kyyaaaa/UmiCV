@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { User, Department } from '../../types';
 import { userService } from '../../services/user.service';
 import { handleApiError } from '../../utils/error.util';
+import { useAuth } from '../../hooks/useAuth';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -16,7 +17,10 @@ interface UserFormModalProps {
 }
 
 export function UserFormModal({ isOpen, onClose, user, departments, onSave }: UserFormModalProps) {
+  const { user: currentUser } = useAuth();
   const isEdit = Boolean(user);
+  const isSelfEditing = isEdit && user?.id === currentUser?.id;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -162,22 +166,28 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
               ...departments.map(d => ({ value: d.id, label: d.name }))
             ]}
           />
-          <Select 
-            label="Vai trò" 
-            required
-            value={formData.role}
-            error={fieldErrors.role}
-            onChange={e => {
-              setFormData({...formData, role: e.target.value});
-              if (fieldErrors.role) setFieldErrors({...fieldErrors, role: ''});
-            }}
-            options={[
-              { value: 'Admin', label: 'Quản trị viên' },
-              { value: 'HR', label: 'Nhân sự (HR)' },
-              { value: 'TechLead', label: 'Tech Lead' },
-              { value: 'Employee', label: 'Nhân viên' },
-            ]}
-          />
+          <div>
+            <Select 
+              label="Vai trò" 
+              required
+              value={formData.role}
+              error={fieldErrors.role}
+              disabled={isSelfEditing}
+              onChange={e => {
+                setFormData({...formData, role: e.target.value});
+                if (fieldErrors.role) setFieldErrors({...fieldErrors, role: ''});
+              }}
+              options={[
+                { value: 'Admin', label: 'Quản trị viên' },
+                { value: 'HR', label: 'Nhân sự (HR)' },
+                { value: 'TechLead', label: 'Tech Lead' },
+                { value: 'Employee', label: 'Nhân viên' },
+              ]}
+            />
+            {isSelfEditing && (
+              <p className="mt-1 text-xs text-red-500">Tài khoản của bạn không thể tự thay đổi phân quyền.</p>
+            )}
+          </div>
         </div>
       </form>
     </Modal>

@@ -113,6 +113,11 @@ export class UserService {
     if (executorId && targetUser.role === 'Admin' && id !== executorId) {
       throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
     }
+    
+    // Prevent Admin self-downgrade
+    if (executorId && id === executorId && targetUser.role === 'Admin' && data.role && data.role !== 'Admin') {
+      throw new ForbiddenError('Bạn không thể tự hạ quyền của chính mình.');
+    }
 
     try {
       const user = await prisma.user.update({
