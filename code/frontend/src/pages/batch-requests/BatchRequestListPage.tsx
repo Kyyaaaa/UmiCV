@@ -96,13 +96,29 @@ export function BatchRequestListPage() {
     {
       key: 'status',
       header: 'Trạng thái',
-      render: (req) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          req.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'
-        }`}>
-          {req.status === 'Active' ? 'Đang chạy' : 'Đã hủy'}
-        </span>
-      )
+      render: (req) => {
+        let badgeVariant = 'bg-slate-100 text-slate-800';
+        let label = 'Đã hủy';
+        
+        if (req.status === 'Active') {
+          if (new Date(req.deadline).getTime() + 86400000 < new Date().getTime()) { // Overdue if today is past deadline
+            badgeVariant = 'bg-red-100 text-red-800';
+            label = 'Quá hạn';
+          } else {
+            badgeVariant = 'bg-blue-100 text-blue-800';
+            label = 'Đang chạy';
+          }
+        } else if (req.status === 'Completed') {
+          badgeVariant = 'bg-green-100 text-green-800';
+          label = 'Hoàn thành';
+        }
+
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeVariant}`}>
+            {label}
+          </span>
+        );
+      }
     }
   ];
 
@@ -136,7 +152,8 @@ export function BatchRequestListPage() {
               onChange={e => { setStatus(e.target.value); setPage(1); }}
               options={[
                 { value: '', label: 'Tất cả trạng thái' },
-                { value: 'Active', label: 'Đang chạy' },
+                { value: 'Active', label: 'Đang chạy/Quá hạn' },
+                { value: 'Completed', label: 'Hoàn thành' },
                 { value: 'Cancelled', label: 'Đã hủy' }
               ]}
             />

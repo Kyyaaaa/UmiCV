@@ -557,3 +557,32 @@ Chuyển đổi SLA từ trạng thái hiển thị thụ động sang luồng x
   - Chỉnh sửa (mock) thời gian `submittedAt` của 1 CV dưới Database lùi về 30 tiếng trước (Warning) và 1 CV lùi về 50 tiếng (Overdue).
   - Gọi chạy Cronjob bằng tay.
   - Kiểm tra xem tài khoản TechLead tương ứng có nhận được chuông thông báo In-app "nhắc nhở duyệt" không.
+
+---
+
+## 🏁 Phase 15: Vòng đời Chiến dịch Cập nhật CV (Batch Request Lifecycle)
+
+Bổ sung tính năng Tự động chốt sổ (Auto-Complete) khi tất cả nhân sự trong chiến dịch đã hoàn thành yêu cầu, giúp HR quản lý chiến dịch khép kín thay vì chỉ có trạng thái Active/Cancelled.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-15.1: Cập nhật Schema**
+  - Bổ sung giá trị `Completed` vào enum `BatchRequestStatus` trong `schema.prisma`. Chạy Prisma Push/Migrate.
+- [x] **TASK-15.2: Tự động Hoàn thành (Auto-Complete)**
+  - Chỉnh sửa Service duyệt CV (`workflow.service.ts`): Khi duyệt CV thành công -> Cập nhật `BatchRequestTarget` thành `Updated`.
+  - Kiểm tra các Target khác trong cùng chiến dịch. Nếu `count(status = 'Outdated') == 0`, đổi trạng thái `BatchRequest` thành `Completed`.
+  - Gửi 1 In-App Notification cho người tạo chiến dịch (HR): `Chiến dịch "..." đã hoàn tất 100%`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-15.3: UI Hiển thị Trạng thái & Quá hạn**
+  - Trong trang Danh sách và Chi tiết Chiến dịch: Hiển thị Badge `Completed` (Xanh lá).
+  - Tự động tính toán hiển thị Badge **`Quá hạn`** (Màu cam/đỏ) nếu trạng thái đang là `Active` nhưng thời gian hiện tại đã vượt qua `deadline`. Giao diện có thể cảnh báo nhưng vẫn cho phép nộp.
+  - Ẩn nút "Nhắc nhở", "Hủy chiến dịch" và "Sửa deadline" nếu trạng thái đã chuyển sang `Completed` hoặc `Cancelled`.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-15.4: Kiểm thử vòng đời tự động**
+  - Tạo 1 chiến dịch cho 2 nhân viên (A và B).
+  - Đóng vai HR duyệt CV của nhân viên A -> Check chiến dịch vẫn là `Active`.
+  - Đóng vai HR duyệt CV của nhân viên B -> Check chiến dịch tự nhảy sang `Completed` và có thông báo gửi về hệ thống cho HR.

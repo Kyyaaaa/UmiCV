@@ -182,10 +182,21 @@ export function BatchRequestDetailPage() {
         description={request.description || 'Chi tiết tiến độ cập nhật CV của nhân sự trong chiến dịch'}
         actions={
           request.status === 'Active' ? (
-            <Button variant="danger" onClick={() => setIsCancelModalOpen(true)}>
-              <Ban size={16} className="mr-2" />
-              Hủy chiến dịch
-            </Button>
+            <div className="flex items-center gap-3">
+              {new Date(request.deadline).getTime() + 86400000 < new Date().getTime() && (
+                <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-800">
+                  Quá hạn
+                </span>
+              )}
+              <Button variant="danger" onClick={() => setIsCancelModalOpen(true)}>
+                <Ban size={16} className="mr-2" />
+                Hủy chiến dịch
+              </Button>
+            </div>
+          ) : request.status === 'Completed' ? (
+            <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
+              Hoàn thành
+            </span>
           ) : (
             <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-slate-100 text-slate-800">
               Chiến dịch đã bị hủy

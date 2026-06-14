@@ -79,7 +79,7 @@ export interface BatchRequest {
   title: string;
   description: string;
   deadline: string;
-  status: 'Active' | 'Cancelled';
+  status: 'Active' | 'Completed' | 'Cancelled';
   createdAt: string;
   targetCount: number;
   completedCount: number;

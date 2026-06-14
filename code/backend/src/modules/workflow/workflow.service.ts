@@ -167,6 +167,33 @@ export class WorkflowService {
       }
       
       await prisma.$transaction(transactions);
+
+      // TASK-15.2: Auto-Complete Batch Request
+      for (const batchId of batchIds) {
+        const outdatedCount = await prisma.batchRequestTarget.count({
+          where: {
+            batchRequestId: batchId,
+            status: TargetStatus.Outdated
+          }
+        });
+
+        if (outdatedCount === 0) {
+          const updatedBatch = await prisma.batchRequest.update({
+            where: { id: batchId },
+            data: { status: BatchRequestStatus.Completed },
+            select: { title: true, createdBy: true }
+          });
+
+          await prisma.notification.create({
+            data: {
+              title: 'Batch Request Completed',
+              message: `Chiến dịch "${updatedBatch.title}" đã hoàn tất 100%.`,
+              userId: updatedBatch.createdBy,
+              isGlobal: false,
+            }
+          });
+        }
+      }
     }
 
     return { message: MESSAGES.WORKFLOW.APPROVE_SUCCESS };
