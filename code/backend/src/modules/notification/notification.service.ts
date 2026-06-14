@@ -36,4 +36,45 @@ export class NotificationService {
 
     return notification;
   }
+
+  async checkNewNotifications(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastCheckedNotifAt: true },
+    });
+
+    if (!user) {
+      return { hasNew: false };
+    }
+
+    const latestNotif = await prisma.notification.findFirst({
+      where: {
+        OR: [
+          { isGlobal: true },
+          { userId: userId },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    if (!latestNotif) {
+      return { hasNew: false };
+    }
+
+    if (!user.lastCheckedNotifAt) {
+      return { hasNew: true };
+    }
+
+    return {
+      hasNew: latestNotif.createdAt > user.lastCheckedNotifAt,
+    };
+  }
+
+  async markNotificationsAsChecked(userId: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastCheckedNotifAt: new Date() },
+    });
+  }
 }

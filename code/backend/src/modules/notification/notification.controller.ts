@@ -19,4 +19,16 @@ export class NotificationController {
     const result = await notificationService.broadcastNotification(data);
     res.status(201).json({ success: true, data: result });
   }
+
+  async checkNew(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const result = await notificationService.checkNewNotifications(userId);
+    res.status(200).json({ success: true, data: result });
+  }
+
+  async markChecked(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    await notificationService.markNotificationsAsChecked(userId);
+    res.status(200).json({ success: true, message: 'Marked as checked' });
+  }
 }

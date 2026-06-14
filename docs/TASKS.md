@@ -307,6 +307,7 @@ Giai đoạn này sẽ đồng bộ hoàn toàn thiết kế của CV Workspace 
   - Tích hợp hook xuất PDF vào nút Download PDF trên Toolbar.
   - Đảm bảo font chữ Tiếng Việt được đăng ký (registerFont) để không bị lỗi ký tự khi tạo PDF.
 
+
 ### 🕵️ QA Agent Tasks
 
 - [x] **TASK-8.5: Kiểm thử UI Layout & Validation**
@@ -490,3 +491,37 @@ Cho phép người dùng (nhân sự hoặc quản lý) xem nhanh bản CV chín
 - [x] **TASK-12.4: Kiểm thử hiển thị đúng Snapshot**
   - Thực hiện kịch bản: Tạo CV -> Nộp -> Duyệt (Bản duyệt v1). Vào lại Workspace thêm "Kỹ năng mới" và lưu nháp.
   - Ra Dashboard bấm "Xem bản đã duyệt". Xác nhận "Kỹ năng mới" không hiển thị ở đây (vì nó chỉ mới lưu nháp, chưa được duyệt).
+
+---
+
+## 🔴 Phase 13: Cải tiến Badge Thông báo (Red Dot)
+
+Phục hồi dấu chấm đỏ báo hiệu có thông báo mới (giống Facebook) với kiến trúc cực nhẹ dùng `lastCheckedNotifAt`. Hệ thống có độ trễ nhỏ (30s) nhưng người dùng không cần F5.
+
+### ⚙️ Backend Agent Tasks
+
+- [ ] **TASK-13.1: Cập nhật Schema**
+  - Thêm trường `lastCheckedNotifAt DateTime?` vào model `User` trong `schema.prisma`. Chạy Prisma Migrate/Push.
+- [ ] **TASK-13.2: Viết API Kiểm tra thông báo mới**
+  - Tạo endpoint `GET /api/notifications/check-new`.
+  - Logic: Lấy thông báo mới nhất (Private của User hoặc Global). So sánh `createdAt` với `user.lastCheckedNotifAt`. Trả về `{ hasNew: boolean }`.
+- [ ] **TASK-13.3: Viết API Đánh dấu đã kiểm tra**
+  - Tạo endpoint `PUT /api/notifications/mark-checked`.
+  - Logic: Cập nhật `user.lastCheckedNotifAt = new Date()`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-13.4: Tích hợp Polling lấy cờ Red Dot**
+  - Sử dụng React Query gọi `GET /api/notifications/check-new` mỗi 30 giây (`refetchInterval: 30000`).
+  - Nếu `hasNew: true`, hiển thị một dấu chấm đỏ nhỏ (Red Dot Badge) đè lên Icon Chuông thông báo trên Topbar.
+- [x] **TASK-13.5: Xử lý thao tác Click**
+  - Sửa logic khi người dùng click vào Icon Chuông:
+    1. Gọi ngầm API `PUT /api/notifications/mark-checked`.
+    2. Gỡ dấu chấm đỏ trên giao diện.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-13.6: Kiểm thử Red Dot**
+  - Dùng 2 trình duyệt: Trình duyệt A (Admin) gửi Broadcast. 
+  - Xem Trình duyệt B (Nhân viên) sau tối đa 30s có tự nhảy ra dấu chấm đỏ không (không F5).
+  - Bấm vào Chuông -> dấu đỏ mất. Tắt/Bật chuông lại -> dấu đỏ vẫn không hiện ra.

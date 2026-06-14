@@ -66,10 +66,11 @@ model User {
   role         UserRole
   status       UserStatus @default(Active)
   departmentId String     @map("department_id") @db.Uuid
-  lockedAt     DateTime?  @map("locked_at")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
-  deletedAt    DateTime?  @map("deleted_at")
+  lockedAt           DateTime?  @map("locked_at")
+  lastCheckedNotifAt DateTime?  @map("last_checked_notif_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @default(now()) @updatedAt @map("updated_at")
+  deletedAt          DateTime?  @map("deleted_at")
 
   department Department @relation(fields: [departmentId], references: [id])
 

@@ -65,4 +65,40 @@ router.get('/', validate(getNotificationsSchema), notificationController.getAll)
  */
 router.post('/broadcast', authorize(['Admin', 'HR']), validate(broadcastNotificationSchema), notificationController.broadcast);
 
+/**
+ * @openapi
+ * /api/notifications/check-new:
+ *   get:
+ *     summary: Check if there are new notifications
+ *     tags: [Notification]
+ *     responses:
+ *       200:
+ *         description: Check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasNew:
+ *                       type: boolean
+ */
+router.get('/check-new', notificationController.checkNew);
+
+/**
+ * @openapi
+ * /api/notifications/mark-checked:
+ *   put:
+ *     summary: Mark notifications as checked
+ *     tags: [Notification]
+ *     responses:
+ *       200:
+ *         description: Marked as checked successfully
+ */
+router.put('/mark-checked', notificationController.markChecked);
+
 export default router;

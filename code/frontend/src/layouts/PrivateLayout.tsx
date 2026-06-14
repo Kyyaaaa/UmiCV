@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/auth.service';
+import { notificationService } from '../services/notification.service';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
@@ -42,6 +44,29 @@ export function PrivateLayout() {
       logout();
       navigate('/login', { replace: true });
     }
+  };
+
+  const { data: newNotifData, refetch } = useQuery({
+    queryKey: ['notifications', 'checkNew'],
+    queryFn: () => notificationService.checkNew(),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+
+  const hasNewNotif = newNotifData?.data?.data?.hasNew || false;
+
+  const markCheckedMutation = useMutation({
+    mutationFn: () => notificationService.markChecked(),
+    onSuccess: () => {
+      refetch();
+    }
+  });
+
+  const handleNotificationClick = () => {
+    if (hasNewNotif) {
+      markCheckedMutation.mutate();
+    }
+    navigate('/notifications');
   };
 
   return (
@@ -90,9 +115,12 @@ export function PrivateLayout() {
           <div className="ml-auto flex items-center gap-4">
             <button 
               className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-              onClick={() => navigate('/notifications')}
+              onClick={handleNotificationClick}
             >
               <Bell size={20} />
+              {hasNewNotif && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+              )}
             </button>
             
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
