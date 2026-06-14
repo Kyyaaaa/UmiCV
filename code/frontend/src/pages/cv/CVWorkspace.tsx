@@ -328,9 +328,9 @@ export function CVWorkspace() {
             variant="outline"
             size="sm"
             onClick={() => setLayoutMode(layoutMode === 'split' ? 'tabs' : 'split')}
-            className="hidden md:flex"
+            className="hidden md:flex whitespace-nowrap"
           >
-            Toggle Mode (Currently {layoutMode})
+            Chế độ: {layoutMode === 'split' ? 'Chia đôi' : 'Tab'}
           </Button>
           <div className="h-6 w-px bg-slate-300 hidden md:block"></div>
           <LanguageSwitcher

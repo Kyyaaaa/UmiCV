@@ -24,7 +24,7 @@ export function LanguageSwitcher({ currentLanguage, onLanguageSelect }: Language
               onLanguageSelect(lang.code);
             }
           }}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             currentLanguage === lang.code 
               ? 'bg-white text-blue-600 shadow-sm cursor-default' 
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
