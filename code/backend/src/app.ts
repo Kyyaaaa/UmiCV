@@ -40,6 +40,7 @@ import userRoutes from './modules/user/user.route';
 import departmentRoutes from './modules/department/department.route';
 import projectRoutes from './modules/project/project.route';
 import notificationRoutes from './modules/notification/notification.route';
+import dashboardRoutes from './modules/dashboard/dashboard.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -50,6 +51,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error Handling
 app.use(errorHandler);

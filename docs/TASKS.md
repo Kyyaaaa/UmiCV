@@ -586,3 +586,30 @@ Bổ sung tính năng Tự động chốt sổ (Auto-Complete) khi tất cả nh
   - Tạo 1 chiến dịch cho 2 nhân viên (A và B).
   - Đóng vai HR duyệt CV của nhân viên A -> Check chiến dịch vẫn là `Active`.
   - Đóng vai HR duyệt CV của nhân viên B -> Check chiến dịch tự nhảy sang `Completed` và có thông báo gửi về hệ thống cho HR.
+
+---
+
+## 🧹 Phase 16: Xóa bỏ Mockup & Cấu hình Dashboard Analytics
+
+Thực hiện Hạng mục 1 trong kế hoạch làm sạch Technical Debt. Loại bỏ hoàn toàn dữ liệu cứng (mock data) trên trang Dashboard và thay thế bằng dữ liệu thật từ Backend API.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-16.1: Khởi tạo Module Dashboard**
+  - Tạo thư mục `src/modules/dashboard` bao gồm controller, service và route.
+  - Viết API `GET /api/dashboard/stats`: Group và đếm tổng số CV, số CV đang chờ duyệt (`PendingApproval`), số CV đã cập nhật (`Updated`), số CV lỗi thời (`Outdated`). Phân quyền: Employee chỉ xem thống kê của cá nhân, TechLead xem của dự án mình, HR/Admin xem toàn hệ thống.
+  - Viết API `GET /api/dashboard/recent-cvs`: Trả về danh sách 5-10 CV vừa được cập nhật gần nhất (`orderBy { updatedAt: 'desc' }`).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-16.2: Tích hợp API vào Dashboard**
+  - Viết `dashboard.service.ts` để gọi 2 API trên.
+  - Xóa bỏ file `src/mocks/cvs.mock.ts`.
+  - Cập nhật file `DashboardOverview.tsx`: Sử dụng `useEffect` hoặc React Query để fetch dữ liệu từ Backend.
+  - Render các con số ở 4 Card đầu trang và đổ dữ liệu thật vào bảng "CV Cập nhật gần đây".
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-16.3: Kiểm thử Dashboard phân quyền**
+  - Đăng nhập bằng Account Nhân viên: Kiểm tra xem Dashboard có hiện đúng thông số của riêng nhân viên đó không.
+  - Đăng nhập bằng Account Admin: Kiểm tra xem số tổng (VD: Tổng số CV toàn công ty) có khớp với dưới Database không.
