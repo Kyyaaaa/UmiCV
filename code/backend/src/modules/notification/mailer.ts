@@ -4,19 +4,32 @@ import { env } from '../../config/env';
 
 let transport: nodemailer.Transporter;
 
-// Dùng Ethereal Email để test luồng nhận mail thật
-transport = nodemailer.createTransport({
-  host: 'smtp.ethereal.email',
-  port: 587,
-  auth: {
-      user: 'ssotrkie6nuyh2hk@ethereal.email',
-      pass: 'X4nxJ7vTV1RBZ2NtBF'
-  }
-});
+// Use real SMTP if configured, fallback to ethereal if missing
+if (env.SMTP_USER && env.SMTP_PASS) {
+  transport = nodemailer.createTransport({
+    host: env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(env.SMTP_PORT || '587', 10),
+    secure: parseInt(env.SMTP_PORT || '587', 10) === 465,
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS
+    }
+  });
+} else {
+  // Dùng Ethereal Email để test luồng nhận mail thật
+  transport = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    auth: {
+        user: 'ssotrkie6nuyh2hk@ethereal.email',
+        pass: 'X4nxJ7vTV1RBZ2NtBF'
+    }
+  });
+}
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
   const sender = {
-    address: 'hello@demomailtrap.com', // Mailtrap default sender for sandbox
+    address: env.SMTP_USER || 'hello@demomailtrap.com',
     name: 'UmiCV System',
   };
 

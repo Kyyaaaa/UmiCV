@@ -200,20 +200,27 @@ export function ApprovalDetailPage() {
       </div>
 
       <div className="shrink-0">
-        <PageHeader 
-          title={`Xét duyệt CV: ${cv.sectionsData.personalInfo?.name || 'Không rõ tên'}`}
-          description={`Phiên bản v${cv.versionNumber} - Ngôn ngữ: ${cv.languageCode.toUpperCase()}`}
-          actions={
-            <div className="flex gap-2">
-              <Button variant="danger" onClick={() => setIsRejectOpen(true)}>
-                <X size={16} className="mr-2" /> Từ chối
-              </Button>
-              <Button variant="primary" onClick={() => setIsApproveOpen(true)}>
-                <Check size={16} className="mr-2" /> Phê duyệt
-              </Button>
-            </div>
-          }
-        />
+        {(() => {
+          const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+          const isBypass = (user?.role === 'HR' || user?.role === 'Admin') && !hasLevel1;
+          const approveButtonText = isBypass ? 'Duyệt thẳng (Bypass)' : 'Phê duyệt';
+          return (
+            <PageHeader 
+              title={`Xét duyệt CV: ${cv.sectionsData.personalInfo?.name || 'Không rõ tên'}`}
+              description={`Phiên bản v${cv.versionNumber} - Ngôn ngữ: ${cv.languageCode.toUpperCase()}`}
+              actions={
+                <div className="flex gap-2">
+                  <Button variant="danger" onClick={() => setIsRejectOpen(true)}>
+                    <X size={16} className="mr-2" /> Từ chối
+                  </Button>
+                  <Button variant="primary" onClick={() => setIsApproveOpen(true)}>
+                    <Check size={16} className="mr-2" /> {approveButtonText}
+                  </Button>
+                </div>
+              }
+            />
+          );
+        })()}
       </div>
 
       {slaStatus === 'Overdue' && (
@@ -347,19 +354,30 @@ export function ApprovalDetailPage() {
         </div>
       </div>
 
-      <ConfirmModal
-        isOpen={isApproveOpen}
-        onClose={() => {
-          setIsApproveOpen(false);
-          setApproveError('');
-        }}
-        onConfirm={handleApprove}
-        title="Xác nhận phê duyệt CV"
-        description="Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt."
-        confirmText={isSubmitting ? "Đang xử lý..." : "Phê duyệt"}
-        isLoading={isSubmitting}
-        error={approveError}
-      />
+      {(() => {
+        const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+        const isBypass = (user?.role === 'HR' || user?.role === 'Admin') && !hasLevel1;
+        const approveButtonText = isBypass ? 'Duyệt thẳng (Bypass)' : 'Phê duyệt';
+        const description = isBypass 
+          ? "Bạn đang duyệt thẳng CV này mà không qua bước duyệt của TechLead (Bypass Level 1). Bạn có chắc chắn muốn thực hiện không?" 
+          : "Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt.";
+        
+        return (
+          <ConfirmModal
+            isOpen={isApproveOpen}
+            onClose={() => {
+              setIsApproveOpen(false);
+              setApproveError('');
+            }}
+            onConfirm={handleApprove}
+            title={`Xác nhận ${approveButtonText}`}
+            description={description}
+            confirmText={isSubmitting ? "Đang xử lý..." : approveButtonText}
+            isLoading={isSubmitting}
+            error={approveError}
+          />
+        );
+      })()}
 
       <Modal isOpen={isRejectOpen} onClose={() => setIsRejectOpen(false)} title="Từ chối CV">
         <div className="space-y-4">
