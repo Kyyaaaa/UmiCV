@@ -55,7 +55,7 @@ export function CVDashboard() {
         resData.map(async (cv) => {
           try {
             const detailRes = await cvService.getCVById(cv.id);
-            return detailRes.data;
+            return { ...cv, ...detailRes.data };
           } catch (e) {
             return cv; // fallback to basic data if detail fetch fails
           }
@@ -164,6 +164,13 @@ export function CVDashboard() {
                     </span>
                   </div>
                   
+                  {activeTab === 'all' && cv.user && (
+                    <div className="mb-3 p-2 bg-blue-50/50 rounded border border-blue-100">
+                      <p className="text-sm font-semibold text-blue-900">{cv.user.username}</p>
+                      <p className="text-xs text-blue-700">{cv.user.fullName}</p>
+                    </div>
+                  )}
+
                   <h3 className="text-lg font-bold text-slate-900 line-clamp-1" title={cv.sectionsData?.personalInfo?.name || 'Chưa có tên'}>
                     {cv.sectionsData?.personalInfo?.name || 'Chưa có tên'}
                   </h3>
