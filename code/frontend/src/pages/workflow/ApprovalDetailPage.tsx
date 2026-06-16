@@ -112,14 +112,19 @@ export function ApprovalDetailPage() {
       setIsSubmitting(true);
       setApproveError('');
       let level = 2;
+      let bypass = false;
+      const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+
       if (user.role === 'TechLead') {
         level = 1;
-      } else if (user.role === 'Admin') {
-        const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
-        level = hasLevel1 ? 2 : 1;
+      } else if (user.role === 'HR' || user.role === 'Admin') {
+        if (!hasLevel1) {
+          bypass = true;
+        }
+        level = 2;
       }
       
-      await workflowService.approveCV(id, level);
+      await workflowService.approveCV(id, level, bypass);
       setIsApproveOpen(false);
       navigate('/workflow');
     } catch (err: any) {

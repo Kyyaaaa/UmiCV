@@ -12,8 +12,8 @@ export const workflowService = {
     return response.data;
   },
 
-  approveCV: async (cvId: string, level: number) => {
-    const response = await apiClient.post(`/cvs/${cvId}/approve`, { level });
+  approveCV: async (cvId: string, level: number, bypass?: boolean) => {
+    const response = await apiClient.post(`/cvs/${cvId}/approve`, { level, bypass });
     return response.data;
   },
 

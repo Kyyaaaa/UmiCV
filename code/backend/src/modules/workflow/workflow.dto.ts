@@ -6,6 +6,7 @@ export const approveSchema = z.object({
   }),
   body: z.object({
     level: z.number().int().min(1).max(2),
+    bypass: z.boolean().optional(),
   }),
 });
 

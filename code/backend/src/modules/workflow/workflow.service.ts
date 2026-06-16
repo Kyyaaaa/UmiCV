@@ -109,7 +109,7 @@ export class WorkflowService {
       const hasTechLead = await prisma.projectMember.findFirst({ where: { userId: cv.userId } });
       const hasLevel1 = logs.some(l => l.level === 1 && l.action === ApprovalAction.Approve);
       
-      if (hasTechLead && !hasLevel1) {
+      if (hasTechLead && !hasLevel1 && !data.bypass) {
         throw new BadRequestError('CV phải được TechLead duyệt trước khi HR phê duyệt.');
       }
 
