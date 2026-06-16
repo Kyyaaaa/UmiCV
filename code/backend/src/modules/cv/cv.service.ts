@@ -228,6 +228,12 @@ export class CVService {
       throw new BadRequestError('NO_CHANGES_TO_PUBLISH');
     }
 
+    // TASK-20.3: Server-side validation
+    const personalInfo = (cv.sectionsData as any)?.personalInfo || {};
+    if (!personalInfo.name || !personalInfo.email || !personalInfo.role) {
+      throw new BadRequestError('Thiếu thông tin cá nhân bắt buộc (Họ tên, Email, Chức danh). Không thể gửi phê duyệt.');
+    }
+
     const updatedCv = await prisma.cVProfile.update({
       where: { id: cvId },
       data: {

@@ -22,6 +22,24 @@ export class WorkflowService {
       throw new BadRequestError(MESSAGES.WORKFLOW.NO_DRAFTS);
     }
 
+    // Server-side Validation: Chống rác
+    for (const profile of profiles) {
+      const sectionsData = profile.sectionsData as any;
+      if (!sectionsData || !sectionsData.personalInfo) {
+        throw new BadRequestError('Thiếu thông tin cá nhân bắt buộc (personalInfo)');
+      }
+      
+      const { personalInfo } = sectionsData;
+      if (!personalInfo.name || !personalInfo.role || !personalInfo.email) {
+        throw new BadRequestError('Hồ sơ phải có đầy đủ Họ tên, Chức danh và Email trước khi gửi phê duyệt.');
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(personalInfo.email)) {
+        throw new BadRequestError('Định dạng Email không hợp lệ.');
+      }
+    }
+
     await prisma.cVProfile.updateMany({
       where: {
         id: { in: profiles.map((p) => p.id) },

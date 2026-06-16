@@ -695,3 +695,32 @@ Hoàn thiện các thao tác CRUD cơ bản cho tính năng Chiến dịch cập
 - [x] **TASK-19.5: Kiểm thử luồng Cập nhật & Xóa**
   - Test thay đổi Deadline xem có báo lỗi nếu chọn ngày quá khứ không.
   - Test xóa 1 chiến dịch đang Active. Check xem CV của nhân sự bị nhắm mục tiêu có tự động chuyển từ `Outdated` về `Draft` an toàn không.
+
+---
+
+## 📋 Phase 20: Checklist Cảnh báo ở màn hình Gửi Phê Duyệt
+
+Đảm bảo nhân sự không nộp lên các CV rác, thiếu thông tin thiết yếu. Xây dựng một bảng "Checklist" cảnh báo trực quan ở màn hình `/cv/:id/publish` và chặn thao tác Submit nếu dính lỗi nghiêm trọng.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-20.1: Tích hợp Dữ liệu và Hàm Kiểm tra (Validation)**
+  - Chỉnh sửa `PublishReviewPage.tsx` để gọi thêm API `cvService.getCVById(id)` lấy dữ liệu mới nhất (sectionsData).
+  - Viết hàm `validateCVData` kiểm tra dữ liệu:
+    - Lỗi (Error) bắt buộc: Thiếu Họ tên, Chức danh, Email hoặc sai định dạng Email.
+    - Cảnh báo (Warning): Chưa nhập Kỹ năng, Kinh nghiệm, Học vấn.
+- [x] **TASK-20.2: Vẽ UI Checklist và Xử lý Nút Bấm**
+  - Hiển thị danh sách các mục kiểm tra trên UI với Icon tương ứng (X đỏ, Cảnh báo vàng, Tick xanh) ở ngay phía trên bảng Diff.
+  - Khóa (disable) nút "Xác nhận Publish" nếu mảng kiểm tra tồn tại ít nhất 1 lỗi (Error).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-20.3: Chặn rác ở API (Server-side Validation)**
+  - Chỉnh sửa API Publish CV trong service tương ứng (e.g. `publishCV` thuộc module workflow/cv).
+  - Bổ sung logic kiểm tra các trường bắt buộc (Name, Role, Email) trong `sectionsData.personalInfo`. Nếu thiếu, throw `BadRequestError` ngay lập tức để chống spam qua API.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-20.4: Kiểm thử luồng Validation**
+  - Xóa hết thông tin cá nhân của bản nháp và sang trang Publish -> Kiểm tra nút gửi đã bị khóa và hiện X Đỏ chưa.
+  - Điền đủ Tên/Email/Chức danh nhưng bỏ trống Kinh nghiệm -> Kiểm tra hệ thống báo Vàng nhưng vẫn cho gửi thành công.

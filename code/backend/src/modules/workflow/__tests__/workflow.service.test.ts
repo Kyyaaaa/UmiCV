@@ -14,7 +14,10 @@ describe('WorkflowService', () => {
 
   describe('submitDraft', () => {
     it('should submit draft successfully', async () => {
-      prismaMock.cVProfile.findMany.mockResolvedValue([{ id: 'cv-1' }] as any);
+      prismaMock.cVProfile.findMany.mockResolvedValue([{ 
+        id: 'cv-1', 
+        sectionsData: { personalInfo: { name: 'John', role: 'Dev', email: 'john@example.com' } } 
+      }] as any);
       prismaMock.cVProfile.updateMany.mockResolvedValue({ count: 1 } as any);
 
       const result = await workflowService.submitDraft('user-1', { languageCode: 'vi' });

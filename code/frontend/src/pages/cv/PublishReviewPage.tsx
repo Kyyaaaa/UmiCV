@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Button } from '../../components/ui/Button';
-import { ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, Loader2, AlertTriangle, XCircle } from 'lucide-react';
 import { cvService } from '../../services/cv.service';
 import { DiffChange } from '../../types/cv';
 
@@ -26,6 +26,56 @@ export function PublishReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{title: string, type: 'success'|'error'} | null>(null);
+  const [validationItems, setValidationItems] = useState<{ type: 'error' | 'warning' | 'success', message: string }[]>([]);
+
+  const validateCVData = (sectionsData: any) => {
+    const items: { type: 'error' | 'warning' | 'success', message: string }[] = [];
+    
+    // Check personal info
+    const pi = sectionsData?.personalInfo || {};
+    const hasName = !!pi.name?.trim();
+    const hasRole = !!pi.role?.trim();
+    const hasEmail = !!pi.email?.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValidEmail = hasEmail && emailRegex.test(pi.email);
+
+    if (!hasName) items.push({ type: 'error', message: 'Họ tên không được để trống' });
+    if (!hasRole) items.push({ type: 'error', message: 'Chức danh không được để trống' });
+    if (!hasEmail) {
+      items.push({ type: 'error', message: 'Email không được để trống' });
+    } else if (!isValidEmail) {
+      items.push({ type: 'error', message: 'Email không đúng định dạng' });
+    }
+
+    if (hasName && hasRole && isValidEmail) {
+      items.push({ type: 'success', message: 'Thông tin cá nhân cơ bản hợp lệ' });
+    }
+
+    // Check collections
+    const skills = sectionsData?.skills || [];
+    const exp = sectionsData?.experience || [];
+    const edu = sectionsData?.education || [];
+
+    if (skills.length === 0) {
+      items.push({ type: 'warning', message: 'Chưa nhập Kỹ năng nào' });
+    } else {
+      items.push({ type: 'success', message: `Đã nhập ${skills.length} kỹ năng` });
+    }
+
+    if (exp.length === 0) {
+      items.push({ type: 'warning', message: 'Chưa nhập Kinh nghiệm làm việc' });
+    } else {
+      items.push({ type: 'success', message: `Đã nhập ${exp.length} mục kinh nghiệm làm việc` });
+    }
+
+    if (edu.length === 0) {
+      items.push({ type: 'warning', message: 'Chưa nhập Học vấn' });
+    } else {
+      items.push({ type: 'success', message: `Đã nhập ${edu.length} mục học vấn` });
+    }
+
+    setValidationItems(items);
+  };
 
   const showToast = (title: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ title, type });
@@ -37,8 +87,14 @@ export function PublishReviewPage() {
       if (!id) return;
       try {
         setIsLoading(true);
-        const res = await cvService.getDiff(id);
-        setDiffs(res.data || []);
+        const [diffRes, cvRes] = await Promise.all([
+          cvService.getDiff(id),
+          cvService.getCVById(id)
+        ]);
+        setDiffs(diffRes.data || []);
+        if (cvRes.data && cvRes.data.sectionsData) {
+          validateCVData(cvRes.data.sectionsData);
+        }
       } catch (err: any) {
         setError(err.response?.data?.message || 'Lỗi khi kiểm tra dữ liệu thay đổi.');
       } finally {
@@ -142,6 +198,24 @@ export function PublishReviewPage() {
         ) : (
           <>
             <div className="p-6 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-800">Checklist Kiểm tra CV</h3>
+              <p className="text-slate-500 mt-1 text-sm">
+                Đảm bảo CV đầy đủ thông tin thiết yếu trước khi gửi đi.
+              </p>
+              
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {validationItems.map((item, idx) => (
+                  <div key={idx} className={`flex items-center space-x-3 p-3 rounded border ${item.type === 'error' ? 'bg-red-50 border-red-100 text-red-700' : item.type === 'warning' ? 'bg-yellow-50 border-yellow-100 text-yellow-700' : 'bg-green-50 border-green-100 text-green-700'}`}>
+                    {item.type === 'error' && <XCircle size={18} className="shrink-0" />}
+                    {item.type === 'warning' && <AlertTriangle size={18} className="shrink-0" />}
+                    {item.type === 'success' && <CheckCircle size={18} className="shrink-0" />}
+                    <span className="text-sm font-medium">{item.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 border-b border-slate-200">
               <h3 className="text-lg font-bold text-slate-800">Tóm tắt các thay đổi từ bản nháp</h3>
               <p className="text-slate-500 mt-1">
                 {diffs.length > 0 ? `${diffs.length} thay đổi được phát hiện so với phiên bản trước.` : 'Không có thay đổi nào so với phiên bản trước.'}
@@ -192,7 +266,7 @@ export function PublishReviewPage() {
                 <Button 
                   onClick={handlePublish} 
                   isLoading={isPublishing} 
-                  disabled={diffs.length === 0}
+                  disabled={diffs.length === 0 || validationItems.some(i => i.type === 'error')}
                 >
                   Xác nhận Publish
                 </Button>
