@@ -47,4 +47,18 @@ export class BatchRequestController {
     const result = await batchRequestService.remindTarget(batchId, targetUserId, hrUserId);
     res.status(200).json({ success: true, ...result });
   }
+
+  update = async (req: AuthRequest, res: Response) => {
+    const hrUserId = req.user!.userId;
+    const batchId = req.params.id;
+    const result = await batchRequestService.updateBatchRequest(batchId, hrUserId, req.body);
+    res.status(200).json({ success: true, data: result });
+  };
+
+  delete = async (req: AuthRequest, res: Response) => {
+    const hrUserId = req.user!.userId;
+    const batchId = req.params.id;
+    const result = await batchRequestService.deleteBatchRequest(batchId, hrUserId);
+    res.status(200).json({ success: true, data: result });
+  };
 }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { BatchRequestController } from './batch-request.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { createBatchRequestSchema, cancelBatchRequestSchema, getBatchRequestsSchema, getBatchRequestTargetsSchema, remindTargetSchema } from './batch-request.dto';
+import { createBatchRequestSchema, cancelBatchRequestSchema, getBatchRequestsSchema, getBatchRequestTargetsSchema, remindTargetSchema, updateBatchRequestSchema, deleteBatchRequestSchema } from './batch-request.dto';
 
 const router = Router();
 const batchRequestController = new BatchRequestController();
@@ -134,5 +134,70 @@ router.post('/:id/cancel', validate(cancelBatchRequestSchema), batchRequestContr
  *         description: Target not found
  */
 router.post('/:id/targets/:userId/remind', validate(remindTargetSchema), batchRequestController.remind);
+
+/**
+ * @openapi
+ * /api/batch-requests/{id}:
+ *   put:
+ *     summary: Update a batch request
+ *     tags: [Batch Request]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               targetUserIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *               deadline:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       200:
+ *         description: Batch request updated
+ *       400:
+ *         description: Invalid input or missing targets
+ *       403:
+ *         description: Forbidden (Not HR)
+ */
+router.put('/:id', validate(updateBatchRequestSchema), batchRequestController.update);
+
+/**
+ * @openapi
+ * /api/batch-requests/{id}:
+ *   delete:
+ *     summary: Delete a batch request
+ *     tags: [Batch Request]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Batch request deleted
+ *       404:
+ *         description: Batch request not found
+ *       403:
+ *         description: Forbidden (Not HR)
+ */
+router.delete('/:id', validate(deleteBatchRequestSchema), batchRequestController.delete);
 
 export default router;

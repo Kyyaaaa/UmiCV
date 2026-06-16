@@ -21,4 +21,12 @@ export const batchRequestService = {
   remindTarget: (id: string, userId: string) => {
     return api.post<{ success: boolean; message: string }>(`/batch-requests/${id}/targets/${userId}/remind`);
   },
+
+  updateBatchRequest: (id: string, data: { title?: string; description?: string; deadline?: string; targetUserIds?: string[] }) => {
+    return api.put<{ success: boolean; data: BatchRequest }>(`/batch-requests/${id}`, data);
+  },
+
+  deleteBatchRequest: (id: string) => {
+    return api.delete<{ success: boolean }>(`/batch-requests/${id}`);
+  },
 };

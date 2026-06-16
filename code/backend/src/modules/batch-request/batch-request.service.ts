@@ -1,5 +1,5 @@
 import prisma from '../../config/db';
-import { CreateBatchRequestInput } from './batch-request.dto';
+import { CreateBatchRequestInput, UpdateBatchRequestInput } from './batch-request.dto';
 import { NotFoundError, BadRequestError } from '../../errors/AppError';
 import { BatchRequestStatus, CVStatus, TargetStatus, Prisma } from '@prisma/client';
 import { MESSAGES } from '../../constants/messages';
@@ -179,5 +179,112 @@ export class BatchRequestService {
     });
 
     return { message: 'Reminder email sent successfully' };
+  }
+
+  async updateBatchRequest(batchId: string, hrUserId: string, data: UpdateBatchRequestInput) {
+    return prisma.$transaction(async (tx) => {
+      const batch = await tx.batchRequest.findUnique({
+        where: { id: batchId },
+        include: { targets: true },
+      });
+
+      if (!batch) {
+        throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
+      }
+
+      if (batch.status === BatchRequestStatus.Completed || batch.status === BatchRequestStatus.Cancelled) {
+        throw new BadRequestError('Cannot update a completed or cancelled batch request');
+      }
+
+      // Update basic info
+      const updateData: any = {};
+      if (data.title) updateData.title = data.title;
+      if (data.description !== undefined) updateData.description = data.description;
+      if (data.deadline) updateData.deadline = new Date(data.deadline);
+
+      await tx.batchRequest.update({
+        where: { id: batchId },
+        data: updateData,
+      });
+
+      // Update targets if provided
+      if (data.targetUserIds) {
+        const currentTargetUserIds = batch.targets.map((t) => t.userId);
+        const usersToAdd = data.targetUserIds.filter((id) => !currentTargetUserIds.includes(id));
+        const usersToRemove = currentTargetUserIds.filter((id) => !data.targetUserIds!.includes(id));
+
+        if (usersToRemove.length > 0) {
+          // Xóa khỏi target
+          await tx.batchRequestTarget.deleteMany({
+            where: {
+              batchRequestId: batchId,
+              userId: { in: usersToRemove },
+            },
+          });
+
+          // Rollback CV
+          await tx.cVProfile.updateMany({
+            where: {
+              userId: { in: usersToRemove },
+              status: CVStatus.Outdated,
+            },
+            data: { status: CVStatus.Draft },
+          });
+        }
+
+        if (usersToAdd.length > 0) {
+          // Thêm mới
+          await tx.batchRequestTarget.createMany({
+            data: usersToAdd.map((userId) => ({
+              batchRequestId: batchId,
+              userId,
+              status: TargetStatus.Outdated,
+            })),
+          });
+
+          // Set CV
+          await tx.cVProfile.updateMany({
+            where: { userId: { in: usersToAdd } },
+            data: { status: CVStatus.Outdated },
+          });
+        }
+      }
+
+      return tx.batchRequest.findUnique({ where: { id: batchId } });
+    });
+  }
+
+  async deleteBatchRequest(batchId: string, hrUserId: string) {
+    const batch = await prisma.batchRequest.findUnique({
+      where: { id: batchId },
+      include: { targets: true },
+    });
+
+    if (!batch) {
+      throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // If active, rollback targets
+      if (batch.status === BatchRequestStatus.Active) {
+        const targetUserIds = batch.targets.map((t) => t.userId);
+        if (targetUserIds.length > 0) {
+          await tx.cVProfile.updateMany({
+            where: {
+              userId: { in: targetUserIds },
+              status: CVStatus.Outdated,
+            },
+            data: { status: CVStatus.Draft },
+          });
+        }
+      }
+
+      // Delete the batch request (Cascade deletes targets)
+      await tx.batchRequest.delete({
+        where: { id: batchId },
+      });
+    });
+
+    return { message: 'Batch request deleted successfully' };
   }
 }

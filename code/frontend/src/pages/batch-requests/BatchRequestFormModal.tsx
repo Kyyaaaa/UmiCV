@@ -13,9 +13,10 @@ interface BatchRequestFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
+  initialData?: any;
 }
 
-export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestFormModalProps) {
+export function BatchRequestFormModal({ isOpen, onClose, onSave, initialData }: BatchRequestFormModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -34,12 +35,31 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        title: '',
-        description: '',
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-      });
-      setSelectedUsers(new Map());
+      if (initialData) {
+        setFormData({
+          title: initialData.title || '',
+          description: initialData.description || '',
+          deadline: initialData.deadline ? new Date(initialData.deadline).toISOString().slice(0, 16) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        });
+        
+        // Populate selected users if initial targets are provided
+        if (initialData.targets && initialData.targets.length > 0) {
+          const map = new Map();
+          initialData.targets.forEach((t: any) => {
+            if (t.user) map.set(t.user.id, t.user);
+          });
+          setSelectedUsers(map);
+        } else {
+          setSelectedUsers(new Map());
+        }
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        });
+        setSelectedUsers(new Map());
+      }
       setSelectedDeptId('');
       setAvailableUsers([]);
       setError('');
@@ -119,12 +139,21 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
     setError('');
     
     try {
-      await batchRequestService.createBatchRequest({
-        title: formData.title,
-        description: formData.description,
-        deadline: new Date(formData.deadline).toISOString(),
-        targetUserIds: Array.from(selectedUsers.keys()),
-      });
+      if (initialData) {
+        await batchRequestService.updateBatchRequest(initialData.id, {
+          title: formData.title,
+          description: formData.description,
+          deadline: new Date(formData.deadline).toISOString(),
+          targetUserIds: Array.from(selectedUsers.keys()),
+        });
+      } else {
+        await batchRequestService.createBatchRequest({
+          title: formData.title,
+          description: formData.description,
+          deadline: new Date(formData.deadline).toISOString(),
+          targetUserIds: Array.from(selectedUsers.keys()),
+        });
+      }
       onSave();
     } catch (err: any) {
       const { globalError, fieldErrors: apiFieldErrors } = handleApiError(err, 'Có lỗi xảy ra khi tạo chiến dịch');
@@ -139,7 +168,7 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Khởi tạo chiến dịch cập nhật CV"
+      title={initialData ? "Cập nhật chiến dịch" : "Khởi tạo chiến dịch cập nhật CV"}
       size="lg"
       footer={
         <>
@@ -147,7 +176,7 @@ export function BatchRequestFormModal({ isOpen, onClose, onSave }: BatchRequestF
             Hủy
           </Button>
           <Button type="submit" form="batch-request-form" isLoading={isLoading}>
-            Tạo chiến dịch ({selectedUsers.size} nhân sự)
+            {initialData ? "Lưu thay đổi" : `Tạo chiến dịch (${selectedUsers.size} nhân sự)`}
           </Button>
         </>
       }

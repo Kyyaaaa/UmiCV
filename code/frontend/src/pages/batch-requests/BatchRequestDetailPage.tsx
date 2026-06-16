@@ -6,7 +6,8 @@ import { Button } from '../../components/ui/Button';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { BatchRequest, BatchRequestTarget } from '../../types';
 import { batchRequestService } from '../../services/batch-request.service';
-import { ArrowLeft, Ban, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Ban, CheckCircle2, Clock, Edit, Trash2 } from 'lucide-react';
+import { BatchRequestFormModal } from './BatchRequestFormModal';
 
 export function BatchRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,9 @@ export function BatchRequestDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
   const [remindingTargets, setRemindingTargets] = useState<Record<string, boolean>>({});
 
@@ -65,6 +69,28 @@ export function BatchRequestDetailPage() {
     } finally {
       setIsCanceling(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    try {
+      setIsDeleting(true);
+      await batchRequestService.deleteBatchRequest(id);
+      navigate('/hr/batch-requests');
+    } catch (err) {
+      console.error('Lỗi khi xóa', err);
+      setToastMessage({ title: 'Lỗi khi xóa chiến dịch', type: 'error' });
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSave = () => {
+    setIsEditModalOpen(false);
+    setToastMessage({ title: 'Đã cập nhật chiến dịch thành công', type: 'success' });
+    setTimeout(() => setToastMessage(null), 3000);
+    fetchData();
   };
 
   const handleRemind = async (userId: string) => {
@@ -181,27 +207,36 @@ export function BatchRequestDetailPage() {
         title={request.title} 
         description={request.description || 'Chi tiết tiến độ cập nhật CV của nhân sự trong chiến dịch'}
         actions={
-          request.status === 'Active' ? (
-            <div className="flex items-center gap-3">
-              {new Date(request.deadline).getTime() + 86400000 < new Date().getTime() && (
-                <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-800">
-                  Quá hạn
-                </span>
-              )}
-              <Button variant="danger" onClick={() => setIsCancelModalOpen(true)}>
-                <Ban size={16} className="mr-2" />
-                Hủy chiến dịch
-              </Button>
-            </div>
-          ) : request.status === 'Completed' ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
-              Hoàn thành
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-slate-100 text-slate-800">
-              Chiến dịch đã bị hủy
-            </span>
-          )
+          <div className="flex items-center gap-3">
+            {request.status === 'Active' ? (
+              <>
+                {new Date(request.deadline).getTime() + 86400000 < new Date().getTime() && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-800">
+                    Quá hạn
+                  </span>
+                )}
+                <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+                  <Edit size={16} className="mr-2" />
+                  Chỉnh sửa
+                </Button>
+                <Button variant="danger" onClick={() => setIsCancelModalOpen(true)}>
+                  <Ban size={16} className="mr-2" />
+                  Hủy
+                </Button>
+              </>
+            ) : request.status === 'Completed' ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
+                Hoàn thành
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-slate-100 text-slate-800">
+                Chiến dịch đã bị hủy
+              </span>
+            )}
+            <Button variant="danger" onClick={() => setIsDeleteModalOpen(true)} className="ml-2 bg-red-600 hover:bg-red-700 text-white p-2">
+              <Trash2 size={16} />
+            </Button>
+          </div>
         }
       />
 
@@ -228,7 +263,7 @@ export function BatchRequestDetailPage() {
           <DataTable
             columns={columns}
             data={targets}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.userId}
             isLoading={isLoading}
           />
         </div>
@@ -243,6 +278,24 @@ export function BatchRequestDetailPage() {
         confirmText="Hủy chiến dịch"
         type="danger"
         isLoading={isCanceling}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Xác nhận xóa chiến dịch"
+        description="Bạn có chắc muốn xóa vĩnh viễn chiến dịch này? Các nhân sự đang bị yêu cầu sẽ được gỡ bỏ ràng buộc cập nhật."
+        confirmText="Xóa vĩnh viễn"
+        type="danger"
+        isLoading={isDeleting}
+      />
+
+      <BatchRequestFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleEditSave}
+        initialData={{ ...request, targets }}
       />
     </div>
   );

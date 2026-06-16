@@ -662,3 +662,36 @@ Thực hiện Hạng mục 4 trong kế hoạch làm sạch Technical Debt. Chuy
 - [x] **TASK-18.3: Kiểm thử Filter và Hiệu suất Search**
   - Gõ text tìm kiếm, kiểm tra Network tab xem có gọi API dạng `?keyword=text` không.
   - Đổi filter SLA, kiểm tra danh sách trả về có khớp chính xác với mốc thời gian cảnh báo hay không.
+
+---
+
+## ✏️ Phase 19: Bổ sung Xóa & Cập nhật cho Chiến dịch (Batch Requests)
+
+Hoàn thiện các thao tác CRUD cơ bản cho tính năng Chiến dịch cập nhật CV, giúp HR quản lý linh hoạt hơn thay vì chỉ có Tạo và Hủy.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-19.1: Viết API Cập nhật (Update) Chiến dịch**
+  - Tạo Endpoint: `PUT /api/batch-requests/:id`
+  - Cho phép sửa các trường cơ bản: `title`, `description`, `deadline`.
+  - Nếu hỗ trợ sửa danh sách nhân sự (Targets): Phải xử lý logic Thêm mới (đổi CV người mới thành `Outdated`) và Bớt đi (Rollback CV người bị bớt về lại `Draft`).
+- [x] **TASK-19.2: Viết API Xóa (Delete) Chiến dịch**
+  - Tạo Endpoint: `DELETE /api/batch-requests/:id`
+  - Logic bắt buộc: Nếu chiến dịch đang `Active`, phải thực hiện thao tác Rollback (như lúc Cancel) để trả CV `Outdated` về lại `Draft` tránh việc khoá nhầm hồ sơ nhân sự.
+  - Thực hiện xóa bản ghi `BatchRequest` (do đã có `onDelete: Cascade` ở schema nên các Target sẽ tự động bị xóa theo).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-19.3: Tích hợp UI Cập nhật (Edit)**
+  - Tái sử dụng `BatchRequestFormModal.tsx` để làm form Edit (truyền initialData vào).
+  - Trên `BatchRequestDetailPage` (hoặc List), thêm icon/nút "Chỉnh sửa". Gọi API Update khi lưu.
+- [x] **TASK-19.4: Tích hợp UI Xóa (Delete)**
+  - Thêm icon/nút "Xóa" (Thùng rác đỏ).
+  - Khi bấm, hiển thị Confirm Modal với cảnh báo: "Bạn có chắc muốn xóa vĩnh viễn chiến dịch này? Các nhân sự đang bị yêu cầu sẽ được gỡ bỏ ràng buộc cập nhật."
+  - Gọi API Delete, báo Toast thành công và quay về danh sách.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-19.5: Kiểm thử luồng Cập nhật & Xóa**
+  - Test thay đổi Deadline xem có báo lỗi nếu chọn ngày quá khứ không.
+  - Test xóa 1 chiến dịch đang Active. Check xem CV của nhân sự bị nhắm mục tiêu có tự động chuyển từ `Outdated` về `Draft` an toàn không.

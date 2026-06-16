@@ -86,7 +86,6 @@ export interface BatchRequest {
 }
 
 export interface BatchRequestTarget {
-  id: string;
   batchRequestId: string;
   userId: string;
   status: 'Outdated' | 'Updated';
