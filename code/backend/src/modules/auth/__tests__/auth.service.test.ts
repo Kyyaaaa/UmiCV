@@ -14,6 +14,11 @@ jest.mock('../../../config/redis', () => ({
     setex: jest.fn(),
   }
 }));
+jest.mock('../../notification/notification.queue', () => ({
+  emailQueue: {
+    add: jest.fn(),
+  }
+}));
 
 describe('AuthService', () => {
   let authService: AuthService;

@@ -724,3 +724,38 @@ Hoàn thiện các thao tác CRUD cơ bản cho tính năng Chiến dịch cập
 - [x] **TASK-20.4: Kiểm thử luồng Validation**
   - Xóa hết thông tin cá nhân của bản nháp và sang trang Publish -> Kiểm tra nút gửi đã bị khóa và hiện X Đỏ chưa.
   - Điền đủ Tên/Email/Chức danh nhưng bỏ trống Kinh nghiệm -> Kiểm tra hệ thống báo Vàng nhưng vẫn cho gửi thành công.
+
+---
+
+## 🔑 Phase 21: Luồng Quên mật khẩu (Forgot Password)
+
+Cho phép người dùng tự khôi phục tài khoản khi quên mật khẩu thông qua mã xác thực (Token) gửi về Email, giảm tải công việc cấp lại mật khẩu thủ công cho Admin.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-21.1: Cập nhật Schema Database**
+  - Chỉnh sửa `schema.prisma`: Thêm `resetPasswordToken` (String?) và `resetPasswordExpires` (DateTime?) vào model `User`.
+  - Chạy Prisma format, generate và push.
+- [x] **TASK-21.2: Xây dựng API Cấp lại Mật khẩu**
+  - Viết API `POST /api/auth/forgot-password`: Nhận `{ email }`. Sinh token bằng thư viện `crypto` (`crypto.randomBytes(32).toString('hex')`). Hash token này lại và lưu vào DB cùng hạn sử dụng (1 giờ).
+  - Viết API `POST /api/auth/reset-password`: Nhận `{ token, newPassword }`. Mã hóa token client gửi lên, tìm trong DB, check expiry, update `passwordHash`, sau đó gán 2 trường reset thành `null`.
+- [x] **TASK-21.3: Gửi Email qua BullMQ**
+  - Thêm template Email `getResetPasswordTemplate` vào `mailer.ts`.
+  - Đẩy Job vào `emailQueue` khi gọi API forgot-password.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-21.4: Màn hình Yêu cầu Khôi phục**
+  - Tạo trang `/forgot-password`: Form nhập Email và nút Gửi mã. Validation bằng Zod.
+  - Cập nhật file `App.tsx` thêm route mới.
+  - Thêm link "Quên mật khẩu?" tại form Login.
+- [x] **TASK-21.5: Màn hình Đặt lại Mật khẩu**
+  - Tạo trang `/reset-password`: Form nhập Mật khẩu mới và Nhập lại Mật khẩu mới.
+  - Lấy `token` từ URL search params để gọi API `POST /reset-password`. Báo thành công và redirect về Login.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-21.6: Kiểm thử luồng Đổi mật khẩu**
+  - Quên mật khẩu 1 tài khoản, lấy link trên Mailtrap/Terminal Log.
+  - Click vào link và tiến hành đổi mật khẩu.
+  - Đăng xuất và đăng nhập lại bằng mật khẩu mới xem có thành công không.

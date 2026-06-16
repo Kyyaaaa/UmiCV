@@ -1,5 +1,5 @@
 import prisma from '../../config/db';
-import { verifyPassword } from '../../utils/hash.util';
+import { verifyPassword, hashPassword } from '../../utils/hash.util';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../../utils/jwt.util';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '../../errors/AppError';
@@ -7,6 +7,10 @@ import { LoginInput } from './auth.dto';
 import { redisClient } from '../../config/redis';
 import { env } from '../../config/env';
 import { MESSAGES } from '../../constants/messages';
+import crypto from 'crypto';
+import { emailQueue } from '../notification/notification.queue';
+import { getResetPasswordTemplate } from '../notification/mailer';
+import { BadRequestError } from '../../errors/AppError';
 
 export class AuthService {
   async login(data: LoginInput) {
@@ -91,5 +95,64 @@ export class AuthService {
     } catch (error) {
       // Token already invalid or expired, no need to blacklist
     }
+  }
+
+  async forgotPassword(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.deletedAt) {
+      // Return success even if user not found to prevent email enumeration
+      return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: passwordResetToken,
+        resetPasswordExpires: passwordResetExpires,
+      },
+    });
+
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    const message = getResetPasswordTemplate(resetUrl);
+
+    await emailQueue.add('forgot-password', {
+      to: user.email,
+      subject: 'Password Reset Request',
+      body: message,
+    });
+
+    return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new BadRequestError('Token is invalid or has expired');
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    return { message: 'Password has been successfully reset' };
   }
 }

@@ -11,6 +11,8 @@ import { PrivateLayout } from './layouts/PrivateLayout';
 
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
 // Dashboard
 import { DashboardOverview } from './pages/dashboard/DashboardOverview';
@@ -90,10 +92,11 @@ const router = createBrowserRouter([
     ]
   },
   {
-    path: "/login",
     element: <PublicLayout />,
     children: [
-      { index: true, element: <LoginPage /> }
+      { path: "/login", element: <LoginPage /> },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
+      { path: "/reset-password", element: <ResetPasswordPage /> }
     ]
   },
   {

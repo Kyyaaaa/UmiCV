@@ -57,4 +57,16 @@ export class AuthController {
 
     res.status(200).json({ success: true, message: MESSAGES.AUTH.LOGOUT_SUCCESS });
   }
+
+  async forgotPassword(req: Request, res: Response) {
+    const { email } = req.body;
+    const result = await authService.forgotPassword(email);
+    res.status(200).json({ success: true, message: result.message });
+  }
+
+  async resetPassword(req: Request, res: Response) {
+    const { token, newPassword } = req.body;
+    const result = await authService.resetPassword(token, newPassword);
+    res.status(200).json({ success: true, message: result.message });
+  }
 }

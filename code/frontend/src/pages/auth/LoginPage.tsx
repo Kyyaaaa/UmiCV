@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -77,7 +77,11 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required 
             />
-
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                Quên mật khẩu?
+              </Link>
+            </div>
           </div>
         </CardContent>
         <CardFooter>

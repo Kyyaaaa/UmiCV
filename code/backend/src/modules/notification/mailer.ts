@@ -79,3 +79,11 @@ export const getRemindCVTemplate = (title: string, deadline: string) => `
   <p><strong>Deadline:</strong> ${deadline}</p>
   <p>Please log in to UmiCV and update your profile.</p>
 `;
+
+export const getResetPasswordTemplate = (resetUrl: string) => `
+  <h2>Password Reset Request</h2>
+  <p>We received a request to reset your password. If you didn't make this request, you can ignore this email.</p>
+  <p>To reset your password, click the link below:</p>
+  <p><a href="${resetUrl}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
+  <p>This link will expire in 1 hour.</p>
+`;
