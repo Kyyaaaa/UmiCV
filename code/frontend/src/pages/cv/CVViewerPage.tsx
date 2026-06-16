@@ -7,6 +7,7 @@ import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
 import { CVPdfDocument } from '../../components/cv-workspace/CVPdfDocument';
 import { cvService } from '../../services/cv.service';
 import { CVSections } from '../../types';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export function CVViewerPage() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export function CVViewerPage() {
   const [versionNumber, setVersionNumber] = useState<number>(0);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
 
   useEffect(() => {
     const fetchLatestApproved = async () => {
@@ -47,7 +49,7 @@ export function CVViewerPage() {
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (err) {
       console.error('Lỗi tạo PDF:', err);
-      alert('Lỗi khi tải PDF. Vui lòng thử lại.');
+      setDownloadError(true);
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -101,6 +103,17 @@ export function CVViewerPage() {
       <main className="flex-1 overflow-auto">
         <CVPreviewPanel data={snapshotData} scale={100} />
       </main>
+
+      <ConfirmModal
+        isOpen={downloadError}
+        onClose={() => setDownloadError(false)}
+        onConfirm={() => setDownloadError(false)}
+        title="Lỗi tải PDF"
+        description="Đã có lỗi xảy ra khi tạo file PDF. Vui lòng thử lại sau."
+        confirmText="Đóng"
+        hideCancel
+        type="danger"
+      />
     </div>
   );
 }

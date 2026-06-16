@@ -67,5 +67,15 @@ export const userService = {
   updatePassword: async (data: any): Promise<ApiResponse<any>> => {
     const response = await apiClient.put<ApiResponse<any>>('/users/me/password', data);
     return response.data;
+  },
+
+  resetPassword: async (id: string, newPassword: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post<ApiResponse<any>>(`/users/${id}/reset-password`, { newPassword });
+    return response.data;
+  },
+
+  deleteUser: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.delete<ApiResponse<any>>(`/users/${id}`);
+    return response.data;
   }
 };

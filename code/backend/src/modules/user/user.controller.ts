@@ -73,4 +73,9 @@ export class UserController {
     const result = await userService.changeRole(req.params.id, req.body.role, req.user!.userId);
     res.status(200).json({ success: true, message: MESSAGES.USER.CHANGE_ROLE_SUCCESS, data: result });
   }
+
+  async deleteUser(req: any, res: Response) {
+    await userService.deleteUser(req.params.id, req.user!.userId);
+    res.status(200).json({ success: true, message: 'Xóa tài khoản thành công' });
+  }
 }

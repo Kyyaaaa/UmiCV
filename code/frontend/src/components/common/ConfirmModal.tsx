@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  hideCancel?: boolean;
   error?: string;
 }
 
@@ -25,6 +26,7 @@ export function ConfirmModal({
   cancelText = 'Hủy',
   type = 'info',
   isLoading = false,
+  hideCancel = false,
   error,
 }: ConfirmModalProps) {
   return (
@@ -35,9 +37,11 @@ export function ConfirmModal({
       size="sm"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            {cancelText}
-          </Button>
+          {!hideCancel && (
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
+              {cancelText}
+            </Button>
+          )}
           <Button 
             variant={type === 'danger' ? 'danger' : 'primary'} 
             onClick={onConfirm}

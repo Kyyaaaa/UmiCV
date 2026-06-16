@@ -335,4 +335,27 @@ router.post('/:id/reset-password', authorize(['Admin']), validate(resetPasswordS
  */
 router.patch('/:id/role', authorize(['Admin']), validate(changeRoleSchema), userController.changeRole);
 
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Soft delete a user
+ *     tags: [User Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       403:
+ *         description: Forbidden (Cannot delete self or Admin)
+ *       404:
+ *         description: User not found
+ */
+router.delete('/:id', authorize(['Admin']), validate(userIdParamSchema), userController.deleteUser);
+
 export default router;

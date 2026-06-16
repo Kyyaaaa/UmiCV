@@ -226,4 +226,20 @@ export class UserService {
     });
     return exclude(updatedUser, ['passwordHash']);
   }
+
+  async deleteUser(id: string, executorId: string) {
+    if (id === executorId) {
+      throw new ForbiddenError('Bạn không thể tự xóa tài khoản của chính mình.');
+    }
+    const targetUser = await this.getUserById(id);
+    if (targetUser.role === 'Admin') {
+      throw new ForbiddenError('Bạn không có quyền xóa tài khoản Quản trị viên khác.');
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return exclude(user, ['passwordHash']);
+  }
 }

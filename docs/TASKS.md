@@ -759,3 +759,33 @@ Cho phép người dùng tự khôi phục tài khoản khi quên mật khẩu t
   - Quên mật khẩu 1 tài khoản, lấy link trên Mailtrap/Terminal Log.
   - Click vào link và tiến hành đổi mật khẩu.
   - Đăng xuất và đăng nhập lại bằng mật khẩu mới xem có thành công không.
+
+---
+
+## 🛠️ Phase 22: Nâng cấp Quản lý Nhân sự (Admin)
+
+Bổ sung tính năng Đặt lại mật khẩu (nhập tay) và Xóa tài khoản (Soft Delete) dành cho Admin.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-22.1: Viết API Xóa Tài khoản (Soft Delete)**
+  - Thêm phương thức `deleteUser` vào `UserService`. Logic: Cập nhật `deletedAt = new Date()`.
+  - Khóa bảo mật: Không cho phép Admin xóa Admin khác, không cho tự xóa chính mình. Trả về `ForbiddenError` nếu vi phạm.
+  - Thêm endpoint `DELETE /api/users/:id` vào `user.route.ts` với quyền `authorize(['Admin'])`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-22.2: Cập nhật Service và Nút bấm UI**
+  - Thêm hàm `resetPassword(id, newPassword)` và `deleteUser(id)` vào `user.service.ts`.
+  - Trong `UserListPage.tsx`, bổ sung nút "Đổi mật khẩu" (Icon Key) và "Xóa" (Icon Trash Đỏ) vào cột Actions.
+  - Disable 2 nút này đối với tài khoản của chính Admin đang thao tác hoặc đối với các Admin khác.
+- [x] **TASK-22.3: Tạo Modal Đổi Mật khẩu & Xóa**
+  - Bổ sung `ResetPasswordModal`: Form nhập "Mật khẩu mới", cho phép Admin gõ tay mật khẩu cấp cho nhân viên. Gọi API và thông báo thành công.
+  - Bổ sung `ConfirmDeleteModal`: Cảnh báo thao tác Xóa. Chấp nhận thì gọi API Xóa và tải lại danh sách.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-22.4: Kiểm thử luồng phân quyền và chức năng**
+  - Đăng nhập bằng Admin, thử tự khóa/xóa tài khoản của chính mình -> Kiểm tra có bị Disable hoặc lỗi API không.
+  - Đổi mật khẩu của 1 nhân viên thành `123456`, sau đó dùng tài khoản đó login xem có được không.
+  - Xóa mềm 1 nhân viên, kiểm tra xem nhân viên đó còn hiện trên danh sách không và có login được nữa không.

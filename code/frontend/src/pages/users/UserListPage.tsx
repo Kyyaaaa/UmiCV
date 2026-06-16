@@ -7,8 +7,9 @@ import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { User, Department } from '../../types';
-import { Plus, Edit2, Lock, Unlock } from 'lucide-react';
+import { Plus, Edit2, Lock, Unlock, Key, Trash2 } from 'lucide-react';
 import { UserFormModal } from './UserFormModal';
+import { ResetPasswordModal } from './ResetPasswordModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { userService } from '../../services/user.service';
 import { departmentService } from '../../services/department.service';
@@ -30,6 +31,14 @@ export function UserListPage() {
   
   const [isLockOpen, setIsLockOpen] = useState(false);
   const [userToLock, setUserToLock] = useState<User | null>(null);
+
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  const [alertMessage, setAlertMessage] = useState<{title: string, message: string} | null>(null);
 
   useEffect(() => {
     fetchDepartments();
@@ -129,9 +138,35 @@ export function UserListPage() {
               }}
             >
               {u.status === 'Active' 
-                ? <Lock size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-red-500"} /> 
+                ? <Lock size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-amber-500"} /> 
                 : <Unlock size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-green-500"} />
               }
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              disabled={isMe || isAdminButNotMe}
+              title={isMe ? "Không thể đổi mật khẩu của chính mình tại đây" : (isAdminButNotMe ? "Không thể thao tác trên tài khoản Quản trị viên khác" : "Đổi mật khẩu")}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setUserToReset(u); 
+                setIsResetOpen(true); 
+              }}
+            >
+              <Key size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-blue-500"} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              disabled={isMe || isAdminButNotMe}
+              title={isMe ? "Không thể xóa tài khoản của chính mình" : (isAdminButNotMe ? "Không thể thao tác trên tài khoản Quản trị viên khác" : "Xóa")}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setUserToDelete(u); 
+                setIsDeleteOpen(true); 
+              }}
+            >
+              <Trash2 size={16} className={isMe || isAdminButNotMe ? "text-slate-300" : "text-red-500"} />
             </Button>
           </div>
         );
@@ -159,6 +194,25 @@ export function UserListPage() {
     } finally {
       setIsLockOpen(false);
       setUserToLock(null);
+    }
+  };
+
+  const handleResetSuccess = () => {
+    setIsResetOpen(false);
+    setUserToReset(null);
+    setAlertMessage({ title: 'Thành công', message: 'Mật khẩu đã được cấp lại thành công!' });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    try {
+      await userService.deleteUser(userToDelete.id);
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+    } finally {
+      setIsDeleteOpen(false);
+      setUserToDelete(null);
     }
   };
 
@@ -244,6 +298,34 @@ export function UserListPage() {
         description={`Bạn có chắc chắn muốn ${userToLock?.status === 'Active' ? 'khóa' : 'mở khóa'} tài khoản của ${userToLock?.fullName}?`}
         confirmText={userToLock?.status === 'Active' ? 'Khóa' : 'Mở khóa'}
         type={userToLock?.status === 'Active' ? 'danger' : 'info'}
+      />
+
+      <ResetPasswordModal
+        isOpen={isResetOpen}
+        onClose={() => setIsResetOpen(false)}
+        user={userToReset}
+        onSuccess={handleResetSuccess}
+      />
+
+      <ConfirmModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Xóa tài khoản nhân sự"
+        description={`Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản của ${userToDelete?.fullName}? Hành động này sẽ không thể khôi phục được.`}
+        confirmText="Xóa vĩnh viễn"
+        type="danger"
+      />
+
+      <ConfirmModal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        onConfirm={() => setAlertMessage(null)}
+        title={alertMessage?.title || ''}
+        description={alertMessage?.message || ''}
+        confirmText="Đóng"
+        hideCancel
+        type="info"
       />
     </div>
   );

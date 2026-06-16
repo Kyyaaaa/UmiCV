@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Settings, Eye, Edit2 } from 'lucide-react';
+import { Settings, Eye, Edit2, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ConfirmModal } from "../../components/common/ConfirmModal";
 
 /**
  * A mockup UI matching the exact layout of the reference `quickcv` project.
@@ -9,6 +10,7 @@ export function QuickCVMockup() {
   const [viewMode, setViewMode] = useState<'split' | 'tabs'>('split');
   const [activeTab, setActiveTab] = useState<'editor' | 'viewer'>('editor');
   const [scale, setScale] = useState(100);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
   // Mock Editor Forms Stack
   const EditorStack = () => (
@@ -382,8 +384,8 @@ export function QuickCVMockup() {
           >
             Toggle Mode (Currently {viewMode})
           </Button>
-          <Button size="sm" onClick={() => alert("Simulating PDF Download...")}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+          <Button size="sm" onClick={() => setDownloadModalOpen(true)}>
+            <Download size={16} className="mr-2" />
             Download PDF
           </Button>
         </div>
@@ -460,6 +462,16 @@ export function QuickCVMockup() {
           border-radius: 20px;
         }
       `}} />
+      <ConfirmModal
+        isOpen={downloadModalOpen}
+        onClose={() => setDownloadModalOpen(false)}
+        onConfirm={() => setDownloadModalOpen(false)}
+        title="Tải PDF"
+        description="Tính năng tải xuống PDF đang được giả lập. PDF của bạn sẽ được tạo và tải xuống trong môi trường thực tế."
+        confirmText="Đóng"
+        hideCancel
+        type="info"
+      />
     </div>
   );
 }
