@@ -5,6 +5,9 @@ import { ApproveInput, RejectInput, SubmitDraftInput } from './workflow.dto';
 import { MESSAGES } from '../../constants/messages';
 import { emailQueue } from '../notification/notification.queue';
 import { getRejectCVTemplate } from '../notification/mailer';
+import { AuditService } from '../audit/audit.service';
+
+const auditService = new AuditService();
 
 export class WorkflowService {
   async submitDraft(userId: string, data: SubmitDraftInput) {
@@ -49,6 +52,8 @@ export class WorkflowService {
         submittedAt: new Date(),
       },
     });
+
+    auditService.logAction('SUBMIT_CV_DRAFT', userId, profiles.map(p => p.id).join(','));
 
     return { message: MESSAGES.WORKFLOW.SUBMIT_SUCCESS };
   }
@@ -214,6 +219,8 @@ export class WorkflowService {
       }
     }
 
+    auditService.logAction('APPROVE_CV', approverId, cvId);
+
     return { message: MESSAGES.WORKFLOW.APPROVE_SUCCESS };
   }
 
@@ -276,9 +283,11 @@ export class WorkflowService {
     // Notify the user about rejection
     await emailQueue.add('reject-cv', {
       to: cv.user.email,
-      subject: `Your CV has been rejected`,
+      subject: 'UmiCV - Notice: CV Rejected',
       body: getRejectCVTemplate(data.reason),
     });
+
+    auditService.logAction('REJECT_CV', approverId, cvId);
 
     return { message: MESSAGES.WORKFLOW.REJECT_SUCCESS };
   }
@@ -309,5 +318,40 @@ export class WorkflowService {
       reason: log.reason,
       createdAt: log.createdAt
     }));
+  }
+
+  async getAllApprovalLogs(query: { page: number; limit: number }) {
+    const { page, limit } = query;
+    const offset = (page - 1) * limit;
+
+    const [logs, total] = await Promise.all([
+      prisma.approvalLog.findMany({
+        skip: offset,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          approver: {
+            select: { id: true, fullName: true, role: true },
+          },
+          cvProfile: {
+            select: {
+              id: true,
+              user: {
+                select: { id: true, fullName: true, username: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.approvalLog.count(),
+    ]);
+
+    return {
+      data: logs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

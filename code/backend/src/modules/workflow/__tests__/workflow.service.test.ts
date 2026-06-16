@@ -4,6 +4,14 @@ import { CVStatus, ApprovalAction } from '@prisma/client';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../../errors/AppError';
 import { MESSAGES } from '../../../constants/messages';
 
+jest.mock('../../audit/audit.service', () => {
+  return {
+    AuditService: jest.fn().mockImplementation(() => {
+      return { logAction: jest.fn() };
+    })
+  };
+});
+
 describe('WorkflowService', () => {
   let workflowService: WorkflowService;
 

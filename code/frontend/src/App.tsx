@@ -38,6 +38,8 @@ import { ProjectListPage } from './pages/projects/ProjectListPage';
 // Notifications & Profile
 import { NotificationCenterPage } from './pages/notifications/NotificationCenterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
+import { ApprovalLogListPage } from './pages/admin/ApprovalLogListPage';
+import { AuditLogListPage } from './pages/admin/AuditLogListPage';
 
 // Batch Request
 import { BatchRequestListPage } from './pages/batch-requests/BatchRequestListPage';
@@ -73,6 +75,7 @@ const router = createBrowserRouter([
             children: [
               { path: "hr/batch-requests", element: <BatchRequestListPage /> },
               { path: "hr/batch-requests/:id", element: <BatchRequestDetailPage /> },
+              { path: "admin/approval-logs", element: <ApprovalLogListPage /> },
             ]
           },
           
@@ -82,6 +85,7 @@ const router = createBrowserRouter([
               { path: "users", element: <UserListPage /> },
               { path: "departments", element: <DepartmentListPage /> },
               { path: "projects", element: <ProjectListPage /> },
+              { path: "admin/audit-logs", element: <AuditLogListPage /> },
             ]
           },
           

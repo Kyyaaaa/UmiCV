@@ -44,6 +44,27 @@ router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema
 
 /**
  * @openapi
+ * /api/cvs/approval-logs/all:
+ *   get:
+ *     summary: Get all approval logs
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of all approval logs
+ */
+router.get('/approval-logs/all', authorize(['Admin', 'HR']), workflowController.getAllApprovalLogs);
+
+/**
+ * @openapi
  * /api/cvs/{id}/approve:
  *   post:
  *     summary: Approve a CV

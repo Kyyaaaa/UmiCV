@@ -3,6 +3,9 @@ import { UserRole, UserStatus, Prisma } from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../../errors/AppError';
 import bcrypt from 'bcrypt';
 import { MESSAGES } from '../../constants/messages';
+import { AuditService } from '../audit/audit.service';
+
+const auditService = new AuditService();
 
 // Helper to exclude fields
 function exclude<User, Key extends keyof User>(
@@ -124,6 +127,11 @@ export class UserService {
         where: { id },
         data,
       });
+
+      if (executorId) {
+        auditService.logAction('UPDATE_USER', executorId, id);
+      }
+
       return exclude(user, ['passwordHash']);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -143,14 +151,19 @@ export class UserService {
     if (targetUser.role === 'Admin') {
       throw new BadRequestError('Không thể khóa tài khoản Quản trị viên');
     }
-    const user = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: UserStatus.Locked,
+        status: 'Locked',
         lockedAt: new Date(),
       },
     });
-    return exclude(user, ['passwordHash']);
+
+    if (executorId) {
+      auditService.logAction('LOCK_USER', executorId, id);
+    }
+
+    return exclude(updatedUser, ['passwordHash']);
   }
 
   async unlockUser(id: string, executorId?: string) {
@@ -158,14 +171,19 @@ export class UserService {
     if (executorId && targetUser.role === 'Admin' && id !== executorId) {
       throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
     }
-    const user = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: UserStatus.Active,
+        status: 'Active',
         lockedAt: null,
       },
     });
-    return exclude(user, ['passwordHash']);
+
+    if (executorId) {
+      auditService.logAction('UNLOCK_USER', executorId, id);
+    }
+
+    return exclude(updatedUser, ['passwordHash']);
   }
 
   async resetPassword(id: string, newPassword: string, executorId?: string) {
@@ -180,6 +198,11 @@ export class UserService {
       where: { id },
       data: { passwordHash },
     });
+
+    if (executorId) {
+      auditService.logAction('RESET_PASSWORD_MANUAL', executorId, id);
+    }
+
     return exclude(user, ['passwordHash']);
   }
 
@@ -192,6 +215,11 @@ export class UserService {
       where: { id },
       data: { role },
     });
+
+    if (executorId) {
+      auditService.logAction('CHANGE_ROLE', executorId, id);
+    }
+
     return exclude(user, ['passwordHash']);
   }
 
@@ -240,6 +268,11 @@ export class UserService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+
+    if (executorId) {
+      auditService.logAction('DELETE_USER', executorId, id);
+    }
+
     return exclude(user, ['passwordHash']);
   }
 }

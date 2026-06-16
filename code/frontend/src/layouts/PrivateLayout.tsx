@@ -25,6 +25,8 @@ const navItems = [
   { to: '/users', icon: Users, label: 'Nhân sự', roles: ['Admin'] },
   { to: '/departments', icon: Building2, label: 'Phòng ban', roles: ['Admin'] },
   { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin'] },
+  { to: '/admin/approval-logs', icon: FileText, label: 'Lịch sử Phê duyệt', roles: ['Admin', 'HR'] },
+  { to: '/admin/audit-logs', icon: LayoutDashboard, label: 'Nhật ký Hệ thống', roles: ['Admin'] },
 ];
 
 export function PrivateLayout() {

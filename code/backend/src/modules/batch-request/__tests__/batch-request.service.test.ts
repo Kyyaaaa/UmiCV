@@ -1,7 +1,15 @@
 import { prismaMock } from '../../../__tests__/prismaMock';
 import { BatchRequestService } from '../batch-request.service';
-import { NotFoundError } from '../../../errors/AppError';
+import { NotFoundError, BadRequestError } from '../../../errors/AppError';
 import { BatchRequestStatus } from '@prisma/client';
+
+jest.mock('../../audit/audit.service', () => {
+  return {
+    AuditService: jest.fn().mockImplementation(() => {
+      return { logAction: jest.fn() };
+    })
+  };
+});
 
 describe('BatchRequestService', () => {
   let service: BatchRequestService;

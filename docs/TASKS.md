@@ -789,3 +789,38 @@ Bổ sung tính năng Đặt lại mật khẩu (nhập tay) và Xóa tài kho�
   - Đăng nhập bằng Admin, thử tự khóa/xóa tài khoản của chính mình -> Kiểm tra có bị Disable hoặc lỗi API không.
   - Đổi mật khẩu của 1 nhân viên thành `123456`, sau đó dùng tài khoản đó login xem có được không.
   - Xóa mềm 1 nhân viên, kiểm tra xem nhân viên đó còn hiện trên danh sách không và có login được nữa không.
+
+---
+
+## 📋 Phase 23: Quản lý Nhật ký Hệ thống (System Logs)
+
+Cung cấp cho Admin/HR khả năng giám sát toàn bộ hoạt động trong hệ thống thông qua Lịch sử phê duyệt CV (Approval Logs) và Nhật ký hoạt động chung (Audit Logs).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-23.1: Viết API Lịch sử Phê duyệt (Approval Logs)**
+  - Thêm Endpoint `GET /api/cvs/approval-logs/all` vào `workflow.route.ts` với quyền truy cập `authorize(['Admin', 'HR'])`.
+  - Service hỗ trợ phân trang (`page`, `limit`) và include dữ liệu `approver` (người duyệt), `cvProfile.user` (người tạo CV).
+- [x] **TASK-23.2: Viết Module Audit Logs**
+  - Khởi tạo thư mục `src/modules/audit` gồm Controller, Service, Route.
+  - Service chứa hàm `logAction(action, userId, resourceId)`. (Bỏ qua lưu IP).
+  - Tích hợp `logAction` vào các hàm quan trọng: Login (`auth.service`), Update/Delete User (`user.service`), Create Batch Request (`batch-request.service`), Publish/Approve/Reject CV (`workflow.service`).
+  - Viết Endpoint `GET /api/audit-logs` (Có phân trang, quyền Admin).
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-23.3: Tích hợp Sidebar và Phân quyền**
+  - Cập nhật Component Sidebar hiện tại, bổ sung 2 Menu Items: "Lịch sử Phê duyệt" và "Nhật ký Hệ thống".
+  - Bọc 2 Menu này bằng điều kiện kiểm tra Role để ẩn đi đối với `Employee` và `TechLead` (hoặc tùy quyền quy định).
+- [x] **TASK-23.4: Xây dựng Giao diện Lịch sử Phê duyệt**
+  - Tạo trang `ApprovalLogListPage.tsx` tại `/admin/approval-logs`.
+  - Hiển thị DataTable gồm: Thời gian, Người thực hiện, Hành động (Approve/Reject), Lý do, Tên CV được duyệt.
+- [x] **TASK-23.5: Xây dựng Giao diện Nhật ký Hệ thống**
+  - Tạo trang `AuditLogListPage.tsx` tại `/admin/audit-logs`.
+  - Hiển thị DataTable gồm: Thời gian, Hành động, User ID/Tên người thực hiện, Resource ID bị tác động.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-23.6: Kiểm thử Phân quyền & Tracking**
+  - Đăng nhập bằng `Employee` và xác nhận không nhìn thấy 2 menu này ở thanh Sidebar.
+  - Đăng nhập bằng `Admin`, thực hiện các hành động: Khóa User, Duyệt 1 CV. Sau đó vào trang System Logs kiểm tra xem hệ thống có ghi nhận kịp thời các sự kiện này không.

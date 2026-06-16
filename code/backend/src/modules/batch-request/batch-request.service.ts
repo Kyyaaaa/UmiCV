@@ -4,9 +4,13 @@ import { NotFoundError, BadRequestError } from '../../errors/AppError';
 import { BatchRequestStatus, CVStatus, TargetStatus, Prisma } from '@prisma/client';
 import { MESSAGES } from '../../constants/messages';
 
+import { AuditService } from '../audit/audit.service';
+
+const auditService = new AuditService();
+
 export class BatchRequestService {
   async createBatchRequest(hrUserId: string, data: CreateBatchRequestInput) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Create Batch Request
       const batchRequest = await tx.batchRequest.create({
         data: {
@@ -36,6 +40,9 @@ export class BatchRequestService {
 
       return batchRequest;
     });
+
+    auditService.logAction('CREATE_BATCH_REQUEST', hrUserId, result.id);
+    return result;
   }
 
   async getBatchRequests(params: { page?: number; limit?: number; status?: string; keyword?: string }) {

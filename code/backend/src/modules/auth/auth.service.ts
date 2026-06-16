@@ -11,6 +11,9 @@ import crypto from 'crypto';
 import { emailQueue } from '../notification/notification.queue';
 import { getResetPasswordTemplate } from '../notification/mailer';
 import { BadRequestError } from '../../errors/AppError';
+import { AuditService } from '../audit/audit.service';
+
+const auditService = new AuditService();
 
 export class AuthService {
   async login(data: LoginInput) {
@@ -35,6 +38,8 @@ export class AuthService {
     const payload = { userId: user.id, role: user.role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
+
+    auditService.logAction('LOGIN', user.id);
 
     return {
       user: {

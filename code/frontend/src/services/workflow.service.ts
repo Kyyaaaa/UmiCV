@@ -12,6 +12,11 @@ export const workflowService = {
     return response.data;
   },
 
+  getAllApprovalLogs: async (params?: { page?: number; limit?: number }) => {
+    const response = await apiClient.get<{ data: any[], total: number }>('/cvs/approval-logs/all', { params });
+    return response.data;
+  },
+
   approveCV: async (cvId: string, level: number, bypass?: boolean) => {
     const response = await apiClient.post(`/cvs/${cvId}/approve`, { level, bypass });
     return response.data;

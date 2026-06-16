@@ -19,6 +19,13 @@ jest.mock('../../notification/notification.queue', () => ({
     add: jest.fn(),
   }
 }));
+jest.mock('../../audit/audit.service', () => {
+  return {
+    AuditService: jest.fn().mockImplementation(() => {
+      return { logAction: jest.fn() };
+    })
+  };
+});
 
 describe('AuthService', () => {
   let authService: AuthService;

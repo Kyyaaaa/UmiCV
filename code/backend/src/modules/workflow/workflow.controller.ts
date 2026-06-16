@@ -37,4 +37,11 @@ export class WorkflowController {
     const result = await workflowService.getApprovalLogs(cvId);
     res.status(200).json({ success: true, data: result });
   }
+
+  async getAllApprovalLogs(req: AuthRequest, res: Response) {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const result = await workflowService.getAllApprovalLogs({ page, limit });
+    res.status(200).json({ success: true, ...result });
+  }
 }
