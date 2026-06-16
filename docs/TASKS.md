@@ -613,3 +613,52 @@ Thực hiện Hạng mục 1 trong kế hoạch làm sạch Technical Debt. Lo�
 - [x] **TASK-16.3: Kiểm thử Dashboard phân quyền**
   - Đăng nhập bằng Account Nhân viên: Kiểm tra xem Dashboard có hiện đúng thông số của riêng nhân viên đó không.
   - Đăng nhập bằng Account Admin: Kiểm tra xem số tổng (VD: Tổng số CV toàn công ty) có khớp với dưới Database không.
+
+---
+
+## 📧 Phase 17: Kích hoạt SMTP Email Thực tế
+
+Thực hiện Hạng mục 3 trong kế hoạch làm sạch Technical Debt. Cấu hình hệ thống SMTP thực tế để các Email thông báo (Nhắc nhở cập nhật, Duyệt CV, SLA) thực sự được gửi tới hòm thư của người dùng thay vì chỉ chạy log ngầm do lỗi xác thực.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-17.1: Cấu hình môi trường SMTP**
+  - Đăng ký hoặc sử dụng thông tin tài khoản SMTP thật (Ví dụ: Mailtrap cho môi trường Test, hoặc tài khoản Gmail App Passwords).
+  - Bổ sung cấu hình `SMTP_HOST`, `SMTP_PORT` (nếu cần) và cập nhật thông tin credentials thật vào file `.env` cũng như format mẫu tại `.env.example`.
+- [x] **TASK-17.2: Rà soát module `mailer.ts` và BullMQ Worker**
+  - Kiểm tra lại logic cấu hình Nodemailer Transport (`src/modules/notification/mailer.ts`).
+  - Chắc chắn Worker xử lý `emailQueue` hoạt động bắt lỗi (try/catch) chuẩn xác và log rõ ràng trạng thái gửi.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-17.3: Kiểm thử End-to-End quá trình gửi/nhận Email**
+  - Sử dụng API hoặc giao diện để trigger 1 sự kiện gửi mail (ví dụ: Chuyển trạng thái Duyệt CV hoặc gửi Broadcast Notification nếu có tích hợp mail).
+  - Kiểm tra hòm thư thực tế (hoặc Mailtrap Inbox) để xác nhận Email đã vào Inbox thành công, không bị rơi vào trạng thái Fail ngầm. Đảm bảo giao diện HTML của Email hiển thị đẹp mắt.
+
+---
+
+## 🔍 Phase 18: Tối ưu Lọc/Tìm kiếm luồng Phê duyệt (Server-side)
+
+Thực hiện Hạng mục 4 trong kế hoạch làm sạch Technical Debt. Chuyển đổi logic filter và search từ việc fetch toàn bộ dữ liệu lên Frontend sang việc query tối ưu bằng Prisma ở Backend nhằm đảm bảo hiệu năng khi số lượng CV tăng lên.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-18.1: Nâng cấp hàm Search/Filter trong Workflow Service**
+  - Tìm service chịu trách nhiệm trả về danh sách phê duyệt cho TechLead/HR (ví dụ: `cvService.searchCVs` hoặc API `/api/workflow/pending`).
+  - Bổ sung logic Prisma để nhận tham số `?keyword=...` (tìm theo `user.fullName` hoặc `user.username` có chứa keyword).
+  - Bổ sung logic nhận tham số `?slaStatus=...` (Warning / Overdue / Safe). Chú ý phải so sánh trường `submittedAt` với thời gian hiện tại (`NOW()`) ngay trong câu query hoặc tính toán động nếu cần.
+  - Tích hợp thêm tính năng Phân trang (Pagination) với `skip` và `take`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-18.2: Đẩy Params vào API & Giao diện Phân trang**
+  - Sửa trang `ApprovalRequestListPage.tsx`.
+  - Thay vì filter dữ liệu ở biến local (`filteredCVs = allCVs.filter(...)`), hãy map state của SearchBox và Dropdown Filter thành Query Params khi gọi API Backend.
+  - Tích hợp debounce cho SearchBox (nhập xong 500ms mới gọi API).
+  - Bổ sung thanh điều hướng Phân trang (Next/Prev Page) dưới bảng nếu Backend trả về dạng Pagination.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-18.3: Kiểm thử Filter và Hiệu suất Search**
+  - Gõ text tìm kiếm, kiểm tra Network tab xem có gọi API dạng `?keyword=text` không.
+  - Đổi filter SLA, kiểm tra danh sách trả về có khớp chính xác với mốc thời gian cảnh báo hay không.

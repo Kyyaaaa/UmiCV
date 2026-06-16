@@ -250,7 +250,7 @@ export class CVService {
   }
 
   async searchCVs(query: SearchInput, requestUserId: string, requestUserRole: string) {
-    const { keyword, departmentId, status, page, limit } = query;
+    const { keyword, departmentId, status, slaStatus, page, limit } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.CVProfileWhereInput = {};
@@ -300,8 +300,28 @@ export class CVService {
       
       where.OR = [
         { user: { username: { contains: keyword, mode: 'insensitive' } } },
+        { user: { fullName: { contains: keyword, mode: 'insensitive' } } },
         { id: { in: matchingIds.map(r => r.id) } }
       ];
+    }
+
+    if (slaStatus) {
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+      where.status = CVStatus.PendingApproval;
+
+      if (slaStatus === 'Safe') {
+        where.submittedAt = { gt: twentyFourHoursAgo };
+      } else if (slaStatus === 'Warning') {
+        where.submittedAt = {
+          lte: twentyFourHoursAgo,
+          gt: fortyEightHoursAgo
+        };
+      } else if (slaStatus === 'Overdue') {
+        where.submittedAt = { lte: fortyEightHoursAgo };
+      }
     }
 
     const [total, data] = await Promise.all([
@@ -329,7 +349,7 @@ export class CVService {
       return { ...cv, slaStatus };
     });
 
-    return { total, page, data: dataWithSLA };
+    return { total, page, limit, data: dataWithSLA };
   }
 
   async diffCV(cvId: string, requestUserId: string, requestUserRole: string) {

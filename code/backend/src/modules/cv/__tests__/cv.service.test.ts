@@ -30,9 +30,10 @@ describe('CVService', () => {
           where: {
             OR: [
               { user: { username: { contains: 'React" OR "1"="1', mode: 'insensitive' } } },
-              { id: { in: ['cv-1'] } },
-            ],
-          },
+              { user: { fullName: { contains: 'React" OR "1"="1', mode: 'insensitive' } } },
+              { id: { in: ['cv-1'] } }
+            ]
+          }
         })
       );
     });

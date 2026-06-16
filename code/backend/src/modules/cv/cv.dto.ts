@@ -102,6 +102,7 @@ export const searchSchema = z.object({
     keyword: z.string().optional(),
     departmentId: z.string().uuid().optional(),
     status: z.nativeEnum(CVStatus).optional(),
+    slaStatus: z.enum(['Warning', 'Overdue', 'Safe']).optional(),
     page: z.string().regex(/^\d+$/).transform(Number).default('1'),
     limit: z.string().regex(/^\d+$/).transform(Number).default('10'),
   }),

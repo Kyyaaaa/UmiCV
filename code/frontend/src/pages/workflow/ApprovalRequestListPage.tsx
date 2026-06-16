@@ -13,18 +13,46 @@ import { workflowService } from '../../services/workflow.service';
 export function ApprovalRequestListPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [slaFilter, setSlaFilter] = useState('all');
   const [pendingCVs, setPendingCVs] = useState<CVProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const limit = 10;
 
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1); // Reset page on new search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchCVs = async () => {
     try {
       setIsLoading(true);
       setErrorMsg('');
-      const res = await workflowService.searchCVs({ status: 'PendingApproval' });
+      const params: any = { 
+        status: 'PendingApproval',
+        page,
+        limit
+      };
+      
+      if (debouncedSearchTerm) {
+        params.keyword = debouncedSearchTerm;
+      }
+      
+      if (slaFilter !== 'all') {
+        params.slaStatus = slaFilter;
+      }
+
+      const res = await workflowService.searchCVs(params);
       setPendingCVs(res.data);
+      setTotalItems(res.total || 0);
     } catch (error: any) {
       console.error('Failed to fetch approval requests', error);
       if (error?.response?.status === 403) {
@@ -39,23 +67,7 @@ export function ApprovalRequestListPage() {
 
   useEffect(() => {
     fetchCVs();
-  }, []);
-
-  let filteredCVs = pendingCVs;
-
-  if (searchTerm) {
-    filteredCVs = filteredCVs.filter(cv => 
-      cv.user?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      cv.user?.username?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-
-  if (slaFilter !== 'all') {
-    filteredCVs = filteredCVs.filter(cv => {
-      const status = cv.slaStatus?.toLowerCase() || 'safe';
-      return status === slaFilter;
-    });
-  }
+  }, [debouncedSearchTerm, slaFilter, page]);
 
   const columns: Column<CVProfile>[] = [
     {
@@ -129,24 +141,55 @@ export function ApprovalRequestListPage() {
           <select 
             className="h-10 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             value={slaFilter}
-            onChange={(e) => setSlaFilter(e.target.value)}
+            onChange={(e) => {
+              setSlaFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="all">Tất cả SLA</option>
-            <option value="safe">An toàn</option>
-            <option value="warning">Sắp hết hạn</option>
-            <option value="overdue">Quá hạn</option>
+            <option value="Safe">An toàn</option>
+            <option value="Warning">Sắp hết hạn</option>
+            <option value="Overdue">Quá hạn</option>
           </select>
         </div>
       </FilterPanel>
 
-      <DataTable
-        columns={columns}
-        data={filteredCVs}
-        keyExtractor={(item) => item.id}
-        onRowClick={(item) => navigate(`/workflow/${item.id}`)}
-        emptyTitle="Không có yêu cầu duyệt"
-        emptyDescription={searchTerm ? "Không tìm thấy yêu cầu duyệt nào khớp với từ khóa." : "Bạn đã xử lý hết các yêu cầu phê duyệt hiện tại."}
-      />
+      <div className={isLoading ? "opacity-50 pointer-events-none" : ""}>
+        <DataTable
+          columns={columns}
+          data={pendingCVs}
+          keyExtractor={(item) => item.id}
+          onRowClick={(item) => navigate(`/workflow/${item.id}`)}
+          emptyTitle="Không có yêu cầu duyệt"
+          emptyDescription={searchTerm ? "Không tìm thấy yêu cầu duyệt nào khớp với từ khóa." : "Bạn đã xử lý hết các yêu cầu phê duyệt hiện tại."}
+        />
+
+        {totalItems > 0 && (
+          <div className="mt-4 flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 rounded-b-lg shadow-sm">
+            <div className="text-sm text-slate-500">
+              Hiển thị <span className="font-medium">{(page - 1) * limit + 1}</span> đến <span className="font-medium">{Math.min(page * limit, totalItems)}</span> trong <span className="font-medium">{totalItems}</span> yêu cầu
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Trước
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page * limit >= totalItems}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

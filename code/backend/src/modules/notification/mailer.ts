@@ -21,8 +21,8 @@ if (env.SMTP_USER && env.SMTP_PASS) {
     host: 'smtp.ethereal.email',
     port: 587,
     auth: {
-        user: 'ssotrkie6nuyh2hk@ethereal.email',
-        pass: 'X4nxJ7vTV1RBZ2NtBF'
+      user: 'ssotrkie6nuyh2hk@ethereal.email',
+      pass: 'X4nxJ7vTV1RBZ2NtBF'
     }
   });
 }
@@ -40,7 +40,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       subject,
       html,
     });
-    
+
     if (info.message) {
       // In stream transport mode, log the email body
       if (typeof info.message.pipe === 'function') {

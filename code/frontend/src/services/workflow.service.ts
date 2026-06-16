@@ -2,7 +2,7 @@ import { apiClient } from '../lib/axios';
 import { CVProfile, ApprovalLog } from '../types';
 
 export const workflowService = {
-  searchCVs: async (params: { status?: string; page?: number; limit?: number }) => {
+  searchCVs: async (params: { status?: string; page?: number; limit?: number; keyword?: string; slaStatus?: string }) => {
     const response = await apiClient.get<{ data: CVProfile[], total: number }>('/cvs/search', { params });
     return response.data;
   },
