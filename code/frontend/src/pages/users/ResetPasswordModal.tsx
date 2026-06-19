@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { User } from '../../types';
 import { userService } from '../../services/user.service';
+import { validatePassword } from '../../utils/validation';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -21,8 +22,9 @@ export function ResetPasswordModal({ isOpen, onClose, user, onSuccess }: ResetPa
     e.preventDefault();
     if (!user) return;
     
-    if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+    const pwdError = validatePassword(newPassword);
+    if (pwdError) {
+      setError(pwdError);
       return;
     }
 
@@ -32,6 +34,7 @@ export function ResetPasswordModal({ isOpen, onClose, user, onSuccess }: ResetPa
     try {
       await userService.resetPassword(user.id, newPassword);
       onSuccess();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu.');
     } finally {
@@ -56,7 +59,7 @@ export function ResetPasswordModal({ isOpen, onClose, user, onSuccess }: ResetPa
           <Input
             type="password"
             label="Mật khẩu mới"
-            placeholder="Nhập ít nhất 6 ký tự..."
+            placeholder="Nhập mật khẩu mới..."
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required

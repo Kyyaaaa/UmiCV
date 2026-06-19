@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/auth.service';
 import { useAuth } from '../../hooks/useAuth';
+import { validatePassword } from '../../utils/validation';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -24,6 +25,13 @@ export function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const pwdError = validatePassword(password);
+    if (pwdError) {
+      setError(pwdError);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -33,9 +41,12 @@ export function LoginPage() {
       
       const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError('Tên đăng nhập hoặc mật khẩu không chính xác.');
+      } else if (err.response?.status === 429) {
+        setError(err.response?.data?.message || 'Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau 15 phút.');
       } else if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {

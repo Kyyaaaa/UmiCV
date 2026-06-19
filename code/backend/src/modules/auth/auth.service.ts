@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '../../errors/AppError';
 import { LoginInput } from './auth.dto';
 import { redisClient } from '../../config/redis';
-import { env } from '../../config/env';
 import { MESSAGES } from '../../constants/messages';
 import crypto from 'crypto';
 import { emailQueue } from '../notification/notification.queue';
@@ -35,7 +34,7 @@ export class AuthService {
       throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
-    const payload = { userId: user.id, role: user.role };
+    const payload = { userId: user.id, role: user.role, tokenVersion: user.tokenVersion };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
@@ -73,7 +72,7 @@ export class AuthService {
         throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
       }
 
-      const newPayload = { userId: user.id, role: user.role };
+      const newPayload = { userId: user.id, role: user.role, tokenVersion: user.tokenVersion };
       const accessToken = generateAccessToken(newPayload);
 
       return { accessToken };
@@ -87,7 +86,7 @@ export class AuthService {
     if (!refreshToken) return;
 
     try {
-      const payload = verifyToken(refreshToken);
+      verifyToken(refreshToken);
       const decoded = jwt.decode(refreshToken) as any;
       
       // Calculate remaining TTL in seconds
@@ -155,6 +154,7 @@ export class AuthService {
         passwordHash,
         resetPasswordToken: null,
         resetPasswordExpires: null,
+        tokenVersion: { increment: 1 },
       },
     });
 

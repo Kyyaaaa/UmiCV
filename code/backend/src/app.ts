@@ -4,17 +4,47 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import xss from 'xss-clean';
+import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/error.middleware';
 
 const app: Express = express();
 
+// Trust proxy if we are behind a reverse proxy (e.g. Nginx, Cloudflare, Render)
+// This is critical for express-rate-limit to identify the real client IP instead of the proxy IP
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: process.env.FRONTEND_URL || true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('dev'));
+
+// XSS Protection
+app.use(xss());
+
+// Global Rate Limiter
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { message: 'Too many requests from this IP, please try again after a minute' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', globalLimiter);
+
+// Auth Limiter
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: { message: 'Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -45,8 +75,8 @@ import auditRoutes from './modules/audit/audit.route';
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/cvs', cvRoutes); 
-app.use('/api/cvs', workflowRoutes); 
+app.use('/api/cvs', cvRoutes);
+app.use('/api/cvs', workflowRoutes);
 app.use('/api/batch-requests', batchRequestRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/departments', departmentRoutes);

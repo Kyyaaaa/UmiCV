@@ -821,6 +821,42 @@ Cung cấp cho Admin/HR khả năng giám sát toàn bộ hoạt động trong h
 
 ### 🕵️ QA Agent Tasks
 
-- [x] **TASK-23.6: Kiểm thử Phân quyền & Tracking**
+- [ ] **TASK-23.6: Kiểm thử Phân quyền & Tracking**
   - Đăng nhập bằng `Employee` và xác nhận không nhìn thấy 2 menu này ở thanh Sidebar.
   - Đăng nhập bằng `Admin`, thực hiện các hành động: Khóa User, Duyệt 1 CV. Sau đó vào trang System Logs kiểm tra xem hệ thống có ghi nhận kịp thời các sự kiện này không.
+
+---
+
+## 🛡️ Phase 24: Nâng cấp Bảo mật Toàn diện (Security Hardening)
+
+Mục tiêu: Đóng kín các lỗ hổng bảo mật (Brute force, XSS, Session Hijacking, Password yếu) để đưa hệ thống đạt chuẩn an toàn trước khi lên môi trường thực tế.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-24.1: Chống Brute Force (Rate Limiting)**
+  - Tích hợp middleware `express-rate-limit` vào `app.ts`.
+  - Áp dụng cấu hình khắt khe cho `/api/auth/login` và `/api/auth/forgot-password` (Ví dụ: Tối đa 5 lần thử / 15 phút).
+  - Áp dụng cấu hình chung cho toàn bộ `/api` (Ví dụ: 100 req / phút / IP).
+- [x] **TASK-24.2: Tăng cường Chính sách Mật khẩu & Chống XSS**
+  - Cài đặt `xss-clean` (hoặc `sanitize-html`), gắn middleware vào `app.ts` để chặn mã độc XSS toàn hệ thống.
+  - Cập nhật Zod schema (`auth.dto.ts`, `user.dto.ts`): Bắt buộc mật khẩu dài tối thiểu 8 ký tự, phải có chữ hoa, chữ thường, số, và ký tự đặc biệt.
+  - (Optional) Tạo script chạy 1 lần để đổi mật khẩu của toàn bộ User cũ trong Database thành mật khẩu mặc định an toàn: `123123123@As`.
+- [x] **TASK-24.3: Triển khai Token Versioning (Bảo mật Phiên đăng nhập)**
+  - Chỉnh sửa `schema.prisma`: Thêm `tokenVersion` (Int, mặc định 0) vào bảng `User`.
+  - Khi generate JWT, nhúng `tokenVersion` vào Payload.
+  - Sửa logic: Khi User đổi mật khẩu, quên mật khẩu hoặc bị Admin Reset/Khóa tài khoản -> Tăng `tokenVersion += 1` trong DB.
+  - Cập nhật Middleware `authenticate` (`auth.middleware.ts`): So sánh `tokenVersion` trong JWT với DB. Nếu nhỏ hơn -> Báo lỗi Unauthorized (Để đăng xuất mọi thiết bị).
+- [x] **TASK-24.4: Hardening cấu hình hệ thống**
+  - Cập nhật `cors` trong `app.ts`: Lấy origin từ biến môi trường `FRONTEND_URL` thay vì cho phép `origin: true`.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-24.5: Cập nhật Validation Mật khẩu trên UI**
+  - Cập nhật Zod validation ở Form Đăng nhập, Modal thêm Nhân sự, Form đổi mật khẩu (Me), và Reset Password. Bắt lỗi đúng luật: 8 ký tự, chữ hoa, thường, số, ký tự đặc biệt. Hiển thị nhắc nhở rõ ràng bằng tiếng Việt.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-24.6: Tấn công giả lập (Penetration Testing)**
+  - Gọi API Login sai mật khẩu liên tục 10 lần -> Đảm bảo nhận lỗi HTTP 429 Too Many Requests.
+  - Nhập tên là `<script>alert(1)</script>` -> Xác nhận Frontend không bật lên thông báo alert do XSS đã bị lọc.
+  - Đăng nhập tài khoản trên 2 trình duyệt khác nhau. Trình duyệt 1 đổi mật khẩu. Trình duyệt 2 thử tải lại trang hoặc thao tác tiếp -> Xác nhận bị văng ra màn Login ngay lập tức (Test Token Versioning).

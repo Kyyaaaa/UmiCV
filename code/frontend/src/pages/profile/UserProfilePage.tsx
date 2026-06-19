@@ -8,9 +8,11 @@ import { Save, Check, X } from 'lucide-react';
 import { userService } from '../../services/user.service';
 import { useAuth } from '../../hooks/useAuth';
 import { handleApiError } from '../../utils/error.util';
+import { validatePassword } from '../../utils/validation';
 
 export function UserProfilePage() {
-  const { user: authUser, logout } = useAuth();
+  const { logout } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPwdLoading, setIsPwdLoading] = useState(false);
@@ -55,6 +57,7 @@ export function UserProfilePage() {
     try {
       await userService.updateMe({ fullName, email });
       showToast('Cập nhật thông tin thành công!');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const { globalError, fieldErrors } = handleApiError(error, 'Cập nhật thất bại');
       setProfileFieldErrors(fieldErrors);
@@ -72,6 +75,12 @@ export function UserProfilePage() {
       setPwdFieldErrors({ confirmPassword: 'Mật khẩu xác nhận không khớp' });
       return;
     }
+
+    const pwdError = validatePassword(newPassword);
+    if (pwdError) {
+      setPwdFieldErrors({ newPassword: pwdError });
+      return;
+    }
     
     setIsPwdLoading(true);
     try {
@@ -87,6 +96,7 @@ export function UserProfilePage() {
         logout();
         window.location.href = '/login';
       }, 2000);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const { globalError, fieldErrors } = handleApiError(error, 'Đổi mật khẩu thất bại');
       setPwdFieldErrors(fieldErrors);

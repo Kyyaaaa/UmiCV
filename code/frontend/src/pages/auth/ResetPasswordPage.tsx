@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/auth.service';
+import { validatePassword } from '../../utils/validation';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -28,8 +29,9 @@ export function ResetPasswordPage() {
       return;
     }
     
-    if (password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+    const pwdError = validatePassword(password);
+    if (pwdError) {
+      setError(pwdError);
       return;
     }
 
@@ -43,6 +45,7 @@ export function ResetPasswordPage() {
       setTimeout(() => {
         navigate('/login');
       }, 3000);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err.response?.data?.message) {
         setError(err.response.data.message);
@@ -105,7 +108,7 @@ export function ResetPasswordPage() {
             <Input 
               type="password"
               label="Mật khẩu mới" 
-              placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)" 
+              placeholder="Nhập mật khẩu mới" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required 

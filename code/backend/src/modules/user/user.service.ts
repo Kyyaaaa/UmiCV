@@ -156,6 +156,7 @@ export class UserService {
       data: {
         status: 'Locked',
         lockedAt: new Date(),
+        tokenVersion: { increment: 1 },
       },
     });
 
@@ -196,7 +197,7 @@ export class UserService {
 
     const user = await prisma.user.update({
       where: { id },
-      data: { passwordHash },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
     });
 
     if (executorId) {
@@ -213,7 +214,7 @@ export class UserService {
     }
     const user = await prisma.user.update({
       where: { id },
-      data: { role },
+      data: { role, tokenVersion: { increment: 1 } },
     });
 
     if (executorId) {
@@ -248,11 +249,11 @@ export class UserService {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
-    const updatedUser = await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id },
-      data: { passwordHash },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
     });
-    return exclude(updatedUser, ['passwordHash']);
+    return exclude(updated, ['passwordHash']);
   }
 
   async deleteUser(id: string, executorId: string) {

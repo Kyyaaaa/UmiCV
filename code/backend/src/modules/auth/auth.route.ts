@@ -2,19 +2,12 @@ import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { validate } from '../../middleware/validate.middleware';
 import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from './auth.dto';
-import rateLimit from 'express-rate-limit';
+
 import { MESSAGES } from '../../constants/messages';
 
 const router = Router();
 const authController = new AuthController();
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // Limit each IP to 5000 login requests per `window`
-  message: { success: false, message: MESSAGES.AUTH.TOO_MANY_ATTEMPTS },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 /**
  * @openapi
@@ -60,7 +53,7 @@ const loginLimiter = rateLimit({
  *       429:
  *         description: Too many login attempts
  */
-router.post('/login', loginLimiter, validate(loginSchema), authController.login);
+router.post('/login', validate(loginSchema), authController.login);
 
 /**
  * @openapi

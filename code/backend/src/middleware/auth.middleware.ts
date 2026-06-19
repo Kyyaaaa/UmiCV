@@ -34,6 +34,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
     }
 
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion < user.tokenVersion) {
+      throw new UnauthorizedError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    }
+
     req.user = decoded;
     next();
   } catch (error) {

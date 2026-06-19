@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { User, Department } from '../../types';
 import { userService } from '../../services/user.service';
 import { handleApiError } from '../../utils/error.util';
+import { validatePassword } from '../../utils/validation';
 import { useAuth } from '../../hooks/useAuth';
 
 interface UserFormModalProps {
@@ -35,6 +36,7 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-compiler/react-compiler
     if (user) {
       setFormData({
         username: user.username,
@@ -60,6 +62,15 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isEdit && formData.password) {
+      const pwdError = validatePassword(formData.password);
+      if (pwdError) {
+        setFieldErrors({ ...fieldErrors, password: pwdError });
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError('');
     
@@ -75,6 +86,7 @@ export function UserFormModal({ isOpen, onClose, user, departments, onSave }: Us
         await userService.createUser(formData);
       }
       onSave();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const { globalError, fieldErrors } = handleApiError(err, 'Có lỗi xảy ra khi lưu nhân sự');
       setError(globalError);
