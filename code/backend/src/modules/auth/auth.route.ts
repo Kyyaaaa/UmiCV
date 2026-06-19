@@ -3,7 +3,6 @@ import { AuthController } from './auth.controller';
 import { validate } from '../../middleware/validate.middleware';
 import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from './auth.dto';
 
-import { MESSAGES } from '../../constants/messages';
 
 const router = Router();
 const authController = new AuthController();

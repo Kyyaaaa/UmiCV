@@ -3,6 +3,8 @@ import { CreateBatchRequestInput, UpdateBatchRequestInput } from './batch-reques
 import { NotFoundError, BadRequestError } from '../../errors/AppError';
 import { BatchRequestStatus, CVStatus, TargetStatus, Prisma } from '@prisma/client';
 import { MESSAGES } from '../../constants/messages';
+import { emailQueue } from '../notification/notification.queue';
+import { getRemindCVTemplate } from '../notification/mailer';
 
 import { AuditService } from '../audit/audit.service';
 
@@ -36,6 +38,16 @@ export class BatchRequestService {
         data: {
           status: CVStatus.Outdated,
         },
+      });
+
+      // Create personal notifications
+      await tx.notification.createMany({
+        data: data.targetUserIds.map((userId) => ({
+          userId,
+          title: 'Yêu cầu cập nhật CV mới',
+          message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${data.title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
+          isGlobal: false,
+        })),
       });
 
       return batchRequest;
@@ -141,6 +153,8 @@ export class BatchRequestService {
       }
     });
 
+    auditService.logAction('CANCEL_BATCH_REQUEST', hrUserId, batchId);
+
     return { message: MESSAGES.BATCH_REQUEST.CANCEL_SUCCESS };
   }
 
@@ -164,9 +178,6 @@ export class BatchRequestService {
     }
 
     // Call emailQueue
-    // To avoid circular dependency or import issues, we can just import it here
-    const { emailQueue } = require('../notification/notification.queue');
-    const { getRemindCVTemplate } = require('../notification/mailer');
 
     await emailQueue.add('send-reminder', {
       to: target.user.email,
@@ -184,6 +195,8 @@ export class BatchRequestService {
       },
       data: { notifiedAt: new Date() },
     });
+
+    auditService.logAction('REMIND_TARGET', hrUserId, batchId);
 
     return { message: 'Reminder email sent successfully' };
   }
@@ -291,6 +304,8 @@ export class BatchRequestService {
         where: { id: batchId },
       });
     });
+
+    auditService.logAction('DELETE_BATCH_REQUEST', hrUserId, batchId);
 
     return { message: 'Batch request deleted successfully' };
   }
