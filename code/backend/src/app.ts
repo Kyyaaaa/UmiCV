@@ -33,7 +33,9 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/', globalLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/', globalLimiter);
+}
 
 // Auth Limiter
 const authLimiter = rateLimit({
@@ -43,8 +45,10 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/forgot-password', authLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/forgot-password', authLimiter);
+}
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {

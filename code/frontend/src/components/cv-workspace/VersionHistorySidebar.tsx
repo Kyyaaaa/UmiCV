@@ -15,22 +15,45 @@ export function VersionHistorySidebar({ cvId, selectedVersionId, onSelectVersion
   const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  useEffect(() => {
-    fetchVersions();
-  }, [cvId]);
-
-  const fetchVersions = async () => {
+  const fetchVersions = React.useCallback(async (currentPage: number) => {
     try {
-      setIsLoading(true);
+      if (currentPage === 1) setIsLoading(true);
+      else setIsLoadingMore(true);
+      
       setError(null);
-      const res = await cvService.getVersions(cvId);
-      setVersions(res.data);
-    } catch (err: any) {
+      const res = await cvService.getVersions(cvId, { page: currentPage, limit: 10 });
+      
+      if (currentPage === 1) {
+        setVersions(res.data);
+      } else {
+        setVersions(prev => [...prev, ...res.data]);
+      }
+      
+      const total = res.total || 0;
+      setHasMore(currentPage * 10 < total);
+    } catch (err) {
+      console.error(err);
       setError('Không thể tải lịch sử phiên bản');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
+  }, [cvId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    setPage(1);
+    fetchVersions(1);
+  }, [cvId, fetchVersions]);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchVersions(nextPage);
   };
 
   const formatDate = (dateStr: string) => {
@@ -108,6 +131,19 @@ export function VersionHistorySidebar({ cvId, selectedVersionId, onSelectVersion
                 );
               })}
             </div>
+            {hasMore && (
+              <div className="mt-6 text-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLoadMore} 
+                  isLoading={isLoadingMore}
+                  className="w-full text-xs text-slate-500 hover:text-slate-700 bg-white"
+                >
+                  {isLoadingMore ? 'Đang tải...' : 'Tải thêm'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

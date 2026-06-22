@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { getCVByIdSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema, copyLocalizationSchema } from './cv.dto';
+import { getCVByIdSchema, getCVVersionsSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema, copyLocalizationSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -205,7 +205,7 @@ router.get('/:id/diff', authorize(['Employee', 'TechLead', 'HR', 'Admin']), cvCo
  *       200:
  *         description: List of versions retrieved
  */
-router.get('/:id/versions', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getCVVersions);
+router.get('/:id/versions', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVVersionsSchema), cvController.getCVVersions);
 
 /**
  * @openapi

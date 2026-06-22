@@ -85,18 +85,27 @@ export class ProjectService {
     return { success: true };
   }
 
-  async getProjectMembers(projectId: string) {
+  async getProjectMembers(projectId: string, params: { page?: number, limit?: number } = {}) {
     await this.getProjectById(projectId);
 
-    const members = await prisma.projectMember.findMany({
-      where: { projectId },
-      include: {
-        user: { select: { id: true, fullName: true, email: true, role: true, departmentId: true } },
-      },
-      orderBy: { joinedAt: 'desc' },
-    });
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
 
-    return members;
+    const [total, members] = await Promise.all([
+      prisma.projectMember.count({ where: { projectId } }),
+      prisma.projectMember.findMany({
+        where: { projectId },
+        include: {
+          user: { select: { id: true, fullName: true, email: true, role: true, departmentId: true } },
+        },
+        orderBy: { joinedAt: 'desc' },
+        skip,
+        take: limit,
+      })
+    ]);
+
+    return { total, page, limit, data: members };
   }
 
   async assignMembers(projectId: string, data: AssignMembersInput) {

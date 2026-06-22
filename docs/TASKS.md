@@ -821,7 +821,7 @@ Cung cấp cho Admin/HR khả năng giám sát toàn bộ hoạt động trong h
 
 ### 🕵️ QA Agent Tasks
 
-- [ ] **TASK-23.6: Kiểm thử Phân quyền & Tracking**
+- [x] **TASK-23.6: Kiểm thử Phân quyền & Tracking**
   - Đăng nhập bằng `Employee` và xác nhận không nhìn thấy 2 menu này ở thanh Sidebar.
   - Đăng nhập bằng `Admin`, thực hiện các hành động: Khóa User, Duyệt 1 CV. Sau đó vào trang System Logs kiểm tra xem hệ thống có ghi nhận kịp thời các sự kiện này không.
 
@@ -860,3 +860,40 @@ Mục tiêu: Đóng kín các lỗ hổng bảo mật (Brute force, XSS, Session
   - Gọi API Login sai mật khẩu liên tục 10 lần -> Đảm bảo nhận lỗi HTTP 429 Too Many Requests.
   - Nhập tên là `<script>alert(1)</script>` -> Xác nhận Frontend không bật lên thông báo alert do XSS đã bị lọc.
   - Đăng nhập tài khoản trên 2 trình duyệt khác nhau. Trình duyệt 1 đổi mật khẩu. Trình duyệt 2 thử tải lại trang hoặc thao tác tiếp -> Xác nhận bị văng ra màn Login ngay lập tức (Test Token Versioning).
+
+---
+
+## ⚡ Phase 26: Tối ưu Hiệu năng (Performance & Pagination)
+
+Bổ sung cơ chế Phân trang (Pagination) cho các API đang truy xuất dữ liệu lớn nhằm tránh lỗi quá tải RAM và tắc nghẽn Băng thông khi ứng dụng Scale-up.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-26.1: Phân trang Chi tiết Chiến dịch (Batch Request Targets)**
+  - Chỉnh sửa `BatchRequestService.getBatchRequestTargets`. Bổ sung tham số `page`, `limit` vào `BatchRequestQuery`.
+  - Dùng `prisma.batchRequestTarget.count` và `findMany` kết hợp `skip` / `take`.
+  - Trả về cấu trúc JSON thống nhất: `{ total, page, limit, data }`.
+  - Sửa lại Route và Controller tương ứng.
+- [x] **TASK-26.2: Phân trang Thành viên Dự án (Project Members)**
+  - Chỉnh sửa `ProjectService.getProjectMembers`. Bổ sung `page`, `limit`.
+  - Chỉnh sửa Response format thành cấu trúc Paginated Data.
+  - Kiểm tra xem API hiện tại có đang bị sử dụng để load danh sách thả xuống (Dropdown) ở Frontend hay không để tránh làm hỏng Logic chọn thành viên.
+- [x] **TASK-26.3: Phân trang Lịch sử Phiên bản CV (CV Version Histories)**
+  - Chỉnh sửa `CVService.getCVVersions`. Bổ sung `page`, `limit`. Trả về Paginated Data.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-26.4: Cập nhật Giao diện Chi tiết Chiến dịch**
+  - Trong trang `BatchRequestDetailPage`, sửa lại lời gọi API theo cấu trúc `{ total, page, limit, data }`.
+  - Bổ sung thanh chuyển trang (Pagination Controls) vào bảng danh sách nhân sự mục tiêu.
+- [x] **TASK-26.5: Cập nhật Giao diện Thành viên Dự án**
+  - Trong tab "Thành viên" của trang Chi tiết dự án, bổ sung thanh chuyển trang ở dưới bảng danh sách thành viên.
+- [x] **TASK-26.6: Cập nhật Giao diện Lịch sử CV**
+  - Trong Modal/Sidebar hiển thị Version History của màn hình Edit CV, bổ sung logic cuộn xuống để tải thêm (Infinite Scroll) hoặc nút "Xem thêm" dựa trên dữ liệu phân trang mới.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-26.7: Kiểm thử luồng Phân trang (Pagination Testing)**
+  - Truy cập trang Chi tiết Chiến dịch, phân trang thử với số lượng bản ghi nhỏ (vd: limit=2). Kiểm tra xem dữ liệu có bị lặp lại hoặc nhảy trang sai không.
+  - Tương tự cho phần Thành viên Dự án.
+  - Vào xem Lịch sử CV, đảm bảo nút "Xem thêm" hoạt động tốt và không làm mất đi các dữ liệu cũ đang hiển thị.

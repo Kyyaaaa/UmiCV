@@ -44,6 +44,9 @@ export interface VersionDetail {
 
 export interface GetVersionsResponse {
   success: boolean;
+  total?: number;
+  page?: number;
+  limit?: number;
   data: VersionSummary[];
 }
 
@@ -66,8 +69,8 @@ export interface PublishCVResponse {
 export interface DiffChange {
   path: string;
   type: 'added' | 'removed' | 'modified';
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
 }
 
 export interface GetDiffResponse {

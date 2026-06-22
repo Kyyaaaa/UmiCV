@@ -65,15 +65,13 @@ export class CVController {
   }
 
   async getCVVersions(req: AuthRequest, res: Response) {
+    const { id: cvId } = req.params;
     const userId = req.user!.userId;
     const role = req.user!.role;
-    const cvId = req.params.id;
-    const versions = await cvService.getCVVersions(cvId, userId, role);
+    const { page, limit } = req.query as any;
 
-    res.status(200).json({
-      success: true,
-      data: versions,
-    });
+    const versions = await cvService.getCVVersions(cvId, userId, role, { page, limit });
+    res.status(200).json({ success: true, ...versions });
   }
 
   async getCVVersionById(req: AuthRequest, res: Response) {

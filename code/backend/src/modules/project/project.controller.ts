@@ -38,8 +38,9 @@ export class ProjectController {
   }
 
   async getProjectMembers(req: Request, res: Response) {
-    const data = await projectService.getProjectMembers(req.params.id);
-    res.status(200).json({ success: true, data });
+    const { page, limit } = req.query as any;
+    const data = await projectService.getProjectMembers(req.params.id, { page, limit });
+    res.status(200).json({ success: true, ...data });
   }
 
   async assignMembers(req: Request, res: Response) {

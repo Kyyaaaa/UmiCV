@@ -30,8 +30,8 @@ export const projectService = {
     return response.data;
   },
 
-  getProjectMembers: async (projectId: string): Promise<ApiResponse<ProjectMember[]>> => {
-    const response = await apiClient.get<ApiResponse<ProjectMember[]>>(`/projects/${projectId}/members`);
+  getProjectMembers: async (projectId: string, params?: Record<string, unknown>): Promise<PaginatedResponse<ProjectMember>> => {
+    const response = await apiClient.get<PaginatedResponse<ProjectMember>>(`/projects/${projectId}/members`, { params });
     return response.data;
   },
 

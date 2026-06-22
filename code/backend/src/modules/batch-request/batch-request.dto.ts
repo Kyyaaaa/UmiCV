@@ -55,6 +55,8 @@ export const getBatchRequestTargetsSchema = z.object({
   }),
   query: z.object({
     status: z.enum(['Outdated', 'Updated']).optional(),
+    page: z.string().regex(/^\d+$/).transform(Number).default('1'),
+    limit: z.string().regex(/^\d+$/).transform(Number).default('10'),
   }),
 });
 

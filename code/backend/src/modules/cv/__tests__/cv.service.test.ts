@@ -79,4 +79,20 @@ describe('CVService', () => {
       });
     });
   });
+
+  describe('getCVVersions', () => {
+    it('should return paginated cv versions', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1' } as any);
+      prismaMock.cVVersionHistory.count.mockResolvedValue(1);
+      prismaMock.cVVersionHistory.findMany.mockResolvedValue([
+        { id: 'v1', versionNumber: 1 } as any
+      ]);
+
+      const result = await cvService.getCVVersions('cv-1', 'user-1', 'Employee');
+      expect(result.data.length).toBe(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+  });
 });

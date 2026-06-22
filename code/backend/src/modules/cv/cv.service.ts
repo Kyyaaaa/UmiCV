@@ -92,7 +92,7 @@ export class CVService {
     });
   }
 
-  async getCVVersions(cvId: string, userId: string, role: string) {
+  async getCVVersions(cvId: string, userId: string, role: string, params: { page?: number, limit?: number } = {}) {
     const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
     if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
     if (cv.userId !== userId) {
@@ -105,15 +105,26 @@ export class CVService {
       }
     }
 
-    return prisma.cVVersionHistory.findMany({
-      where: { cvProfileId: cvId },
-      orderBy: { versionNumber: 'desc' },
-      select: {
-        id: true,
-        versionNumber: true,
-        createdAt: true,
-      },
-    });
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [total, versions] = await Promise.all([
+      prisma.cVVersionHistory.count({ where: { cvProfileId: cvId } }),
+      prisma.cVVersionHistory.findMany({
+        where: { cvProfileId: cvId },
+        orderBy: { versionNumber: 'desc' },
+        select: {
+          id: true,
+          versionNumber: true,
+          createdAt: true,
+        },
+        skip,
+        take: limit,
+      })
+    ]);
+
+    return { total, page, limit, data: versions };
   }
 
   async getCVVersionById(cvId: string, versionId: string, userId: string, role: string) {

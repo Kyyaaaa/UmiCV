@@ -1,7 +1,6 @@
 import { prismaMock } from '../../../__tests__/prismaMock';
 import { BatchRequestService } from '../batch-request.service';
-import { NotFoundError, BadRequestError } from '../../../errors/AppError';
-import { BatchRequestStatus } from '@prisma/client';
+import { NotFoundError } from '../../../errors/AppError';
 
 jest.mock('../../audit/audit.service', () => {
   return {
@@ -34,14 +33,18 @@ describe('BatchRequestService', () => {
   });
 
   describe('getBatchRequestTargets', () => {
-    it('should return targets for a valid batch request', async () => {
+    it('should return paginated targets for a valid batch request', async () => {
       prismaMock.batchRequest.findUnique.mockResolvedValue({ id: 'batch-1' } as any);
+      prismaMock.batchRequestTarget.count.mockResolvedValue(1);
       prismaMock.batchRequestTarget.findMany.mockResolvedValue([
         { userId: 'user-1', status: 'Outdated' } as any
       ]);
 
       const result = await service.getBatchRequestTargets('batch-1', {});
-      expect(result.length).toBe(1);
+      expect(result.data.length).toBe(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
 
     it('should throw NotFoundError if batch request does not exist', async () => {

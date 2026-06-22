@@ -3,6 +3,9 @@ import { ProjectController } from './project.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { UserRole } from '@prisma/client';
 
+import { validate } from '../../middleware/validate.middleware';
+import { getProjectMembersSchema } from './project.dto';
+
 const router = Router();
 const controller = new ProjectController();
 
@@ -10,7 +13,7 @@ router.use(authenticate);
 
 router.get('/', controller.getProjects.bind(controller));
 router.get('/:id', controller.getProjectById.bind(controller));
-router.get('/:id/members', controller.getProjectMembers.bind(controller));
+router.get('/:id/members', validate(getProjectMembersSchema), controller.getProjectMembers.bind(controller));
 
 // Chỉ Admin mới có quyền tạo/sửa/xóa Project
 router.post('/', authorize([UserRole.Admin]), controller.createProject.bind(controller));

@@ -24,11 +24,11 @@ export class BatchRequestController {
   }
 
   async getTargets(req: AuthRequest, res: Response) {
-    const batchId = req.params.id;
-    const status = req.query.status as string;
+    const { id: batchId } = req.params;
+    const { status, page, limit } = req.query as any;
 
-    const result = await batchRequestService.getBatchRequestTargets(batchId, { status });
-    res.status(200).json({ success: true, data: result });
+    const result = await batchRequestService.getBatchRequestTargets(batchId, { status, page, limit });
+    res.status(200).json({ success: true, ...result });
   }
 
   async cancel(req: AuthRequest, res: Response) {

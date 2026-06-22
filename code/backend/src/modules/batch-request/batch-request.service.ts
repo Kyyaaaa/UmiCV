@@ -95,7 +95,7 @@ export class BatchRequestService {
     return { total, page, limit, data: dataWithCounts };
   }
 
-  async getBatchRequestTargets(batchId: string, params: { status?: string }) {
+  async getBatchRequestTargets(batchId: string, params: { status?: string, page?: number, limit?: number }) {
     const batch = await prisma.batchRequest.findUnique({ where: { id: batchId } });
     if (!batch) {
       throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
@@ -106,15 +106,24 @@ export class BatchRequestService {
       ...(params.status && { status: params.status as TargetStatus }),
     };
 
-    const targets = await prisma.batchRequestTarget.findMany({
-      where,
-      include: {
-        user: { select: { id: true, fullName: true, email: true, department: { select: { name: true } } } },
-      },
-      orderBy: { user: { fullName: 'asc' } },
-    });
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
 
-    return targets;
+    const [total, targets] = await Promise.all([
+      prisma.batchRequestTarget.count({ where }),
+      prisma.batchRequestTarget.findMany({
+        where,
+        include: {
+          user: { select: { id: true, fullName: true, email: true, department: { select: { name: true } } } },
+        },
+        orderBy: { user: { fullName: 'asc' } },
+        skip,
+        take: limit,
+      })
+    ]);
+
+    return { total, page, limit, data: targets };
   }
 
   async cancelBatchRequest(batchId: string, hrUserId: string) {

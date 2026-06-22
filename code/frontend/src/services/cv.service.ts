@@ -34,8 +34,8 @@ export const cvService = {
     return response.data;
   },
 
-  getVersions: async (id: string): Promise<GetVersionsResponse> => {
-    const response = await apiClient.get<GetVersionsResponse>(`/cvs/${id}/versions`);
+  getVersions: async (id: string, params?: { page?: number, limit?: number }): Promise<GetVersionsResponse> => {
+    const response = await apiClient.get<GetVersionsResponse>(`/cvs/${id}/versions`, { params });
     return response.data;
   },
 

@@ -21,35 +21,41 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (isOpen && project) {
-      fetchData();
-    }
-  }, [isOpen, project]);
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     if (!project) return;
     try {
       setIsLoading(true);
       setError('');
       
       const [membersRes, usersRes] = await Promise.all([
-        projectService.getProjectMembers(project.id),
+        projectService.getProjectMembers(project.id, { page, limit: 10 }),
         userService.getUsers({ limit: 100 }) // In real app, might want server side search
       ]);
       
       setMembers(membersRes.data);
+      setTotalItems(membersRes.total);
       
       // Filter out users who are already members
       const memberUserIds = new Set(membersRes.data.map(m => m.userId));
       const notMembers = (usersRes.data || []).filter(u => !memberUserIds.has(u.id));
       setAvailableUsers(notMembers);
-    } catch (err: any) {
+    } catch (err) {
+      console.error(err);
       setError('Lỗi khi tải dữ liệu thành viên');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [project, page]);
+
+  useEffect(() => {
+    if (isOpen && project) {
+      // eslint-disable-next-line
+      fetchData();
+    }
+  }, [isOpen, project, page, fetchData]);
 
   const handleAddMember = async () => {
     if (!project || !selectedUserId) return;
@@ -58,8 +64,9 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
       await projectService.assignMembers(project.id, [selectedUserId]);
       setSelectedUserId('');
       await fetchData(); // Refresh lists
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Lỗi khi thêm thành viên');
+    } catch (err: unknown) {
+      console.error(err);
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi thêm thành viên');
     } finally {
       setIsAdding(false);
     }
@@ -72,8 +79,9 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
     try {
       await projectService.removeMember(project.id, userId);
       await fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Lỗi khi xóa thành viên');
+    } catch (err: unknown) {
+      console.error(err);
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi xóa thành viên');
     }
   };
 
@@ -120,7 +128,7 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
 
         {/* Members list section */}
         <div>
-          <h4 className="font-medium text-sm text-slate-800 mb-3">Danh sách thành viên ({members.length})</h4>
+          <h4 className="font-medium text-sm text-slate-800 mb-3">Danh sách thành viên ({totalItems})</h4>
           
           <div className="bg-slate-50 border border-slate-200 rounded-md overflow-hidden max-h-96 overflow-y-auto">
             {isLoading ? (
@@ -157,6 +165,31 @@ export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembers
               </ul>
             )}
           </div>
+          {totalItems > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border border-t-0 border-slate-200 bg-white rounded-b-md">
+              <div className="text-xs text-slate-500">
+                Hiển thị <span className="font-medium">{(page - 1) * 10 + 1}</span> đến <span className="font-medium">{Math.min(page * 10, totalItems)}</span> / <span className="font-medium">{totalItems}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Trước
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page * 10 >= totalItems}
+                >
+                  Sau
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Modal>

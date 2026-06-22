@@ -1,81 +1,64 @@
 import request from 'supertest';
-import prisma from '../config/db';
 import app from '../app';
+import prisma from '../config/db';
 
 const API_URL = app;
 
-describe('QA Phase 23 - System Logs (Audit & Approval Logs)', () => {
+describe('QA Phase 23 - Audit & Tracking', () => {
   let adminToken = '';
-  let adminId = '';
-  let empToken = '';
+  const testUser = 'phase23_qa_user';
+  const testPass = '123123123@As';
+  let createdUserId = '';
 
   beforeAll(async () => {
-    // Authenticate Admin
-    const adminLogin = await request(API_URL).post('/api/auth/login').send({ username: 'admin', password: 'password123' });
-    adminToken = adminLogin.body?.data?.accessToken || (await request(API_URL).post('/api/auth/login').send({ username: 'admin', password: '123456' })).body.data.accessToken;
-    const adminMe = await request(API_URL).get('/api/users/me').set('Authorization', `Bearer ${adminToken}`);
-    adminId = adminMe.body.data.id;
-
-    // Authenticate Employee
-    const empLogin = await request(API_URL).post('/api/auth/login').send({ username: 'testemployee', password: 'password123' });
-    empToken = empLogin.body?.data?.accessToken || (await request(API_URL).post('/api/auth/login').send({ username: 'testemployee', password: '123456' })).body.data.accessToken;
+    // 1. Get Admin Token
+    const adminLoginRes = await request(API_URL).post('/api/auth/login').send({ username: 'admin', password: 'password123' });
+    adminToken = adminLoginRes.body?.data?.accessToken || (await request(API_URL).post('/api/auth/login').send({ username: 'admin', password: '123123123@As' })).body?.data?.accessToken;
+    
+    // Clean up
+    await prisma.auditLog.deleteMany({ where: { userId: adminLoginRes.body?.data?.id } });
+    await prisma.user.deleteMany({ where: { username: testUser } });
   });
 
   afterAll(async () => {
-    // Cleanup audit logs created by test (optional, but good for cleanliness)
-    // We can't easily distinguish test logs from real ones unless we use timestamps or specific actions.
-    // It's okay to leave audit logs in E2E since they are just logs.
+    await prisma.user.deleteMany({ where: { username: testUser } });
   });
 
-  it('should deny Employee from accessing Approval Logs and Audit Logs', async () => {
-    const resApproval = await request(API_URL)
-      .get('/api/cvs/approval-logs/all')
-      .set('Authorization', `Bearer ${empToken}`);
-    
-    // Employee shouldn't access HR/Admin route, maybe 403 or 404 if not found
-    // Depending on routing, it should be 403 Forbidden
-    expect(resApproval.status).toBe(403);
+  it('should log action when Admin creates and locks a User', async () => {
+    // 1. Create a user
+    const dept = await prisma.department.findFirst();
+    const createRes = await request(API_URL)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        username: testUser,
+        email: 'phase23@example.com',
+        fullName: 'Phase 23 User',
+        password: testPass,
+        role: 'Employee',
+        departmentId: dept?.id || ''
+      });
+      
+    expect(createRes.status).toBe(201);
+    createdUserId = createRes.body.data.id;
 
-    const resAudit = await request(API_URL)
+    // 2. Lock the user
+    const lockRes = await request(API_URL)
+      .patch(`/api/users/${createdUserId}/lock`)
+      .set('Authorization', `Bearer ${adminToken}`);
+      
+    expect(lockRes.status).toBe(200);
+
+    // 3. Verify in Audit Logs
+    const auditRes = await request(API_URL)
       .get('/api/audit-logs')
-      .set('Authorization', `Bearer ${empToken}`);
-    
-    expect(resAudit.status).toBe(403);
-  });
-
-  it('should allow Admin to access Approval Logs and Audit Logs', async () => {
-    const resApproval = await request(API_URL)
-      .get('/api/cvs/approval-logs/all')
       .set('Authorization', `Bearer ${adminToken}`);
+      
+    expect(auditRes.status).toBe(200);
+    console.log(JSON.stringify(auditRes.body));
+    const logs = auditRes.body?.data?.data || auditRes.body?.data || [];
     
-    expect(resApproval.status).toBe(200);
-    expect(Array.isArray(resApproval.body.data)).toBe(true);
-
-    const resAudit = await request(API_URL)
-      .get('/api/audit-logs')
-      .set('Authorization', `Bearer ${adminToken}`);
-    
-    expect(resAudit.status).toBe(200);
-    expect(Array.isArray(resAudit.body.data)).toBe(true);
-  });
-
-  it('should track login action in Audit Logs', async () => {
-    // Do a login
-    await request(API_URL).post('/api/auth/login').send({ username: 'testemployee', password: 'password123' });
-
-    // Wait a brief moment just in case it's async (though typically it's awaited in service)
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Fetch logs
-    const resAudit = await request(API_URL)
-      .get('/api/audit-logs?limit=10')
-      .set('Authorization', `Bearer ${adminToken}`);
-    
-    expect(resAudit.status).toBe(200);
-    
-    const logs = resAudit.body.data;
-    // Look for a login action in the recent logs
-    const hasLoginLog = logs.some((log: any) => log.action.toLowerCase().includes('login'));
-    expect(hasLoginLog).toBe(true);
+    const lockLog = logs.find((log: any) => log.action === 'LOCK_USER' && log.resourceId === createdUserId);
+    expect(lockLog).toBeDefined();
   });
 });

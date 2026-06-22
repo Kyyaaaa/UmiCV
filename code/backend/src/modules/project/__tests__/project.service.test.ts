@@ -1,6 +1,5 @@
 import { prismaMock } from '../../../__tests__/prismaMock';
 import { ProjectService } from '../project.service';
-import { BadRequestError, NotFoundError } from '../../../errors/AppError';
 
 describe('ProjectService', () => {
   let service: ProjectService;
@@ -51,6 +50,22 @@ describe('ProjectService', () => {
       await expect(service.assignMembers('proj-1', { userIds: ['emp-1', 'emp-2'] })).rejects.toThrow(
         'Một hoặc nhiều user không tồn tại hoặc đã bị khóa (Vui lòng kiểm tra lại danh sách ID).'
       );
+    });
+  });
+
+  describe('getProjectMembers', () => {
+    it('should return paginated members for a valid project', async () => {
+      prismaMock.project.findUnique.mockResolvedValue({ id: 'proj-1' } as any);
+      prismaMock.projectMember.count.mockResolvedValue(1);
+      prismaMock.projectMember.findMany.mockResolvedValue([
+        { userId: 'user-1' } as any
+      ]);
+
+      const result = await service.getProjectMembers('proj-1', {});
+      expect(result.data.length).toBe(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
   });
 });

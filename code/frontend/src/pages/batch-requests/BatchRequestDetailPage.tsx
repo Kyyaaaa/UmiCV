@@ -23,14 +23,11 @@ export function BatchRequestDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
   const [remindingTargets, setRemindingTargets] = useState<Record<string, boolean>>({});
+  
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
-  useEffect(() => {
-    if (id) {
-      fetchData();
-    }
-  }, [id]);
-
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     try {
       setIsLoading(true);
       // Fetch both the batch request details and its targets
@@ -41,11 +38,12 @@ export function BatchRequestDetailPage() {
       // Actually, we can fetch all requests and find it, or build a GET /:id backend endpoint.
       // For now, let's fetch targets. We'll also fetch all requests and find the matching one.
       const [targetsRes, requestsRes] = await Promise.all([
-        batchRequestService.getBatchRequestTargets(id!, { limit: 1000 }),
+        batchRequestService.getBatchRequestTargets(id!, { page, limit: 10 }),
         batchRequestService.getBatchRequests({ limit: 1000 })
       ]);
       
       setTargets(targetsRes.data.data);
+      setTotalItems(targetsRes.data.total);
       const reqInfo = requestsRes.data.data.find(r => r.id === id);
       if (reqInfo) {
         setRequest(reqInfo);
@@ -55,7 +53,14 @@ export function BatchRequestDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, page]);
+
+  useEffect(() => {
+    if (id) {
+      // eslint-disable-next-line
+      fetchData();
+    }
+  }, [id, page, fetchData]);
 
   const handleCancel = async () => {
     if (!id) return;
@@ -257,7 +262,7 @@ export function BatchRequestDetailPage() {
 
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-          <h3 className="font-medium text-slate-900">Danh sách nhân sự mục tiêu ({targets.length})</h3>
+          <h3 className="font-medium text-slate-900">Danh sách nhân sự mục tiêu ({totalItems})</h3>
         </div>
         <div className="p-0">
           <DataTable
@@ -267,6 +272,31 @@ export function BatchRequestDetailPage() {
             isLoading={isLoading}
           />
         </div>
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-white">
+            <div className="text-sm text-slate-500">
+              Hiển thị <span className="font-medium">{(page - 1) * 10 + 1}</span> đến <span className="font-medium">{Math.min(page * 10, totalItems)}</span> trong <span className="font-medium">{totalItems}</span> bản ghi
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Trước
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page * 10 >= totalItems}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <ConfirmModal
