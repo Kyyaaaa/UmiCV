@@ -40,18 +40,41 @@ export class BatchRequestService {
         },
       });
 
-      // Create personal notifications
-      await tx.notification.createMany({
-        data: data.targetUserIds.map((userId) => ({
-          userId,
-          title: 'Yêu cầu cập nhật CV mới',
-          message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${data.title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
-          isGlobal: false,
-        })),
-      });
-
       return batchRequest;
     });
+
+    // Async Tasks
+    (async () => {
+      try {
+        const users = await prisma.user.findMany({
+          where: { id: { in: data.targetUserIds } },
+          select: { id: true, email: true }
+        });
+
+        // Create personal notifications
+        await prisma.notification.createMany({
+          data: users.map((u) => ({
+            userId: u.id,
+            title: 'Yêu cầu cập nhật CV mới',
+            message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${data.title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
+            isGlobal: false,
+          })),
+        });
+
+        // Add emails to queue
+        const emailJobs = users.map(u => ({
+          name: 'send-reminder',
+          data: {
+            to: u.email,
+            subject: `Yêu cầu cập nhật CV cho chiến dịch: ${data.title}`,
+            body: `Bạn đã được yêu cầu cập nhật CV cho chiến dịch: "${data.title}". Hạn chót: ${data.deadline}`,
+          }
+        }));
+        await emailQueue.addBulk(emailJobs);
+      } catch (err) {
+        console.error('[BatchRequestService] Async notification failed:', err);
+      }
+    })();
 
     auditService.logAction('CREATE_BATCH_REQUEST', hrUserId, result.id);
     return result;
@@ -211,20 +234,29 @@ export class BatchRequestService {
   }
 
   async updateBatchRequest(batchId: string, hrUserId: string, data: UpdateBatchRequestInput) {
-    return prisma.$transaction(async (tx) => {
-      const batch = await tx.batchRequest.findUnique({
-        where: { id: batchId },
-        include: { targets: true },
-      });
+    const batch = await prisma.batchRequest.findUnique({
+      where: { id: batchId },
+      include: { targets: true },
+    });
 
-      if (!batch) {
-        throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
-      }
+    if (!batch) {
+      throw new NotFoundError(MESSAGES.BATCH_REQUEST.NOT_FOUND);
+    }
 
-      if (batch.status === BatchRequestStatus.Completed || batch.status === BatchRequestStatus.Cancelled) {
-        throw new BadRequestError('Cannot update a completed or cancelled batch request');
-      }
+    if (batch.status === BatchRequestStatus.Completed || batch.status === BatchRequestStatus.Cancelled) {
+      throw new BadRequestError('Cannot update a completed or cancelled batch request');
+    }
 
+    let usersToAdd: string[] = [];
+    let usersToRemove: string[] = [];
+
+    if (data.targetUserIds) {
+      const currentTargetUserIds = batch.targets.map((t) => t.userId);
+      usersToAdd = data.targetUserIds.filter((id) => !currentTargetUserIds.includes(id));
+      usersToRemove = currentTargetUserIds.filter((id) => !data.targetUserIds!.includes(id));
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
       // Update basic info
       const updateData: any = {};
       if (data.title) updateData.title = data.title;
@@ -238,10 +270,6 @@ export class BatchRequestService {
 
       // Update targets if provided
       if (data.targetUserIds) {
-        const currentTargetUserIds = batch.targets.map((t) => t.userId);
-        const usersToAdd = data.targetUserIds.filter((id) => !currentTargetUserIds.includes(id));
-        const usersToRemove = currentTargetUserIds.filter((id) => !data.targetUserIds!.includes(id));
-
         if (usersToRemove.length > 0) {
           // Xóa khỏi target
           await tx.batchRequestTarget.deleteMany({
@@ -281,6 +309,44 @@ export class BatchRequestService {
 
       return tx.batchRequest.findUnique({ where: { id: batchId } });
     });
+
+    // Async tasks
+    if (usersToAdd.length > 0) {
+      (async () => {
+        try {
+          const users = await prisma.user.findMany({
+            where: { id: { in: usersToAdd } },
+            select: { id: true, email: true }
+          });
+
+          const title = data.title || batch.title;
+          const deadline = data.deadline || batch.deadline;
+
+          await prisma.notification.createMany({
+            data: users.map((u) => ({
+              userId: u.id,
+              title: 'Yêu cầu cập nhật CV mới',
+              message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
+              isGlobal: false,
+            })),
+          });
+
+          const emailJobs = users.map(u => ({
+            name: 'send-reminder',
+            data: {
+              to: u.email,
+              subject: `Yêu cầu cập nhật CV cho chiến dịch: ${title}`,
+              body: `Bạn đã được yêu cầu cập nhật CV cho chiến dịch: "${title}". Hạn chót: ${deadline}`,
+            }
+          }));
+          await emailQueue.addBulk(emailJobs);
+        } catch (err) {
+          console.error('[BatchRequestService] Async notification failed:', err);
+        }
+      })();
+    }
+
+    return result;
   }
 
   async deleteBatchRequest(batchId: string, hrUserId: string) {

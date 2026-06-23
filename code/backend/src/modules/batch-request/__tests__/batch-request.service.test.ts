@@ -10,12 +10,82 @@ jest.mock('../../audit/audit.service', () => {
   };
 });
 
+import { emailQueue } from '../../notification/notification.queue';
+
+jest.mock('../../notification/notification.queue', () => ({
+  emailQueue: {
+    addBulk: jest.fn(),
+  },
+}));
+
 describe('BatchRequestService', () => {
   let service: BatchRequestService;
 
   beforeEach(() => {
     service = new BatchRequestService();
     jest.clearAllMocks();
+  });
+
+  describe('createBatchRequest', () => {
+    it('should create batch request and queue emails asynchronously', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => {
+        return cb(prismaMock);
+      });
+
+      prismaMock.batchRequest.create.mockResolvedValue({ id: 'batch-1' } as any);
+      prismaMock.user.findMany.mockResolvedValue([
+        { id: 'user-1', email: 'test1@test.com' },
+        { id: 'user-2', email: 'test2@test.com' },
+      ] as any);
+
+      await service.createBatchRequest('hr-1', {
+        title: 'Test Title',
+        description: 'Test Description',
+        deadline: new Date().toISOString(),
+        targetUserIds: ['user-1', 'user-2'],
+      });
+
+      // Wait a tick for async I/O
+      await new Promise(resolve => setImmediate(resolve));
+
+      expect(emailQueue.addBulk).toHaveBeenCalledTimes(1);
+      const jobs = (emailQueue.addBulk as jest.Mock).mock.calls[0][0];
+      expect(jobs).toHaveLength(2);
+      expect(jobs[0].data.to).toBe('test1@test.com');
+      expect(jobs[1].data.to).toBe('test2@test.com');
+    });
+  });
+
+  describe('updateBatchRequest', () => {
+    it('should update batch request and queue emails for new users asynchronously', async () => {
+      prismaMock.$transaction.mockImplementation(async (cb) => {
+        return cb(prismaMock);
+      });
+
+      prismaMock.batchRequest.findUnique.mockResolvedValue({
+        id: 'batch-1',
+        title: 'Old Title',
+        targets: [{ userId: 'user-old' }],
+        status: 'Active'
+      } as any);
+
+      prismaMock.user.findMany.mockResolvedValue([
+        { id: 'user-new', email: 'test-new@test.com' }
+      ] as any);
+
+      await service.updateBatchRequest('batch-1', 'hr-1', {
+        title: 'New Title',
+        targetUserIds: ['user-old', 'user-new'], // new user added
+      });
+
+      // Wait a tick for async I/O
+      await new Promise(resolve => setImmediate(resolve));
+
+      expect(emailQueue.addBulk).toHaveBeenCalledTimes(1);
+      const jobs = (emailQueue.addBulk as jest.Mock).mock.calls[0][0];
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].data.to).toBe('test-new@test.com');
+    });
   });
 
   describe('getBatchRequests', () => {

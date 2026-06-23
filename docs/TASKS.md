@@ -939,3 +939,28 @@ Sửa lỗi sai lệch thời gian chạy cronjob khi triển khai ứng dụng 
   - Mở file `src/modules/workflow/workflow.cron.ts`. Cập nhật hàm `cron.schedule` thêm tham số options `{ timezone: "Asia/Ho_Chi_Minh" }`.
   - Mở file `src/modules/notification/notification.cron.ts`. Cập nhật hàm `cron.schedule` tương tự.
   - Sửa lại các test case liên quan nếu việc mock thư viện `node-cron` bị ảnh hưởng bởi tham số `timezone`.
+
+---
+
+## 🚀 Phase 29: Xử lý Bất đồng bộ (Async Batch Request)
+
+Đảm bảo khi HR tạo hoặc cập nhật Chiến dịch (Batch Request), tất cả nhân viên liên quan đều được thông báo qua Email và App Notification một cách bất đồng bộ qua Queue (BullMQ), tránh gây nghẽn API.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-29.1: Bổ sung logic Queue vào `createBatchRequest`**
+  - Mở file `src/modules/batch-request/batch-request.service.ts`.
+  - Trong hàm `createBatchRequest`, sau khi transaction hoàn tất, truy vấn lấy danh sách thông tin `user` (đặc biệt là `email`) từ `data.targetUserIds`.
+  - Sử dụng vòng lặp hoặc `emailQueue.addBulk` để đẩy các Job gửi Email đến danh sách user vừa lấy. Tiêu đề email: `"Yêu cầu cập nhật CV cho chiến dịch: {title}"`. (Nội dung nên kèm theo Deadline).
+  - Tách đoạn `tx.notification.createMany` ra chạy ngầm (không dùng `await` trả về) hoặc đưa vào một queue xử lý ngầm (để giúp API respond ngay lập tức).
+- [x] **TASK-29.2: Bổ sung logic Queue vào `updateBatchRequest`**
+  - Trong hàm `updateBatchRequest`, khi có nhân sự mới được thêm vào (`usersToAdd`), thực hiện lấy danh sách email và đẩy Job gửi Email vào Queue tương tự như lúc Create.
+- [x] **TASK-29.3: Viết Unit/E2E Test cho luồng Async mới**
+  - Tạo/Sửa các test trong `__tests__` để đảm bảo `emailQueue.add` (hoặc `addBulk`) được gọi đúng số lần bằng số lượng nhân viên mục tiêu.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-29.4: Kiểm thử luồng gửi Email Async**
+  - Dùng tài khoản HR, tạo một chiến dịch mới với 3 nhân viên mục tiêu.
+  - Quan sát Terminal log của Worker xem có bắt được 3 Job gửi email và tiến hành xử lý hay không.
+  - Sửa chiến dịch, thêm 2 nhân viên mới. Kiểm tra xem Terminal log có bắt thêm 2 Job gửi email cho những nhân sự mới này không.
