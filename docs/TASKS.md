@@ -897,3 +897,32 @@ Bổ sung cơ chế Phân trang (Pagination) cho các API đang truy xuất dữ
   - Truy cập trang Chi tiết Chiến dịch, phân trang thử với số lượng bản ghi nhỏ (vd: limit=2). Kiểm tra xem dữ liệu có bị lặp lại hoặc nhảy trang sai không.
   - Tương tự cho phần Thành viên Dự án.
   - Vào xem Lịch sử CV, đảm bảo nút "Xem thêm" hoạt động tốt và không làm mất đi các dữ liệu cũ đang hiển thị.
+
+---
+
+## 🌐 Phase 27: Chuẩn hóa Ngôn ngữ hiển thị (Message Localization)
+
+Tiến hành dịch thuật và đưa toàn bộ các chuỗi thông báo (Success, Error) còn đang bị "code cứng" bằng tiếng Anh trong hệ thống vào file cấu hình chung `messages.ts` để dễ dàng bảo trì và đảm bảo trải nghiệm thống nhất cho người dùng.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-27.1: Cập nhật file `messages.ts`**
+  - Mở file `src/constants/messages.ts`, khai báo thêm các key tiếng Việt tương ứng cho: Luồng Forgot Password, Reset Password, Target Errors, Delete Batch Request, Trùng lặp CV, v.v. (Dựa theo `translation_review.md`).
+- [x] **TASK-27.2: Refactor `auth.service.ts`**
+  - Thay thế các đoạn string tiếng Anh cứng (vd: "Token is invalid or has expired") bằng cách gọi `MESSAGES.AUTH.xxx`.
+  - Sửa lại nội dung tiêu đề và nội dung email tiếng Việt khi gửi email Quên mật khẩu.
+- [x] **TASK-27.3: Refactor `batch-request.service.ts` & `cv.service.ts`**
+  - Thay thế các đoạn string tiếng Anh cứng (vd: "Target not found", "Reminder email sent successfully") bằng cách gọi `MESSAGES.BATCH_REQUEST.xxx` và `MESSAGES.CV.xxx`.
+  - Sửa lại nội dung tiêu đề email tiếng Việt khi nhắc nhở cập nhật CV.
+- [ ] **TASK-27.4: Refactor Zod Schemas (Optional)**
+  - Quét qua các file `*.dto.ts` để đảm bảo các rules kiểm tra đầu vào (như Zod schema) đều ném ra lỗi bằng tiếng Việt (vd: "Hạn chót phải lớn hơn thời gian hiện tại" thay vì "Invalid date").
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-27.5: Kiểm thử lỗi ngôn ngữ trên UI**
+  - Thực hiện các kịch bản gây lỗi để kiểm tra xem màn hình (Toast notification) có hiện đúng tiếng Việt không:
+    - Bấm quên mật khẩu. Xem Email trả về có đúng tiêu đề và nội dung tiếng Việt không.
+    - Cố tình mở link đặt lại mật khẩu cũ đã hết hạn -> Xác nhận màn hình hiện Toast lỗi "Đường dẫn không hợp lệ hoặc đã hết hạn".
+    - Tạo 1 CV tiếng Việt, sau đó cố tình tạo tiếp 1 CV tiếng Việt nữa -> Xác nhận Toast lỗi "Hồ sơ CV với ngôn ngữ này đã tồn tại".
+    - Nhắc nhở 1 nhân viên cập nhật CV -> Xác nhận nhân viên nhận được email tiêu đề tiếng Việt.
+    - Hủy 1 chiến dịch -> Xác nhận Toast "Đã xóa chiến dịch thành công".

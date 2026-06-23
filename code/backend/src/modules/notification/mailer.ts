@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { MailtrapTransport } from 'mailtrap';
 import { env } from '../../config/env';
 
 let transport: nodemailer.Transporter;
@@ -61,29 +60,29 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
 
 // Templates
 export const getSubmitCVTemplate = (username: string, cvId: string) => `
-  <h2>New CV Submitted</h2>
-  <p>User <strong>${username}</strong> has submitted a new CV for approval.</p>
-  <p><a href="http://localhost:5173/admin/cvs/${cvId}">Review CV here</a></p>
+  <h2>Có CV Mới Được Nộp</h2>
+  <p>Nhân viên <strong>${username}</strong> vừa nộp một CV mới để chờ phê duyệt.</p>
+  <p><a href="http://localhost:5173/admin/cvs/${cvId}">Xem CV tại đây</a></p>
 `;
 
 export const getRejectCVTemplate = (reason: string) => `
-  <h2>CV Rejected</h2>
-  <p>Your recent CV submission has been reviewed and rejected.</p>
-  <p><strong>Reason:</strong> ${reason}</p>
-  <p>Please update your CV and resubmit.</p>
+  <h2>CV Của Bạn Đã Bị Từ Chối</h2>
+  <p>Bản CV bạn vừa nộp đã được xem xét và bị từ chối phê duyệt.</p>
+  <p><strong>Lý do:</strong> ${reason}</p>
+  <p>Vui lòng cập nhật lại CV và nộp lại.</p>
 `;
 
 export const getRemindCVTemplate = (title: string, deadline: string) => `
-  <h2>Reminder: Action Required</h2>
-  <p>You have a pending requirement to update your CV for the campaign <strong>${title}</strong>.</p>
-  <p><strong>Deadline:</strong> ${deadline}</p>
-  <p>Please log in to UmiCV and update your profile.</p>
+  <h2>Nhắc Nhở: Cần Cập Nhật CV</h2>
+  <p>Bạn có yêu cầu cập nhật CV cho chiến dịch <strong>${title}</strong>.</p>
+  <p><strong>Hạn chót:</strong> ${deadline}</p>
+  <p>Vui lòng đăng nhập vào hệ thống UmiCV và cập nhật hồ sơ của bạn.</p>
 `;
 
 export const getResetPasswordTemplate = (resetUrl: string) => `
-  <h2>Password Reset Request</h2>
-  <p>We received a request to reset your password. If you didn't make this request, you can ignore this email.</p>
-  <p>To reset your password, click the link below:</p>
-  <p><a href="${resetUrl}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
-  <p>This link will expire in 1 hour.</p>
+  <h2>Yêu Cầu Đặt Lại Mật Khẩu</h2>
+  <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu của bạn. Nếu bạn không thực hiện yêu cầu này, bạn có thể bỏ qua email này.</p>
+  <p>Để đặt lại mật khẩu, vui lòng bấm vào nút bên dưới:</p>
+  <p><a href="${resetUrl}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Đặt Lại Mật Khẩu</a></p>
+  <p>Đường dẫn này sẽ hết hạn trong 1 giờ.</p>
 `;

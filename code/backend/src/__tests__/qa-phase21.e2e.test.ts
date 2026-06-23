@@ -1,4 +1,5 @@
 import request from 'supertest';
+import bcrypt from 'bcrypt';
 import prisma from '../config/db';
 import { emailQueue } from '../modules/notification/notification.queue';
 import app from '../app';
@@ -14,7 +15,7 @@ const API_URL = app;
 
 describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
   let empEmail = '';
-  let empUsername = 'testemployee';
+  const empUsername = 'testemployee';
   let capturedToken = '';
 
   beforeAll(async () => {
@@ -25,9 +26,9 @@ describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
 
   afterAll(async () => {
     // Reset password back to 'password123'
-    const tokenLogin = await request(API_URL)
+    await request(API_URL)
       .post('/api/auth/login')
-      .send({ username: empUsername, password: 'newpassword456' });
+      .send({ username: empUsername, password: 'NewPassword456!' });
     
     // We can't easily reset without the flow, but wait, we can just use the DB or just run the flow again!
     // Or we just update the DB with bcrypt hash of 'password123'
@@ -42,7 +43,7 @@ describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
       .send({ email: empEmail });
     
     expect(res.status).toBe(200);
-    expect(res.body.message).toMatch(/If that email address is in our database/);
+    expect(res.body.message).toMatch(/Nếu email này tồn tại trong hệ thống/);
 
     // Verify emailQueue.add was called
     expect(emailQueue.add).toHaveBeenCalledWith(
@@ -66,7 +67,7 @@ describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
       .post('/api/auth/reset-password')
       .send({
         token: capturedToken,
-        newPassword: 'newpassword456',
+        newPassword: 'NewPassword456!',
       });
     
     expect(res.status).toBe(200);
@@ -84,7 +85,7 @@ describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
     // Attempt login with new password
     const successRes = await request(API_URL)
       .post('/api/auth/login')
-      .send({ username: empUsername, password: 'newpassword456' });
+      .send({ username: empUsername, password: 'NewPassword456!' });
     
     expect(successRes.status).toBe(200);
     expect(successRes.body.data.accessToken).toBeDefined();
@@ -92,7 +93,6 @@ describe('QA Phase 21 - Forgot Password & Reset Password Flow', () => {
 
   it('should restore the original password', async () => {
     // We just restore via DB to avoid testing the API again and relying on mock counts
-    const bcrypt = require('bcrypt');
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash('password123', salt);
     await prisma.user.update({

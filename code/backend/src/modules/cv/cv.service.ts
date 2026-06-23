@@ -29,7 +29,7 @@ export class CVService {
     });
 
     if (existing) {
-      throw new BadRequestError('CV with this language already exists');
+      throw new BadRequestError(MESSAGES.CV.DUPLICATE_LANGUAGE);
     }
 
     return prisma.cVProfile.create({
@@ -145,7 +145,7 @@ export class CVService {
     });
 
     if (!version || version.cvProfileId !== cvId) {
-      throw new NotFoundError('Version not found');
+      throw new NotFoundError(MESSAGES.CV.VERSION_NOT_FOUND);
     }
 
     return version;
@@ -167,7 +167,7 @@ export class CVService {
     }
 
     if (cv.versionNumber === 0) {
-      throw new NotFoundError('CV này chưa từng được duyệt');
+      throw new NotFoundError(MESSAGES.CV.NOT_APPROVED_YET);
     }
 
     const version = await prisma.cVVersionHistory.findFirst({
@@ -176,7 +176,7 @@ export class CVService {
     });
 
     if (!version) {
-      throw new NotFoundError('CV này chưa từng được duyệt');
+      throw new NotFoundError(MESSAGES.CV.NOT_APPROVED_YET);
     }
 
     return version;
@@ -198,7 +198,7 @@ export class CVService {
     });
 
     if (!version || version.cvProfileId !== cvId) {
-      throw new NotFoundError('Version not found');
+      throw new NotFoundError(MESSAGES.CV.VERSION_NOT_FOUND);
     }
 
     return prisma.cVProfile.update({
@@ -236,13 +236,13 @@ export class CVService {
     const originalJson = cv.histories.length > 0 ? JSON.stringify(cv.histories[0].snapshotData) : '{}';
 
     if (draftJson === originalJson) {
-      throw new BadRequestError('NO_CHANGES_TO_PUBLISH');
+      throw new BadRequestError(MESSAGES.CV.NO_CHANGES_TO_PUBLISH);
     }
 
     // TASK-20.3: Server-side validation
     const personalInfo = (cv.sectionsData as any)?.personalInfo || {};
     if (!personalInfo.name || !personalInfo.email || !personalInfo.role) {
-      throw new BadRequestError('Thiếu thông tin cá nhân bắt buộc (Họ tên, Email, Chức danh). Không thể gửi phê duyệt.');
+      throw new BadRequestError(MESSAGES.CV.MISSING_REQUIRED_INFO);
     }
 
     const updatedCv = await prisma.cVProfile.update({
@@ -258,7 +258,7 @@ export class CVService {
     for (const hr of hrUsers) {
       await emailQueue.add('submit-cv', {
         to: hr.email,
-        subject: `New CV Submitted by ${cv.user.username}`,
+        subject: `Có CV mới được gửi từ ${cv.user.username}`,
         body: getSubmitCVTemplate(cv.user.username, cvId),
       });
     }
@@ -439,7 +439,7 @@ export class CVService {
     } else {
       // Overwrite existing CV
       if (targetCv.status === CVStatus.PendingApproval) {
-        throw new BadRequestError('Cannot overwrite a CV that is pending approval.');
+        throw new BadRequestError(MESSAGES.CV.CANNOT_OVERWRITE_PENDING);
       }
 
       targetCv = await prisma.cVProfile.update({

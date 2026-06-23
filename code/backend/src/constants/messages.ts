@@ -17,6 +17,9 @@ export const MESSAGES = {
     LOGOUT_SUCCESS: 'Đăng xuất thành công',
     REFRESH_SUCCESS: 'Làm mới token thành công',
     TOO_MANY_ATTEMPTS: 'Bạn đã đăng nhập sai quá nhiều lần, vui lòng thử lại sau 15 phút',
+    FORGOT_PASSWORD_SUCCESS: 'Nếu email này tồn tại trong hệ thống, chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.',
+    RESET_PASSWORD_SUCCESS: 'Mật khẩu của bạn đã được đặt lại thành công.',
+    RESET_PASSWORD_INVALID: 'Mã xác nhận không hợp lệ hoặc đã hết hạn.',
   },
   RBAC: {
     FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
@@ -29,6 +32,12 @@ export const MESSAGES = {
     UPDATE_SUCCESS: 'Cập nhật CV thành công',
     SEARCH_SUCCESS: 'Tìm kiếm CV thành công',
     DIFF_SUCCESS: 'Lấy thông tin thay đổi CV thành công',
+    DUPLICATE_LANGUAGE: 'CV với ngôn ngữ này đã tồn tại',
+    VERSION_NOT_FOUND: 'Không tìm thấy phiên bản CV',
+    NO_CHANGES_TO_PUBLISH: 'Không có thay đổi nào để gửi phê duyệt',
+    MISSING_REQUIRED_INFO: 'Thiếu thông tin cá nhân bắt buộc (Họ tên, Email, Chức danh). Không thể gửi phê duyệt.',
+    CANNOT_OVERWRITE_PENDING: 'Không thể ghi đè lên CV đang chờ phê duyệt',
+    NOT_APPROVED_YET: 'CV này chưa từng được duyệt',
   },
   WORKFLOW: {
     NO_DRAFTS: 'Không có bản nháp nào để gửi',
@@ -46,6 +55,9 @@ export const MESSAGES = {
     CREATE_SUCCESS: 'Tạo yêu cầu đồng bộ thành công',
     GET_SUCCESS: 'Lấy thông tin yêu cầu đồng bộ thành công',
     CANCEL_SUCCESS: 'Hủy yêu cầu đồng bộ thành công',
+    TARGET_NOT_FOUND: 'Không tìm thấy nhân viên trong chiến dịch này',
+    TARGET_NOT_OUTDATED: 'CV của nhân viên này không ở trạng thái cần cập nhật',
+    REMINDER_SUCCESS: 'Đã gửi email nhắc nhở thành công',
   },
   USER: {
     NOT_FOUND: 'Không tìm thấy người dùng',

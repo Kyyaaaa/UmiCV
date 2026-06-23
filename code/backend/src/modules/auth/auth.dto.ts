@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   body: z.object({
-    username: z.string().min(1, 'Username is required'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    username: z.string().min(1, 'Tên đăng nhập không được bỏ trống'),
+    password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
   }),
 });
 
@@ -11,7 +11,7 @@ export type LoginInput = z.infer<typeof loginSchema>['body'];
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email format'),
+    email: z.string().email('Email không hợp lệ'),
   }),
 });
 
@@ -22,7 +22,7 @@ const passwordMessage = 'Mật khẩu phải dài tối thiểu 8 ký tự, có 
 
 export const resetPasswordSchema = z.object({
   body: z.object({
-    token: z.string().min(1, 'Token is required'),
+    token: z.string().min(1, 'Mã xác nhận không được bỏ trống'),
     newPassword: z.string().regex(passwordRegex, passwordMessage),
   }),
 });

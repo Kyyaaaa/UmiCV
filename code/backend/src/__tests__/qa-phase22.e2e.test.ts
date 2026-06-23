@@ -7,7 +7,7 @@ const API_URL = app;
 describe('QA Phase 22 - Admin User Management (Reset Password & Soft Delete)', () => {
   let adminToken = '';
   let adminId = '';
-  let empToken = '';
+
   let empId = '';
   const empUsername = 'testemployee_qa22';
   const empEmail = 'testemployee_qa22@example.com';
@@ -31,7 +31,7 @@ describe('QA Phase 22 - Admin User Management (Reset Password & Soft Delete)', (
         username: empUsername,
         email: empEmail,
         fullName: 'QA 22 Employee',
-        password: 'password123',
+        password: 'NewPassword123!',
         role: 'Employee'
         // departmentId is not strictly required if nullable, otherwise we might need a default.
         // Assuming user creation works without it based on schema or it handles null.
@@ -47,7 +47,7 @@ describe('QA Phase 22 - Admin User Management (Reset Password & Soft Delete)', (
           username: empUsername,
           email: empEmail,
           fullName: 'QA 22 Employee',
-          password: 'password123',
+          password: 'NewPassword123!',
           role: 'Employee',
           departmentId: dept?.id
         });
@@ -74,18 +74,17 @@ describe('QA Phase 22 - Admin User Management (Reset Password & Soft Delete)', (
     const res = await request(API_URL)
       .post(`/api/users/${empId}/reset-password`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ newPassword: 'newpassword123' });
+      .send({ newPassword: 'NewPassword123!' });
     
     expect(res.status).toBe(200);
 
     // Verify login with new password works
     const loginRes = await request(API_URL)
       .post('/api/auth/login')
-      .send({ username: empUsername, password: 'newpassword123' });
+      .send({ username: empUsername, password: 'NewPassword123!' });
     
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.data.accessToken).toBeDefined();
-    empToken = loginRes.body.data.accessToken; // Store token if needed
   });
 
   it('should allow admin to soft delete employee', async () => {
@@ -103,7 +102,7 @@ describe('QA Phase 22 - Admin User Management (Reset Password & Soft Delete)', (
   it('should prevent soft-deleted employee from logging in', async () => {
     const loginRes = await request(API_URL)
       .post('/api/auth/login')
-      .send({ username: empUsername, password: 'newpassword123' });
+      .send({ username: empUsername, password: 'NewPassword123!' });
     
     // API returns 401 Unauthorized for deleted users usually, or 404
     expect(loginRes.status).toBe(401); 

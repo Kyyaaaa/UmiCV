@@ -1,4 +1,5 @@
 import request from 'supertest';
+import bcrypt from 'bcrypt';
 import prisma from '../config/db';
 import app from '../app';
 
@@ -6,7 +7,7 @@ const API_URL = app;
 
 describe('QA Phase 24 - Security Hardening', () => {
   let empToken = '';
-  let empId = '';
+
 
   const testUser = 'phase24_user';
   const testPass = '123123123@As';
@@ -16,13 +17,12 @@ describe('QA Phase 24 - Security Hardening', () => {
     await prisma.user.deleteMany({ where: { username: testUser } });
 
     // Create user using Prisma to bypass login/create API limits
-    const bcrypt = require('bcrypt');
     const hash = await bcrypt.hash(testPass, 10);
     
     // Get a department
     const dept = await prisma.department.findFirst();
     
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         username: testUser,
         email: 'phase24@example.com',
@@ -33,7 +33,7 @@ describe('QA Phase 24 - Security Hardening', () => {
       }
     });
       
-    empId = user.id;
+
 
     // Login as the new user to get a valid token
     const empLogin = await request(API_URL).post('/api/auth/login').send({ username: testUser, password: testPass });
@@ -84,7 +84,7 @@ describe('QA Phase 24 - Security Hardening', () => {
     // Run this last so it doesn't affect other tests if limit kicks in early
     let lastStatus = 200;
     for (let i = 0; i < 6; i++) {
-      const res = await request(API_URL).post('/api/auth/login').send({ username: 'wrong', password: 'wrong' });
+      const res = await request(API_URL).post('/api/auth/login').send({ username: 'wrong', password: 'wrongpassword' });
       lastStatus = res.status;
     }
     // The rate limit max is 5, so the 6th should be 429

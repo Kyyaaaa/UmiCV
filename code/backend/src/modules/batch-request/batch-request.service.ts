@@ -179,18 +179,18 @@ export class BatchRequestService {
     });
 
     if (!target) {
-      throw new NotFoundError('Target not found');
+      throw new NotFoundError(MESSAGES.BATCH_REQUEST.TARGET_NOT_FOUND);
     }
 
     if (target.status !== TargetStatus.Outdated) {
-      throw new BadRequestError('Target is not outdated');
+      throw new BadRequestError(MESSAGES.BATCH_REQUEST.TARGET_NOT_OUTDATED);
     }
 
     // Call emailQueue
 
     await emailQueue.add('send-reminder', {
       to: target.user.email,
-      subject: `Reminder: Please update your CV for ${target.batchRequest.title}`,
+      subject: `Nhắc nhở: Vui lòng cập nhật CV cho chiến dịch ${target.batchRequest.title}`,
       body: getRemindCVTemplate(target.batchRequest.title, target.batchRequest.deadline.toString()),
     });
 
@@ -207,7 +207,7 @@ export class BatchRequestService {
 
     auditService.logAction('REMIND_TARGET', hrUserId, batchId);
 
-    return { message: 'Reminder email sent successfully' };
+    return { message: MESSAGES.BATCH_REQUEST.REMINDER_SUCCESS };
   }
 
   async updateBatchRequest(batchId: string, hrUserId: string, data: UpdateBatchRequestInput) {

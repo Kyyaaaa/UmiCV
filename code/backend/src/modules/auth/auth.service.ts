@@ -105,7 +105,7 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || user.deletedAt) {
       // Return success even if user not found to prevent email enumeration
-      return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+      return { message: MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -125,11 +125,11 @@ export class AuthService {
 
     await emailQueue.add('forgot-password', {
       to: user.email,
-      subject: 'Password Reset Request',
+      subject: 'Yêu cầu đặt lại mật khẩu',
       body: message,
     });
 
-    return { message: 'If that email address is in our database, we will send you an email to reset your password.' };
+    return { message: MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -143,7 +143,7 @@ export class AuthService {
     });
 
     if (!user || user.deletedAt) {
-      throw new BadRequestError('Token is invalid or has expired');
+      throw new BadRequestError(MESSAGES.AUTH.RESET_PASSWORD_INVALID);
     }
 
     const passwordHash = await hashPassword(newPassword);
@@ -158,6 +158,6 @@ export class AuthService {
       },
     });
 
-    return { message: 'Password has been successfully reset' };
+    return { message: MESSAGES.AUTH.RESET_PASSWORD_SUCCESS };
   }
 }
