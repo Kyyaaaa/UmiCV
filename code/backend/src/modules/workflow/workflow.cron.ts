@@ -105,6 +105,6 @@ export const checkSLA = async () => {
 };
 
 export const setupWorkflowCronjobs = () => {
-  cron.schedule('0 8 * * *', checkSLA);
+  cron.schedule('0 8 * * *', checkSLA, { timezone: 'Asia/Ho_Chi_Minh' });
   console.log('Workflow SLA Cronjobs are successfully registered.');
 };

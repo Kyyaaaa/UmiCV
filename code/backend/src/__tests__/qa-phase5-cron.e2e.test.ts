@@ -3,7 +3,7 @@ import prisma from '../config/db';
 import { emailQueue } from '../modules/notification/notification.queue';
 
 jest.mock('node-cron', () => ({
-  schedule: jest.fn((scheduleStr, callback) => {
+  schedule: jest.fn((scheduleStr: string, callback: any, options?: any) => {
     // Expose callback for manual triggering
     (global as any).triggerCron = callback;
   }),

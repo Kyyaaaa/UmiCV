@@ -53,7 +53,7 @@ export const setupCronjobs = () => {
     } catch (error) {
       console.error('[Cronjob] Error during daily run:', error);
     }
-  });
+  }, { timezone: 'Asia/Ho_Chi_Minh' });
 
   console.log('Cronjobs are successfully registered.');
 };

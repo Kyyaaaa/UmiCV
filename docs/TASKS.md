@@ -926,3 +926,16 @@ Tiến hành dịch thuật và đưa toàn bộ các chuỗi thông báo (Succe
     - Tạo 1 CV tiếng Việt, sau đó cố tình tạo tiếp 1 CV tiếng Việt nữa -> Xác nhận Toast lỗi "Hồ sơ CV với ngôn ngữ này đã tồn tại".
     - Nhắc nhở 1 nhân viên cập nhật CV -> Xác nhận nhân viên nhận được email tiêu đề tiếng Việt.
     - Hủy 1 chiến dịch -> Xác nhận Toast "Đã xóa chiến dịch thành công".
+
+---
+
+## 🕒 Phase 28: Cấu hình Múi giờ cho Cronjob (Timezone Fix)
+
+Sửa lỗi sai lệch thời gian chạy cronjob khi triển khai ứng dụng trên các máy chủ đám mây (Cloud) sử dụng múi giờ UTC mặc định.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-28.1: Cấu hình múi giờ `Asia/Ho_Chi_Minh` cho toàn bộ Cronjob**
+  - Mở file `src/modules/workflow/workflow.cron.ts`. Cập nhật hàm `cron.schedule` thêm tham số options `{ timezone: "Asia/Ho_Chi_Minh" }`.
+  - Mở file `src/modules/notification/notification.cron.ts`. Cập nhật hàm `cron.schedule` tương tự.
+  - Sửa lại các test case liên quan nếu việc mock thư viện `node-cron` bị ảnh hưởng bởi tham số `timezone`.
