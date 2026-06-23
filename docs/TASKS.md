@@ -964,3 +964,29 @@ Sửa lỗi sai lệch thời gian chạy cronjob khi triển khai ứng dụng 
   - Dùng tài khoản HR, tạo một chiến dịch mới với 3 nhân viên mục tiêu.
   - Quan sát Terminal log của Worker xem có bắt được 3 Job gửi email và tiến hành xử lý hay không.
   - Sửa chiến dịch, thêm 2 nhân viên mới. Kiểm tra xem Terminal log có bắt thêm 2 Job gửi email cho những nhân sự mới này không.
+
+---
+
+## ⏰ Phase 30: Hoàn thiện Nhắc nhở Tự động (Auto Remind Cronjob)
+
+Sửa lỗi logic gửi thư spam mỗi ngày và xử lý Bug không gửi được Email do sai định dạng trường dữ liệu.
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-30.1: Sửa Bug lấy sai Email**
+  - Mở file `src/modules/notification/notification.cron.ts`.
+  - Thay đổi dòng `to: target.user.username` thành `to: target.user.email` để luồng gửi mail không bị crash.
+- [x] **TASK-30.2: Cải tiến Logic quét Deadline**
+  - Trong vòng lặp lấy dữ liệu của `notification.cron.ts`, bổ sung thêm điều kiện vào Prisma Query:
+    - Chỉ lấy những `batchRequest` có `status` là `Active`.
+    - Chỉ gửi email nếu `deadline` nằm trong vòng **48 giờ tới** (Hoặc đã quá hạn nhưng chưa được update). Có thể dùng Date logic để lọc.
+- [x] **TASK-30.3: Chuẩn hóa Nội dung Email & In-app Notification**
+  - Thay thế các đoạn hardcode tiếng Anh như `"Reminder: Please update your CV for..."` bằng cách gọi file `messages.ts` (MESSAGES.BATCH_REQUEST) hoặc sử dụng hàm generate HTML Template bằng tiếng Việt.
+  - Bổ sung lệnh `prisma.notification.create(...)` bên trong vòng lặp Cronjob để sinh ra chuông báo trên web cho nhân viên (In-app Notification).
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-30.4: Kiểm thử Cronjob Nhắc nhở**
+  - Sử dụng API Mock hoặc gọi thủ công hàm Cronjob thay vì chờ đến 8h sáng.
+  - Setup 1 chiến dịch có deadline là 3 tuần sau -> Xác nhận Cronjob bỏ qua, không gửi email.
+  - Setup 1 chiến dịch có deadline là ngày mai -> Xác nhận Cronjob bắt được và gửi 1 Email (tới đúng địa chỉ email, không phải username) + 1 In-app Notification bằng tiếng Việt.
