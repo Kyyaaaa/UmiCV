@@ -1,0 +1,47 @@
+﻿ 
+
+TẬP ĐOÀN CÔNG NGHIỆP - VIỄN THÔNG QUÂN ĐỘI
+
+
+
+  
+BÁO CÁO MINI-PROJECT 
+<Tên đề tài>
+
+<Tên sinh viên thực hiện>
+<Email sinh viên thực hiện> 
+Chương trình Viettel Digital Talent 2026
+Lĩnh vực: Software Engineer
+
+
+
+
+Mentor: <Tên mentor>
+Đơn vị: <Tên đơn vị>
+
+
+
+
+
+(Khung báo cáo - Phần mở đầu)
+Lời mở đầu
+[Giới thiêu lý do viết báo cáo, bối cảnh thực tế]
+Tóm tắt nội dung và đóng góp
+[Tóm tắt ngắn gọn toàn bộ nội dung, kết quả chính và giá trị báo cáo mang lại]
+Mục lục
+[Mục lục báo cáo]
+Danh mục hình vẽ
+[Danh mục các hình ảnh sử dụng trong báo cáo]
+Danh mục đồ thị
+[Danh mục các đồ thị, bảng biểu dùng trong báo cáo]
+(Khung báo cáo - Body)
+I. Giới thiệu
+[Đặt vấn đề, mục tiêu của báo cáo, câu hỏi nghiên cứu hoặc phạm vi triển khai công nghệ]
+II. Nội dung và phương pháp
+[Trình bày kiến thức nền tảng, tổng quan về công nghệ, xu hướng hoặc các công trình liên quan, các phương pháp, nội dung thực hiện]
+III. Kết quả thực hiện và đánh giá
+[Mô tả quá trình thử nghiệm, triển khai hoặc mô phỏng, kết quả và đánh giá]
+IV. Kết luận
+[Tóm tắt các phát hiện chính, đánh giá hiệu quả, hướng phát triển tương lai]
+Tài liệu tham khảo
+[Danh sách các tài liệu tham khảo liên quan]

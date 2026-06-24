@@ -17,7 +17,7 @@ export const processOutdatedTargets = async () => {
 
     while (hasMore) {
       const outdatedTargets = await prisma.batchRequestTarget.findMany({
-        where: { 
+        where: {
           status: TargetStatus.Outdated,
           batchRequest: {
             status: BatchRequestStatus.Active,
@@ -67,11 +67,11 @@ export const processOutdatedTargets = async () => {
           data: { notifiedAt: new Date() },
         });
       }
-      
+
       count += outdatedTargets.length;
       skip += take;
     }
-    
+
     console.log(`[Cronjob] Processed ${count} outdated target(s).`);
   } catch (error) {
     console.error('[Cronjob] Error during daily run:', error);
