@@ -1,0 +1,37 @@
+@startuml
+left to right direction
+skin rose
+
+actor "HR" as HR
+actor "Tech Lead" as TechLead
+actor "Employee" as Employee
+
+rectangle "Luồng Quản lý và Phê duyệt CV" {
+  usecase "Xem CV chính thức" as UC_ViewCV
+  usecase "Sửa CV bản nháp (Draft Space)" as UC_EditDraft
+  usecase "Nộp CV để phê duyệt" as UC_SubmitCV
+  
+  usecase "Xem lịch sử thay đổi (Diff Viewer)" as UC_ViewDiff
+  usecase "Phê duyệt chuyên môn" as UC_TechApprove
+  usecase "Phê duyệt định dạng" as UC_HRApprove
+  usecase "Từ chối (Reject)" as UC_Reject
+
+  Employee --> UC_ViewCV #blue
+  Employee --> UC_EditDraft #blue
+  Employee --> UC_SubmitCV #blue
+
+  UC_SubmitCV .> UC_EditDraft : "<< extend >>"
+
+  TechLead --> UC_ViewDiff #purple
+  TechLead --> UC_TechApprove #purple
+  TechLead --> UC_Reject #purple
+
+  HR --> UC_ViewDiff #green
+  HR --> UC_HRApprove #green
+  HR --> UC_Reject #green
+
+  UC_TechApprove .> UC_ViewDiff : "<< include >>"
+  UC_HRApprove .> UC_ViewDiff : "<< include >>"
+  UC_Reject .> UC_ViewDiff : "<< include >>"
+}
+@enduml

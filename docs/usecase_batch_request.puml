@@ -1,0 +1,34 @@
+@startuml
+left to right direction
+skin rose
+
+actor "HR" as HR
+actor "Employee" as Employee
+actor "System (Cronjob)" as System
+
+rectangle "Luồng Chiến dịch cập nhật CV (Batch Request)" {
+  usecase "Tạo chiến dịch cập nhật (Batch Request)" as UC_CreateBatch
+  usecase "Chọn nhân sự mục tiêu" as UC_SelectTargets
+  usecase "Theo dõi tiến độ chiến dịch" as UC_TrackBatch
+  usecase "Hủy chiến dịch" as UC_CancelBatch
+  
+  usecase "Nhận yêu cầu cập nhật" as UC_ReceiveReq
+  usecase "Cập nhật CV theo yêu cầu" as UC_UpdateCV
+  
+  usecase "Gửi Email/Notification nhắc nhở" as UC_SendReminders
+
+  HR --> UC_CreateBatch #green
+  HR --> UC_TrackBatch #green
+  HR --> UC_CancelBatch #green
+
+  UC_CreateBatch ..> UC_SelectTargets : "<< include >>"
+
+  Employee --> UC_ReceiveReq #blue
+  Employee --> UC_UpdateCV #blue
+
+  UC_UpdateCV ..> UC_ReceiveReq : "<< extend >>"
+
+  System --> UC_SendReminders #black
+  UC_SendReminders ..> UC_ReceiveReq : "<< include >>"
+}
+@enduml
