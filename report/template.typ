@@ -18,7 +18,7 @@
 
   // 3. CÀI ĐẶT ĐOẠN VĂN (Tương đương \parindent{0pt} và \parskip{.5\baselineskip})
   set par(justify: true, first-line-indent: 0pt, leading: 0.65em)
-  set par(spacing: 1.2em) // Khoảng cách giữa các đoạn
+  set block(spacing: 1.2em) // Khoảng cách giữa các đoạn
 
 // 4. CÀI ĐẶT ĐỀ MỤC (Đã bỏ chữ "Chapter")
   set heading(numbering: "1.1.1")
