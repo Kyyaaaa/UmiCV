@@ -6,29 +6,29 @@ actor "HR" as HR
 actor "Employee" as Employee
 actor "System (Cronjob)" as System
 
-rectangle "Luồng Chiến dịch cập nhật CV (Batch Request)" {
-  usecase "Tạo chiến dịch cập nhật (Batch Request)" as UC_CreateBatch
-  usecase "Chọn nhân sự mục tiêu" as UC_SelectTargets
+rectangle "Hệ thống UmiCV" {
+  usecase "Tạo chiến dịch cập nhật" as UC_CreateBatch
+  usecase "Cập nhật thông tin chiến dịch" as UC_UpdateBatch
   usecase "Theo dõi tiến độ chiến dịch" as UC_TrackBatch
-  usecase "Hủy chiến dịch" as UC_CancelBatch
+  usecase "Gửi nhắc nhở thủ công" as UC_ManualRemind
+  usecase "Hủy / Xóa chiến dịch" as UC_CancelDeleteBatch
   
-  usecase "Nhận yêu cầu cập nhật" as UC_ReceiveReq
-  usecase "Cập nhật CV theo yêu cầu" as UC_UpdateCV
+  usecase "Xem thông báo yêu cầu" as UC_ReceiveReq
+  usecase "Cập nhật CV theo chiến dịch" as UC_UpdateCV
   
-  usecase "Gửi Email/Notification nhắc nhở" as UC_SendReminders
+  usecase "Nhắc nhở tự động (Cronjob)" as UC_SendReminders
+  usecase "Tự động đóng chiến dịch quá hạn" as UC_AutoCloseBatch
 
   HR --> UC_CreateBatch #green
+  HR --> UC_UpdateBatch #green
   HR --> UC_TrackBatch #green
-  HR --> UC_CancelBatch #green
-
-  UC_CreateBatch ..> UC_SelectTargets : "<< include >>"
+  HR --> UC_ManualRemind #green
+  HR --> UC_CancelDeleteBatch #green
 
   Employee --> UC_ReceiveReq #blue
   Employee --> UC_UpdateCV #blue
 
-  UC_UpdateCV ..> UC_ReceiveReq : "<< extend >>"
-
   System --> UC_SendReminders #black
-  UC_SendReminders ..> UC_ReceiveReq : "<< include >>"
+  System --> UC_AutoCloseBatch #black
 }
 @enduml

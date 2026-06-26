@@ -1,0 +1,58 @@
+@startuml
+skinparam WrapWidth 70
+skinparam DefaultFontSize 10
+skinparam activityFontSize 10
+
+|Employee|
+start
+
+:Nhấn "Nộp CV";
+
+|System|
+:Kiểm tra dữ liệu CV;
+if (Dữ liệu đầy đủ?) then (Không)
+  :Báo thiếu dữ liệu;
+  |Employee|
+  :Bổ sung dữ liệu;
+  stop
+else (Có)
+  |System|
+  :Đổi trạng thái CV thành "Chờ duyệt";
+  :Gửi thông báo tới Tech Lead;
+  
+  |Tech Lead|
+  :Nhận thông báo;
+  :Mở trang phê duyệt;
+  :Xem lịch sử thay đổi;
+  if (Duyệt cấp 1?) then (Từ chối)
+    :Nhập lý do từ chối;
+    |System|
+    :Đổi trạng thái CV thành "Nháp";
+    :Gửi thông báo từ chối tới Employee;
+    stop
+  else (Đồng ý)
+    |System|
+    :Ghi nhận Approval Log;
+    :Gửi thông báo tới HR;
+    
+    |HR|
+    :Nhận thông báo;
+    :Mở trang phê duyệt;
+    :Kiểm tra định dạng và chính tả CV;
+    if (Duyệt cấp 2?) then (Từ chối)
+      :Nhập lý do từ chối;
+      |System|
+      :Đổi trạng thái CV thành "Nháp";
+      :Gửi thông báo từ chối tới Employee;
+      stop
+    else (Đồng ý)
+      |System|
+      :Ghi nhận Approval Log;
+      :Hợp nhất bản nháp vào bản chính thức;
+      :Đổi trạng thái CV thành "Đã cập nhật";
+      :Gửi thông báo tới Employee;
+      stop
+    endif
+  endif
+endif
+@enduml

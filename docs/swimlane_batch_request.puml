@@ -1,0 +1,34 @@
+@startuml
+skinparam WrapWidth 100
+skinparam DefaultFontSize 10
+skinparam activityFontSize 10
+
+|HR|
+start
+:Chọn "Tạo chiến dịch cập nhật";
+:Điền Tiêu đề, Mô tả, Hạn chót;
+:Chọn danh sách nhân sự mục tiêu;
+
+|System|
+:Kiểm tra danh sách nhân sự;
+if (Danh sách rỗng?) then (Có)
+  :Cảnh báo yêu cầu chọn nhân viên;
+  |HR|
+  :Bổ sung nhân sự;
+  stop
+else (Không)
+  |System|
+  :Lưu Batch Request với trạng thái "Đang chạy";
+  :Tạo bản ghi Target cho từng nhân sự;
+  :Đổi trạng thái CVProfile mục tiêu thành "Chưa cập nhật";
+  :Tạo thông báo;
+  :Đẩy Job gửi Email vào Message Queue;
+  :Worker lấy Job từ Queue;
+  :Gửi Email thông báo đồng loạt;
+  
+  |Employee|
+  :Nhận Thông báo/Email yêu cầu cập nhật CV;
+  stop
+endif
+
+@enduml

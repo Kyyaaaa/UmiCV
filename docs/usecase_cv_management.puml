@@ -6,32 +6,33 @@ actor "HR" as HR
 actor "Tech Lead" as TechLead
 actor "Employee" as Employee
 
-rectangle "Luồng Quản lý và Phê duyệt CV" {
+rectangle "Hệ thống UmiCV" {
   usecase "Xem CV chính thức" as UC_ViewCV
-  usecase "Sửa CV bản nháp (Draft Space)" as UC_EditDraft
+  usecase "Cập nhật CV bản nháp" as UC_EditDraft
   usecase "Nộp CV để phê duyệt" as UC_SubmitCV
   
-  usecase "Xem lịch sử thay đổi (Diff Viewer)" as UC_ViewDiff
-  usecase "Phê duyệt chuyên môn" as UC_TechApprove
-  usecase "Phê duyệt định dạng" as UC_HRApprove
-  usecase "Từ chối (Reject)" as UC_Reject
+  usecase "Xem danh sách CV dự án (Chờ duyệt cấp 1)" as UC_TL_Pending
+  usecase "Xem toàn bộ CV chờ duyệt" as UC_HR_Pending
+  
+  usecase "So sánh phiên bản CV (Diff)" as UC_ViewDiff
+  usecase "Phê duyệt cấp 1 (Chuyên môn)" as UC_TechApprove
+  usecase "Phê duyệt cấp 2 (Định dạng)" as UC_HRApprove
+  usecase "Duyệt thẳng CV (Bỏ qua cấp 1)" as UC_DirectApprove
+  usecase "Từ chối phê duyệt" as UC_Reject
 
   Employee --> UC_ViewCV #blue
   Employee --> UC_EditDraft #blue
   Employee --> UC_SubmitCV #blue
 
-  UC_SubmitCV .> UC_EditDraft : "<< extend >>"
-
+  TechLead --> UC_TL_Pending #purple
   TechLead --> UC_ViewDiff #purple
   TechLead --> UC_TechApprove #purple
   TechLead --> UC_Reject #purple
 
+  HR --> UC_HR_Pending #green
   HR --> UC_ViewDiff #green
   HR --> UC_HRApprove #green
+  HR --> UC_DirectApprove #green
   HR --> UC_Reject #green
-
-  UC_TechApprove .> UC_ViewDiff : "<< include >>"
-  UC_HRApprove .> UC_ViewDiff : "<< include >>"
-  UC_Reject .> UC_ViewDiff : "<< include >>"
 }
 @enduml

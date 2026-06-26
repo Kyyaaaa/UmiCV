@@ -1,31 +1,45 @@
-@startuml
-left to right direction
-skin rose
+  @startuml
+  left to right direction
+  skin rose
 
-actor "Employee" as Employee
-actor "Tech Lead" as TechLead
-actor "HR" as HR
-actor "Admin" as Admin
+  actor "Employee" as Employee
+  actor "Tech Lead" as TechLead
+  actor "HR" as HR
+  actor "Admin" as Admin
 
-rectangle "Hệ thống UmiCV - Tổng quan" {
-  usecase "Quản lý CV cá nhân" as UC_PersonalCV
-  usecase "Phê duyệt CV dự án" as UC_ProjectCV
-  usecase "Quản lý chiến dịch cập nhật CV" as UC_BatchRequest
-  usecase "Quản trị hệ thống & Danh mục" as UC_AdminTasks
-  usecase "Xem thông báo" as UC_Notification
-  usecase "Phê duyệt định dạng CV" as UC_HRApprove
+  rectangle "Hệ thống UmiCV" {
+    usecase "Quản lý CV cá nhân" as UC_PersonalCV
+    usecase "Phê duyệt CV dự án" as UC_ProjectCV
+    usecase "Quản lý chiến dịch cập nhật CV" as UC_BatchRequest
+    usecase "Quản lý thông báo hệ thống" as NotificationManage
+    usecase "Xem thông báo" as UC_Notification
+    usecase "Phê duyệt định dạng CV" as UC_HRApprove
+    usecase "Xem lịch sử phê duyệt CV" as UC_ApproveHistory
+    usecase "Quản lý CV nhân viên" as UserCVManage
+    usecase "Quản lý tài khoản hệ thống" as AccountManage
+    usecase "Quản lý phòng ban" as DepartmentManage
+    usecase "Quản lý dự án" as ProjectManage
+    usecase "Xem Audit Log" as AuditLogView
 
-  Employee --> UC_PersonalCV #blue
-  Employee --> UC_Notification #blue
+    Employee --> UC_PersonalCV #blue
+    Employee --> UC_Notification #blue
 
-  TechLead --> UC_ProjectCV #purple
-  TechLead --> UC_PersonalCV #purple
-  TechLead --> UC_Notification #purple
+    TechLead --> UC_ProjectCV #purple
+    TechLead --> UC_PersonalCV #purple
+    TechLead --> UC_Notification #purple
 
-  HR --> UC_BatchRequest #green
-  HR --> UC_Notification #green
-  HR --> UC_HRApprove #green
-
-  Admin --> UC_AdminTasks #black
-}
-@enduml
+    HR --> UC_BatchRequest #green
+    HR --> UC_Notification #green
+    HR --> UC_HRApprove #green
+    HR --> UC_ApproveHistory #green
+    HR --> UserCVManage #green
+    
+    Admin --> NotificationManage #black
+    Admin --> UC_ApproveHistory #black
+    Admin --> UserCVManage #black
+    Admin --> AccountManage #black
+    Admin --> DepartmentManage #black
+    Admin --> ProjectManage #black
+    Admin --> AuditLogView #black
+  }
+  @enduml

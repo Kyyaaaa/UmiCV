@@ -80,28 +80,28 @@ Hệ thống sử dụng Json Web Token kết hợp RBAC để kiểm soát quy�
 == Phân tích Use Case và quy tắc nghiệp vụ
 
 === Mô tả Actor
-Các tác nhân (Actor) tham gia vào hệ thống UmiCV bao gồm:
-- *Employee (Nhân viên):* Người dùng phổ thông, có quyền tạo, xem và chỉnh sửa hồ sơ CV của cá nhân.
-- *Tech Lead (Người hướng dẫn/Trưởng nhóm):* Chịu trách nhiệm đối chiếu năng lực chuyên môn thực tế của nhân viên và thực hiện phê duyệt/từ chối CV nháp của thành viên thuộc dự án mình quản lý.
-- *HR (Nhân sự):* Phụ trách quản lý chiến dịch thu thập CV (Batch Request), rà soát định dạng trình bày cuối cùng của CV và thực hiện phê duyệt xuất bản.
-- *Admin (Quản trị viên):* Quản lý toàn bộ hệ thống, phân quyền và danh mục dữ liệu.
-- *System (Hệ thống):* Tác nhân tự động thực hiện các tác vụ chạy ngầm như gửi Email/Notification nhắc nhở (Cronjob).
+Các tác nhân tham gia vào hệ thống UmiCV bao gồm:
+- *Employee:* Nhân viên, có quyền tạo, xem và chỉnh sửa hồ sơ CV của cá nhân.
+- *Tech Lead:* Trưởng nhóm, chịu trách nhiệm đối chiếu năng lực chuyên môn thực tế của nhân viên và thực hiện phê duyệt/từ chối CV nháp của thành viên thuộc dự án mình quản lý.
+- *HR:* Nhân sự, phụ trách quản lý chiến dịch cập nhật CV hàng loạt, rà soát định dạng trình bày cuối cùng của CV và thực hiện phê duyệt xuất bản.
+- *Admin:* Quản trị viên, có quyền quản lý toàn bộ hệ thống, phân quyền và danh mục dữ liệu.
+- *System:* Hệ thống, tự động thực hiện các tác vụ như gửi Email/Notification nhắc nhở.
 
-=== Biểu đồ Use Case (Use Case Diagrams)
+=== Biểu đồ Use Case
 
 #figure(
-  image("images/UseCaseDiagram_Overview.png", width: 90%),
-  caption: [Biểu đồ Use Case tổng quan hệ thống UmiCV]
+  image("images/UseCaseDiagram_Overview.png", width: 30%),
+  caption: [Tổng quan hệ thống UmiCV]
 )
 
 #figure(
-  image("images/UseCaseDiagram_CVManagement.png", width: 85%),
-  caption: [Biểu đồ Use Case luồng quản lý và phê duyệt CV]
+  image("images/UseCaseDiagram_CVManagement.png", width: 40%),
+  caption: [Quản lý và phê duyệt CV]
 )
 
 #figure(
-  image("images/UseCaseDiagram_BatchRequest.png", width: 85%),
-  caption: [Biểu đồ Use Case luồng chiến dịch cập nhật CV]
+  image("images/UseCaseDiagram_BatchRequest.png", width: 40%),
+  caption: [Chiến dịch cập nhật CV]
 )
 
 === Đặc tả Use Case cốt lõi
@@ -155,6 +155,22 @@ Các tác nhân (Actor) tham gia vào hệ thống UmiCV bao gồm:
 - *BR2 (Quyền phê duyệt):* Tech Lead chỉ được quyền xem chi tiết (Diff) và phê duyệt bản nháp CV của các nhân viên đang trực thuộc dự án do chính Tech Lead đó quản lý.
 - *BR3 (Tránh trùng lặp yêu cầu):* Khi HR tạo Batch Request, nếu nhân viên mục tiêu đang có CV ở trạng thái `Pending Approval` hoặc `Updated`, hệ thống tự động bỏ qua nhân viên đó để tránh trùng lặp thao tác cập nhật.
 - *BR4 (Hợp nhất dữ liệu):* CV chính thức chỉ được sinh ra hoặc ghi đè sau khi bản nháp đã vượt qua toàn bộ các cấp phê duyệt (Tech Lead và HR).
+
+== Phân tích luồng nghiệp vụ (Swimlane / Activity Diagram)
+
+Để minh họa chi tiết trình tự các bước thực hiện và sự tương tác giữa các tác nhân (Actors) theo thời gian thực, hệ thống được thiết kế thông qua các biểu đồ luồng nghiệp vụ chia làn (Swimlane).
+
+#figure(
+  image("images/Swimlane_SubmitCV.png", width: 60%),
+  caption: [Biểu đồ luồng nghiệp vụ: Nộp và phê duyệt CV]
+)
+Luồng nghiệp vụ này mô tả chi tiết quá trình từ khi nhân viên khởi tạo yêu cầu nộp CV. Hệ thống sẽ ngay lập tức kiểm tra tính hợp lệ của dữ liệu trước khi chuyển giao cho cấp quản lý. Quá trình phê duyệt được phân tách rõ ràng thành 2 chốt chặn: Tech Lead (duyệt tính chính xác về mặt chuyên môn) và HR (duyệt tính chuẩn hóa về mặt hình thức). Bất kỳ sự từ chối nào ở cả hai cấp đều sẽ trả CV về lại trạng thái nháp.
+
+#figure(
+  image("images/Swimlane_BatchRequest.png", width: 60%),
+  caption: [Biểu đồ luồng nghiệp vụ: Chiến dịch yêu cầu cập nhật CV]
+)
+Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Thay vì gửi email thủ công, HR chỉ cần thiết lập chiến dịch. Hệ thống ứng dụng kiến trúc hướng sự kiện (Message Queue) để đẩy các tác vụ gửi Email/Thông báo ra Background Worker xử lý bất đồng bộ, tránh quá tải máy chủ. Đặc biệt, hệ thống tích hợp luồng Cronjob độc lập chạy ngầm hàng ngày để tự động rà soát, chuyển trạng thái "Completed" đối với các chiến dịch quá hạn và khôi phục CV chưa cập nhật về lại trạng thái an toàn.
 
 == Kiến trúc hệ thống tổng quan
 - *Frontend:* Xây dựng bằng ReactJS, Vite và TailwindCSS.
