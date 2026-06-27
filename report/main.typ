@@ -1,17 +1,18 @@
 #import "template.typ": report
 
 #show: report.with(
-  title: [BÁO CÁO MINI-PROJECT \ Hệ thống Quản lý CV Nhân viên Toàn diện (UmiCV)],
+  title: [BÁO CÁO MINI-PROJECT \ Hệ thống quản lý CV - UmiCV],
+  logo: "images/Viettel.png",
   authors: (
-    "Sinh viên: <Tên sinh viên thực hiện>",
-    "Email: <Email sinh viên thực hiện>",
+    "Sinh viên: Phạm Minh Hoàng",
+    "Email: hoanglbp3300@gmail.com",
     "Chương trình Viettel Digital Talent 2026",
     "Lĩnh vực: Software Engineer",
     "",
-    "Mentor: <Tên mentor>",
+    "Mentor: Phạm Tuấn Minh",
     "Đơn vị: VTIT"
   ),
-  date: "Tháng 6/2026"
+  date: "Tháng 6 - 2026"
 )
 
 #text(size: 20pt, weight: "bold")[Phần mở đầu]
@@ -25,7 +26,7 @@ Trong bối cảnh chuyển đổi số mạnh mẽ hiện nay, việc quản l�
 Báo cáo này trình bày toàn diện quá trình phát triển hệ thống UmiCV. Các đóng góp chính của dự án bao gồm:
 - Thiết kế hệ thống theo kiến trúc Clean Architecture kết hợp Modular Monolith, đảm bảo tính mở rộng cao và dễ bảo trì.
 - Xây dựng mô hình không gian nháp linh hoạt cùng luồng phê duyệt đa cấp.
-- Tự động hóa quy trình thu thập CV hàng loạt thông qua Batch Request và cơ chế xử lý bất đồng bộ.
+- Tự động hóa việc tạo chiến dịch cập nhật CV hàng loạt thông qua Batch Request và cơ chế xử lý bất đồng bộ.
 - Triển khai thành công hệ thống trên môi trường Docker và chống lại các rủi ro bảo mật.
 
 #v(1em)
@@ -47,7 +48,7 @@ Quản lý CV không chỉ đơn thuần là việc lưu trữ tài liệu mà c
 == Hiện trạng và thách thức trong việc quản lý CV
 Với cơ cấu tổ chức phân nhánh thành nhiều phòng ban và khối dự án, việc quản lý CV hiện tại đối mặt với nhiều thách thức lớn:
 - Dữ liệu bị phân tán trên nhiều định dạng, dẫn đến sự thiếu nhất quán.
-- Khi HR cần thu thập hàng loạt CV để làm hồ sơ, quy trình yêu cầu cập nhật diễn ra thủ công qua Email/Chat, rất khó để tracking tiến độ của từng người.
+- Khi HR cần thu thập hàng loạt CV để làm hồ sơ, quy trình yêu cầu cập nhật thường diễn ra thủ công qua Email/Chat, rất khó để tracking tiến độ của từng người.
 - Thiếu một luồng phê duyệt rõ ràng về mặt chuyên môn và mặt hình thức, dẫn đến chất lượng CV khi gửi ra ngoài không đồng đều.
 
 == Mục tiêu và phạm vi nghiên cứu của UmiCV
@@ -106,19 +107,19 @@ Các tác nhân tham gia vào hệ thống UmiCV bao gồm:
 
 === Đặc tả Use Case cốt lõi
 
-*1. Đặc tả Use Case: Nộp CV để phê duyệt*
+*1. Đặc tả Use Case: Nộp CV*
 #table(
   columns: (1.5fr, 3.5fr),
   inset: 8pt,
-  [*Tên Use Case*], [*Nộp CV để phê duyệt (Submit CV)*],
+  [*Tên Use Case*], [*Nộp CV*],
   [*Actor*], [Employee],
-  [*Tiền điều kiện*], [Nhân viên đã đăng nhập và đang có một bản CV nháp (Draft).],
-  [*Hậu điều kiện*], [Bản nháp chuyển sang trạng thái `Pending Approval`. Hệ thống gửi thông báo cho Tech Lead.],
+  [*Tiền điều kiện*], [Nhân viên đã đăng nhập và đang có một bản CV nháp.],
+  [*Hậu điều kiện*], [Bản nháp chuyển sang trạng thái `Chờ duyệt`. Hệ thống gửi thông báo cho Tech Lead.],
   [*Luồng sự kiện chính*], [
     1. Nhân viên truy cập vào không gian nháp của mình.\
-    2. Nhân viên nhấn nút "Submit for Review".\
+    2. Nhân viên nhấn nút "Nộp CV".\
     3. Hệ thống kiểm tra tính hợp lệ của dữ liệu.\
-    4. Hệ thống cập nhật trạng thái CV thành `Pending Approval`.\
+    4. Hệ thống cập nhật trạng thái CV thành `Chờ duyệt`.\
     5. Hệ thống gửi thông báo/Email cho Tech Lead phụ trách dự án của nhân viên.
   ],
   [*Luồng ngoại lệ*], [
@@ -131,13 +132,13 @@ Các tác nhân tham gia vào hệ thống UmiCV bao gồm:
 #table(
   columns: (1.5fr, 3.5fr),
   inset: 8pt,
-  [*Tên Use Case*], [*Tạo chiến dịch cập nhật (Create Batch Request)*],
+  [*Tên Use Case*], [*Tạo chiến dịch cập nhật*],
   [*Actor*], [HR],
   [*Tiền điều kiện*], [HR đã đăng nhập vào hệ thống.],
   [*Hậu điều kiện*], [Một Batch Request mới được tạo. Các nhân viên mục tiêu nhận được thông báo yêu cầu cập nhật CV.],
   [*Luồng sự kiện chính*], [
-    1. HR chọn chức năng "Tạo Batch Request".\
-    2. HR nhập tên chiến dịch, mô tả và hạn chót (Deadline).\
+    1. HR chọn chức năng "Tạo chiến dịch cập nhật".\
+    2. HR nhập tên chiến dịch, mô tả và hạn chót.\
     3. HR lọc và chọn danh sách nhân viên cần cập nhật CV.\
     4. HR nhấn nút "Tạo chiến dịch".\
     5. Hệ thống lưu Batch Request và đẩy Job vào Message Queue.\
@@ -145,37 +146,100 @@ Các tác nhân tham gia vào hệ thống UmiCV bao gồm:
   ],
   [*Luồng ngoại lệ*], [
     - *Bước 3 sai:* Nếu không chọn nhân viên nào, hệ thống báo lỗi yêu cầu chọn ít nhất 1 mục tiêu.\
-    - *Bước 4 sai:* Trùng lặp chiến dịch đang Active. Hệ thống cảnh báo.
   ]
 )
 
-=== Quy tắc nghiệp vụ (Business Rules)
-Để đảm bảo tính nhất quán của dữ liệu, hệ thống UmiCV áp dụng các quy tắc nghiệp vụ (Business Rules) chặt chẽ sau:
-- *BR1 (Duy nhất bản nháp):* Mỗi nhân viên tại một thời điểm chỉ có thể tồn tại tối đa một bản CV nháp (Draft) hoặc một bản đang chờ duyệt (Pending Approval) cho mỗi ngôn ngữ.
-- *BR2 (Quyền phê duyệt):* Tech Lead chỉ được quyền xem chi tiết (Diff) và phê duyệt bản nháp CV của các nhân viên đang trực thuộc dự án do chính Tech Lead đó quản lý.
-- *BR3 (Tránh trùng lặp yêu cầu):* Khi HR tạo Batch Request, nếu nhân viên mục tiêu đang có CV ở trạng thái `Pending Approval` hoặc `Updated`, hệ thống tự động bỏ qua nhân viên đó để tránh trùng lặp thao tác cập nhật.
-- *BR4 (Hợp nhất dữ liệu):* CV chính thức chỉ được sinh ra hoặc ghi đè sau khi bản nháp đã vượt qua toàn bộ các cấp phê duyệt (Tech Lead và HR).
+#v(1em)
+*3. Đặc tả Use Case: Phê duyệt cấp 1*
+#table(
+  columns: (1.5fr, 3.5fr),
+  inset: 8pt,
+  [*Tên Use Case*], [*Phê duyệt cấp 1*],
+  [*Actor*], [Tech Lead],
+  [*Tiền điều kiện*], [Tech Lead đăng nhập, có nhân viên trực thuộc dự án vừa nộp CV đang chờ duyệt cấp 1.],
+  [*Hậu điều kiện*], [CV chuyển sang chờ duyệt cấp 2 hoặc quay về bản nháp.],
+  [*Luồng sự kiện chính*], [
+    1. Tech Lead truy cập danh sách CV dự án đang chờ duyệt.\
+    2. Tech Lead chọn một CV và sử dụng công cụ "So sánh phiên bản" để xem các thay đổi.\
+    3. Tech Lead kiểm tra tính chính xác của kinh nghiệm/kỹ năng.\
+    4. Tech Lead nhấn "Chấp nhận".\
+    5. Hệ thống lưu Approval Log cấp 1 và gửi thông báo tiếp cho HR.
+  ],
+  [*Luồng ngoại lệ*], [
+    - *Bước 3-4 từ chối:* Tech Lead nhập lý do và nhấn "Từ chối". CV bị trả về trạng thái "Nháp", nhân viên nhận được email thông báo lý do.
+  ]
+)
 
-== Phân tích luồng nghiệp vụ (Swimlane / Activity Diagram)
+#v(1em)
+*4. Đặc tả Use Case: Phê duyệt cấp 2*
+#table(
+  columns: (1.5fr, 3.5fr),
+  inset: 8pt,
+  [*Tên Use Case*], [*Phê duyệt cấp 2*],
+  [*Actor*], [HR],
+  [*Tiền điều kiện*], [CV đã được Tech Lead phê duyệt cấp 1 thành công.],
+  [*Hậu điều kiện*], [Bản nháp được hợp nhất thành bản chính thức nếu chấp nhận hoặc về bản nháp nếu từ chối],
+  [*Luồng sự kiện chính*], [
+    1. HR truy cập danh sách CV toàn công ty đang chờ duyệt cấp 2.\
+    2. HR rà soát lỗi chính tả, văn phong và định dạng trình bày của CV.\
+    3. HR nhấn "Chấp nhận".\
+    4. Hệ thống lưu Approval Log cấp 2.\
+    5. Hệ thống hợp nhất dữ liệu từ bản nháp sang bản chính thức và đổi trạng thái CV thành `Đã cập nhật`.\
+    6. Gửi thông báo tới nhân viên.
+  ],
+  [*Luồng ngoại lệ*], [
+    - *Bước 2-3 từ chối:* HR nhập lý do sai định dạng và nhấn "Từ chối". CV quay về "Nháp".
+  ]
+)
 
-Để minh họa chi tiết trình tự các bước thực hiện và sự tương tác giữa các tác nhân (Actors) theo thời gian thực, hệ thống được thiết kế thông qua các biểu đồ luồng nghiệp vụ chia làn (Swimlane).
+#v(1em)
+*5. Đặc tả Use Case: Duyệt thẳng CV*
+#table(
+  columns: (1.5fr, 3.5fr),
+  inset: 8pt,
+  [*Tên Use Case*], [*Duyệt thẳng CV*],
+  [*Actor*], [HR],
+  [*Tiền điều kiện*], [Có CV vừa được nộp nhưng nhân sự không thuộc dự án nào, hoặc trong tình huống cần HR duyệt ngay.],
+  [*Hậu điều kiện*], [Bản nháp được hợp nhất trực tiếp thành bản chính thức.],
+  [*Luồng sự kiện chính*], [
+    1. HR truy cập danh sách toàn bộ CV chờ duyệt.\
+    2. HR chọn một CV chưa qua phê duyệt cấp 1.\
+    3. HR kiểm tra chéo cả thông tin nghiệp vụ lẫn định dạng.\
+    4. HR nhấn "Duyệt thẳng".\
+    5. Hệ thống lưu Approval Log với quyền lực tối cao của HR.\
+    6. Hợp nhất bản nháp vào bản chính thức, kết thúc quy trình duyệt.
+  ],
+  [*Luồng ngoại lệ*], [
+    - *Bước 3-4 từ chối:* HR có thể từ chối trực tiếp. CV quay về "Nháp".
+  ]
+)
+
+=== Quy tắc nghiệp vụ
+Để đảm bảo tính nhất quán của dữ liệu, hệ thống UmiCV áp dụng các quy tắc nghiệp vụ chặt chẽ sau:
+- *BR1 (Duy nhất bản nháp):* Mỗi nhân viên tại một thời điểm chỉ có thể tồn tại tối đa một bản CV nháp hoặc một bản đang chờ duyệt cho mỗi ngôn ngữ.
+- *BR2 (Quyền phê duyệt):* Tech Lead chỉ được quyền xem chi tiết và phê duyệt bản nháp CV của các nhân viên đang trực thuộc dự án do chính Tech Lead đó quản lý.
+- *BR3 (Hợp nhất dữ liệu):* CV chính thức chỉ được sinh ra hoặc ghi đè sau khi bản nháp đã vượt qua toàn bộ các cấp phê duyệt.
+
+== Phân tích luồng nghiệp vụ
+
+Để minh họa chi tiết trình tự các bước thực hiện và sự tương tác giữa các tác nhân theo thời gian thực, hệ thống được thiết kế thông qua các biểu đồ luồng nghiệp vụ chia làn.
 
 #figure(
   image("images/Swimlane_SubmitCV.png", width: 60%),
   caption: [Biểu đồ luồng nghiệp vụ: Nộp và phê duyệt CV]
 )
-Luồng nghiệp vụ này mô tả chi tiết quá trình từ khi nhân viên khởi tạo yêu cầu nộp CV. Hệ thống sẽ ngay lập tức kiểm tra tính hợp lệ của dữ liệu trước khi chuyển giao cho cấp quản lý. Quá trình phê duyệt được phân tách rõ ràng thành 2 chốt chặn: Tech Lead (duyệt tính chính xác về mặt chuyên môn) và HR (duyệt tính chuẩn hóa về mặt hình thức). Bất kỳ sự từ chối nào ở cả hai cấp đều sẽ trả CV về lại trạng thái nháp.
+Luồng nghiệp vụ này mô tả chi tiết quá trình từ khi nhân viên khởi tạo yêu cầu nộp CV. Hệ thống sẽ ngay lập tức kiểm tra tính hợp lệ của dữ liệu trước khi chuyển giao cho cấp quản lý. Quá trình phê duyệt được phân tách rõ ràng thành 2 chốt chặn: Tech Lead duyệt tính chính xác về mặt chuyên môn và HR duyệt tính chuẩn hóa về mặt hình thức. Bất kỳ sự từ chối nào ở cả hai cấp đều sẽ trả CV về lại trạng thái nháp.
 
 #figure(
   image("images/Swimlane_BatchRequest.png", width: 60%),
   caption: [Biểu đồ luồng nghiệp vụ: Chiến dịch yêu cầu cập nhật CV]
 )
-Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Thay vì gửi email thủ công, HR chỉ cần thiết lập chiến dịch. Hệ thống ứng dụng kiến trúc hướng sự kiện (Message Queue) để đẩy các tác vụ gửi Email/Thông báo ra Background Worker xử lý bất đồng bộ, tránh quá tải máy chủ. Đặc biệt, hệ thống tích hợp luồng Cronjob độc lập chạy ngầm hàng ngày để tự động rà soát, chuyển trạng thái "Completed" đối với các chiến dịch quá hạn và khôi phục CV chưa cập nhật về lại trạng thái an toàn.
+Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Thay vì gửi email thủ công, HR chỉ cần thiết lập chiến dịch. Hệ thống sử dụng Message Queue để đẩy các tác vụ gửi Email/Thông báo ra Background Worker xử lý bất đồng bộ, tránh quá tải máy chủ. Đặc biệt, hệ thống tích hợp luồng Cronjob độc lập chạy ngầm hàng ngày để tự động rà soát, chuyển trạng thái đối với các chiến dịch đã hoàn thành hoặc quá hạn.
 
 == Kiến trúc hệ thống tổng quan
-- *Frontend:* Xây dựng bằng ReactJS, Vite và TailwindCSS.
+- *Frontend:* ReactJS, Vite và TailwindCSS.
 - *Backend:* Node.js, Express và TypeScript.
-- *Cơ sở dữ liệu:* PostgreSQL, sử dụng trường JSONB để lưu trữ nội dung CV động.
+- *Cơ sở dữ liệu:* PostgreSQL.
 
 == Thiết kế cơ sở dữ liệu và không gian nháp
 
@@ -187,16 +251,16 @@ Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Tha
 <fig-erd>
 
 === Giải thích các thực thể chính
-Hệ thống xoay quanh một số thực thể (Entities) cốt lõi:
-- *User:* Quản lý thông tin người dùng, lưu trữ thông tin đăng nhập và vai trò (`role`) quyết định quyền hạn trong hệ thống.
-- *Department:* Quản lý cấu trúc phòng ban phân cấp (parent-child).
-- *Project:* Tổ chức công việc theo dự án, lưu trữ thông tin dự án và người phụ trách (`Tech Lead`).
-- *ProjectMember:* Bảng trung gian (quan hệ N-N) liên kết nhân viên vào các dự án tương ứng.
-- *CVProfile:* Lưu trữ trạng thái hiện tại (Draft, Pending, Updated) và cấu trúc dữ liệu chi tiết của CV dưới dạng JSON.
-- *CVVersionHistory:* Lưu lại ảnh chụp (snapshot) của CV mỗi khi có thay đổi để theo dõi lịch sử chỉnh sửa.
+Hệ thống xoay quanh một số thực thể chính:
+- *User:* Quản lý thông tin người dùng, lưu trữ thông tin đăng nhập và vai trò quyết định quyền hạn trong hệ thống.
+- *Department:* Quản lý cấu trúc phòng ban phân cấp.
+- *Project:* Tổ chức công việc theo dự án, lưu trữ thông tin dự án và người phụ trách.
+- *ProjectMember:* Bảng trung gian liên kết nhân viên vào các dự án tương ứng.
+- *CVProfile:* Lưu trữ trạng thái hiện tại và cấu trúc dữ liệu chi tiết của CV dưới dạng JSON.
+- *CVVersionHistory:* Lưu lại ảnh chụp của CV mỗi khi có thay đổi để theo dõi lịch sử chỉnh sửa.
 - *BatchRequest:* Đại diện cho một chiến dịch yêu cầu cập nhật CV từ bộ phận HR.
 - *BatchRequestTarget:* Các cá nhân mục tiêu được gắn vào chiến dịch yêu cầu cập nhật, kèm theo trạng thái hoàn thành và hạn chót.
-- *ApprovalLog:* Lưu vết (log) mọi thao tác phê duyệt (Approve/Reject) của Tech Lead/HR, ghi nhận lý do và cấp độ duyệt.
+- *ApprovalLog:* Lưu vết mọi thao tác phê duyệt của Tech Lead/HR, ghi nhận lý do và cấp độ duyệt.
 - *AuditLog:* Ghi nhận lại các hoạt động tác động đến hệ thống nhằm đảm bảo tính minh bạch và phục vụ việc tra soát lỗi.
 
 === Giải thích các mối quan hệ

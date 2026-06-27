@@ -28,11 +28,8 @@ export function ProjectListPage() {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [deleteError, setDeleteError] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
+    await Promise.resolve(); // Prevent synchronous setState in useEffect
     try {
       setIsLoading(true);
       const [projectsRes, usersRes] = await Promise.all([
@@ -47,6 +44,13 @@ export function ProjectListPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const columns: Column<Project>[] = [
     {
@@ -120,8 +124,9 @@ export function ProjectListPage() {
       setIsDeleteOpen(false);
       setProjectToDelete(null);
       fetchData();
-    } catch (error: any) {
-      setDeleteError(error.response?.data?.message || 'Có lỗi xảy ra khi xóa dự án');
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      setDeleteError(err.response?.data?.message || 'Có lỗi xảy ra khi xóa dự án');
     }
   };
 

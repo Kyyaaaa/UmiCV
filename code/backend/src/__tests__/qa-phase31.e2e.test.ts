@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../app';
 import prisma from '../config/db';
+import * as bcrypt from 'bcrypt';
 
 const API_URL = app;
 
@@ -17,11 +18,10 @@ describe('QA Phase 31 - HR Role on Projects', () => {
 
     // 2. Setup Data
     const dept = await prisma.department.findFirst();
-    const bcrypt = require('bcrypt');
     const hash = await bcrypt.hash('123123123@As', 10);
 
     // Create HR User
-    const hr = await prisma.user.create({
+    await prisma.user.create({
         data: {
             username: 'qa31_hr',
             email: 'qa31_hr@example.com',

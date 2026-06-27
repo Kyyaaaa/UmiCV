@@ -1,12 +1,13 @@
 // ==========================================
 // TEMPLATE: ĐƯỢC CHUYỂN ĐỔI TỪ LATEX
-// Tên file: template.typ
+// Tên file: template.typ 
 // ==========================================
 
 #let report(
   title: "",
   authors: (),
   date: datetime.today().display("[day]/[month]/[year]"),
+  logo: none,
   body
 ) = {
   // 1. THÔNG TIN SIÊU DỮ LIỆU (Metadata)
@@ -25,7 +26,10 @@
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     v(2em)
-    text(size: 20pt, weight: "bold")[#counter(heading).display() #it.body]
+    let number = if it.numbering != none {
+      counter(heading).display(it.numbering) + " "
+    }
+    text(size: 20pt, weight: "bold")[#number#it.body]
     v(1.5em)
   }
 
@@ -55,6 +59,10 @@
   // TRANG BÌA (Title Page)
   // ==========================================
   page(align(center + horizon)[
+    #if logo != none {
+      image(logo, width: 50%)
+      v(1.5em)
+    }
     #text(size: 14pt, weight: "bold")[TẬP ĐOÀN CÔNG NGHIỆP - VIỄN THÔNG QUÂN ĐỘI]
     #v(3em)
     #text(size: 26pt, weight: "bold", title)
@@ -71,7 +79,9 @@
   set page(numbering: none)
   counter(page).update(1)
   
+  set heading(numbering: none)
   outline(title: "Mục lục", indent: auto, depth: 3)
+  set heading(numbering: "1.1.1")
   pagebreak(weak: true)
 
   // ==========================================
