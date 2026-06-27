@@ -233,6 +233,8 @@ model Notification {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title     String   @db.VarChar(255)
   message   String
+  type      String?  @default("info")
+  link      String?
   isGlobal  Boolean  @default(false) @map("is_global")
   userId    String?  @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")

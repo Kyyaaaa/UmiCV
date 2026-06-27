@@ -81,6 +81,8 @@ export const checkSLA = async () => {
               data: {
                 title: `SLA ${severity}: Pending CV Approval`,
                 message: `The CV for ${cv.user.fullName} is ${severity} (waiting for ${Math.floor(hoursDiff)} hours). Please review it.`,
+                type: isOverdue ? 'error' : 'warning',
+                link: '/workflow',
                 userId: approver.id,
                 isGlobal: false,
               },

@@ -76,6 +76,7 @@ const router = createBrowserRouter([
               { path: "hr/batch-requests", element: <BatchRequestListPage /> },
               { path: "hr/batch-requests/:id", element: <BatchRequestDetailPage /> },
               { path: "admin/approval-logs", element: <ApprovalLogListPage /> },
+              { path: "projects", element: <ProjectListPage /> },
             ]
           },
           
@@ -84,7 +85,6 @@ const router = createBrowserRouter([
             children: [
               { path: "users", element: <UserListPage /> },
               { path: "departments", element: <DepartmentListPage /> },
-              { path: "projects", element: <ProjectListPage /> },
               { path: "admin/audit-logs", element: <AuditLogListPage /> },
             ]
           },

@@ -53,6 +53,8 @@ export const processOutdatedTargets = async () => {
             userId: target.userId,
             title: 'Sắp hết hạn cập nhật CV',
             message: `Chiến dịch "${title}" sắp hết hạn vào ${deadlineStr}. Vui lòng cập nhật CV ngay!`,
+            type: 'warning',
+            link: '/cv',
             isGlobal: false,
           }
         });

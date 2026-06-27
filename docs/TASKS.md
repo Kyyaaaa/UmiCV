@@ -990,3 +990,40 @@ Sửa lỗi logic gửi thư spam mỗi ngày và xử lý Bug không gửi đư
   - Sử dụng API Mock hoặc gọi thủ công hàm Cronjob thay vì chờ đến 8h sáng.
   - Setup 1 chiến dịch có deadline là 3 tuần sau -> Xác nhận Cronjob bỏ qua, không gửi email.
   - Setup 1 chiến dịch có deadline là ngày mai -> Xác nhận Cronjob bắt được và gửi 1 Email (tới đúng địa chỉ email, không phải username) + 1 In-app Notification bằng tiếng Việt.
+
+---
+
+## 🔐 Phase 31: Mở rộng Quyền HR cho Quản lý Dự án
+
+Cấp quyền cho bộ phận Nhân sự (HR) có thể xem danh sách Dự án và được phép phân bổ nhân sự (Thêm thành viên vào dự án), nhưng **KHÔNG ĐƯỢC PHÉP** tạo mới, sửa tên hay xóa dự án (Các quyền này vẫn giữ độc quyền cho Admin).
+
+### ⚙️ Backend Agent Tasks
+
+- [x] **TASK-31.1: Cập nhật quyền trong Project Routes**
+  - Mở file `src/modules/project/project.route.ts`.
+  - Thay đổi các middleware `authorize` của các endpoint liên quan đến thành viên từ `[UserRole.Admin, UserRole.TechLead]` thành `[UserRole.Admin, UserRole.TechLead, UserRole.HR]`:
+    - `POST /:id/members` (Thêm nhân sự vào dự án)
+  - Đảm bảo các route tạo/sửa/xóa (`POST /`, `PUT /:id`, `DELETE /:id`) VẪN CHỈ LÀ `[UserRole.Admin]`. Mở file `src/modules/project/project.service.ts` để rà soát đảm bảo logic không bị chặn cứng Admin khi thêm member.
+
+### 🎨 Frontend Agent Tasks
+
+- [x] **TASK-31.2: Cập nhật Cấu hình Định tuyến (React Router)**
+  - Mở file `src/App.tsx`.
+  - Di chuyển route `{ path: "projects", element: <ProjectListPage /> }` từ khối `<RoleRoute allowedRoles={['Admin']} />` sang khối `<RoleRoute allowedRoles={['HR', 'Admin']} />`.
+
+- [x] **TASK-31.3: Cập nhật Thanh điều hướng (Sidebar)**
+  - Mở file `src/layouts/PrivateLayout.tsx`.
+  - Ở mảng cấu hình `NAVIGATION`, cập nhật dòng chứa `/projects` thành `roles: ['Admin', 'HR']`.
+
+- [x] **TASK-31.4: Cập nhật UI Elements (Ẩn chức năng)**
+  - Rà soát trang `ProjectListPage` và chi tiết dự án.
+  - Bọc các nút "Tạo dự án mới", "Chỉnh sửa dự án", "Xóa dự án" bằng Component `<RequireRole roles={['Admin']}>` để ẩn chúng đi đối với người dùng đăng nhập bằng Role HR. HR chỉ được nhìn thấy nút "Thêm thành viên".
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-31.5: Kiểm thử luồng phân quyền HR**
+  - **Test Giao diện:** Đăng nhập bằng tài khoản HR.
+    - Đảm bảo Sidebar có menu "Dự án" và truy cập thành công.
+    - Đảm bảo KHÔNG CÓ nút Tạo mới, Xóa hay Sửa thông tin dự án.
+    - Thử thêm 1 nhân viên vào dự án và kiểm tra xem có thành công (HTTP 200) không.
+    - Cố tình gọi Postman POST `/projects` bằng Token của HR -> Phải bị từ chối (HTTP 403 Forbidden).

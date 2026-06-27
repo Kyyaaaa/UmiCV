@@ -57,6 +57,8 @@ export class BatchRequestService {
             userId: u.id,
             title: 'Yêu cầu cập nhật CV mới',
             message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${data.title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
+            type: 'warning',
+            link: '/cv',
             isGlobal: false,
           })),
         });
@@ -327,6 +329,8 @@ export class BatchRequestService {
               userId: u.id,
               title: 'Yêu cầu cập nhật CV mới',
               message: `Bạn đã được thêm vào chiến dịch cập nhật CV: "${title}". Vui lòng cập nhật CV và gửi đi trước hạn chót.`,
+              type: 'warning',
+              link: '/cv',
               isGlobal: false,
             })),
           });

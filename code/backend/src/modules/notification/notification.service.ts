@@ -30,6 +30,8 @@ export class NotificationService {
       data: {
         title: data.title,
         message: data.message,
+        type: data.type || 'info',
+        link: data.link,
         isGlobal: true,
       },
     });

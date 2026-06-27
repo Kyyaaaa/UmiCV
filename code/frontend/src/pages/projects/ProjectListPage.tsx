@@ -9,8 +9,11 @@ import { ProjectMembersModal } from './ProjectMembersModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { projectService } from '../../services/project.service';
 import { userService } from '../../services/user.service';
+import { useAuth } from '../../hooks/useAuth';
 
 export function ProjectListPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [projects, setProjects] = useState<Project[]>([]);
   const [techLeads, setTechLeads] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,22 +81,26 @@ export function ProjectListPage() {
           >
             <Users size={16} className="text-blue-600" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => { setSelectedProject(p); setIsFormOpen(true); }}
-            title="Chỉnh sửa"
-          >
-            <Edit2 size={16} className="text-slate-500" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => { setProjectToDelete(p); setDeleteError(''); setIsDeleteOpen(true); }}
-            title="Xóa"
-          >
-            <Trash2 size={16} className="text-red-500" />
-          </Button>
+          {isAdmin && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setSelectedProject(p); setIsFormOpen(true); }}
+                title="Chỉnh sửa"
+              >
+                <Edit2 size={16} className="text-slate-500" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setProjectToDelete(p); setDeleteError(''); setIsDeleteOpen(true); }}
+                title="Xóa"
+              >
+                <Trash2 size={16} className="text-red-500" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -124,10 +131,12 @@ export function ProjectListPage() {
         title="Quản lý Dự án" 
         description="Quản lý danh sách dự án và nhân sự tham gia" 
         actions={
-          <Button onClick={() => { setSelectedProject(null); setIsFormOpen(true); }}>
-            <Plus size={16} className="mr-2" />
-            Thêm dự án
-          </Button>
+          isAdmin && (
+            <Button onClick={() => { setSelectedProject(null); setIsFormOpen(true); }}>
+              <Plus size={16} className="mr-2" />
+              Thêm dự án
+            </Button>
+          )
         }
       />
 

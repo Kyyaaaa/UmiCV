@@ -168,6 +168,8 @@ export class WorkflowService {
           data: {
             title: 'CV Approved',
             message: `Your CV (version ${updatedVersion}) has been approved and published successfully.`,
+            type: 'success',
+            link: '/cv',
             userId: cv.userId,
             isGlobal: false,
           }
@@ -211,6 +213,8 @@ export class WorkflowService {
             data: {
               title: 'Batch Request Completed',
               message: `Chiến dịch "${updatedBatch.title}" đã hoàn tất 100%.`,
+              type: 'success',
+              link: `/hr/batch-requests/${batchId}`,
               userId: updatedBatch.createdBy,
               isGlobal: false,
             }
@@ -275,6 +279,8 @@ export class WorkflowService {
       data: {
         title: 'CV Rejected',
         message: `Your CV was rejected. Reason: ${data.reason}`,
+        type: 'error',
+        link: `/cv/${cvId}/workspace`,
         userId: cv.userId,
         isGlobal: false,
       }

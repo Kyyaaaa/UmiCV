@@ -22,7 +22,7 @@ router.delete('/:id', authorize([UserRole.Admin]), controller.deleteProject.bind
 
 // Phân bổ nhân sự: Admin có thể add, nhưng TechLead có thể tự add vào dự án của mình không?
 // Trong khuôn khổ hiện tại, allow Admin và TechLead chung (Service/Controller sẽ check riêng quyền TechLead sở hữu nếu cần, nhưng tạm thời chỉ dùng Role guard)
-router.post('/:id/members', authorize([UserRole.Admin, UserRole.TechLead]), controller.assignMembers.bind(controller));
-router.delete('/:id/members/:userId', authorize([UserRole.Admin, UserRole.TechLead]), controller.removeMember.bind(controller));
+router.post('/:id/members', authorize([UserRole.Admin, UserRole.TechLead, UserRole.HR]), controller.assignMembers.bind(controller));
+router.delete('/:id/members/:userId', authorize([UserRole.Admin, UserRole.TechLead, UserRole.HR]), controller.removeMember.bind(controller));
 
 export default router;

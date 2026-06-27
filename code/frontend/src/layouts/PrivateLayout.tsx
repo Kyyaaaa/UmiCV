@@ -24,7 +24,7 @@ const navItems = [
   { to: '/hr/batch-requests', icon: Users, label: 'Chiến dịch cập nhật', roles: ['Admin', 'HR'] },
   { to: '/users', icon: Users, label: 'Nhân sự', roles: ['Admin'] },
   { to: '/departments', icon: Building2, label: 'Phòng ban', roles: ['Admin'] },
-  { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin'] },
+  { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin', 'HR'] },
   { to: '/admin/approval-logs', icon: FileText, label: 'Lịch sử Phê duyệt', roles: ['Admin', 'HR'] },
   { to: '/admin/audit-logs', icon: LayoutDashboard, label: 'Nhật ký Hệ thống', roles: ['Admin'] },
 ];
