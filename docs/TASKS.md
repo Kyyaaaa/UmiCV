@@ -1027,3 +1027,38 @@ Cấp quyền cho bộ phận Nhân sự (HR) có thể xem danh sách Dự án 
     - Đảm bảo KHÔNG CÓ nút Tạo mới, Xóa hay Sửa thông tin dự án.
     - Thử thêm 1 nhân viên vào dự án và kiểm tra xem có thành công (HTTP 200) không.
     - Cố tình gọi Postman POST `/projects` bằng Token của HR -> Phải bị từ chối (HTTP 403 Forbidden).
+
+---
+
+## 🧪 Phase 32: Thực nghiệm và Đánh giá (QA & Báo cáo)
+
+Thực hiện viết script E2E Test tự động bằng Python Playwright, chạy toàn bộ bộ Test Suite (Backend Unit/Integration + Frontend E2E) và cập nhật số liệu thực tế vào báo cáo `report/main.typ`.
+
+### 🕵️ QA Agent Tasks
+
+- [x] **TASK-32.1: Viết Script Test tự động cho Frontend**
+  - Di chuyển vào thư mục `testing/`.
+  - Cài đặt thư viện: `pip install -r requirements.txt` và `playwright install`.
+  - Viết code Python hoàn chỉnh cho các thư mục test còn trống bằng `pytest` và `playwright`:
+    - `smoke_testing/`: Các luồng cơ bản (VD: Đăng nhập).
+    - `functional_testing/`: Các chức năng CRUD (Tạo, Sửa, Xóa CV/Dự án...).
+    - `business_flow_testing/`: Các luồng nghiệp vụ nối tiếp (Luồng phê duyệt CV qua TechLead, HR).
+    - `validation_testing/`: Test form input, dữ liệu không hợp lệ.
+    - `regression_testing/`: Test hồi quy cho các bug đã fix.
+  - *(Lưu ý: User sẽ tự bật Server Backend/Frontend ở terminal khác, QA Agent chỉ cần tập trung viết code test và giả định localhost:5173 đã sẵn sàng).*
+
+- [x] **TASK-32.2: Chạy toàn bộ Unit & Integration Test (Backend)**
+  - Di chuyển vào thư mục `code/backend`.
+  - Chạy lệnh test (`npm run test` hoặc `npx jest`).
+  - Ghi nhận số liệu: Tổng số test cases, tỷ lệ bao phủ (Coverage), số test pass/fail và thời gian thực thi.
+  - Ghi chú các kịch bản kiểm thử bảo mật (RBAC, Token, Zod Payload) để lấy số liệu thực tế.
+
+- [x] **TASK-32.3: Chạy Test Suite Python và Tổng hợp Báo cáo (`test_evaluation_report.md`)**
+  - Chạy toàn bộ bộ test Python bằng lệnh `pytest` ở thư mục `testing/`.
+  - Tạo một file `test_evaluation_report.md` (trong thư mục `report/` hoặc `docs/`) để phân tích và tổng kết lại tất cả số liệu từ Backend Test và Frontend E2E Test.
+  - Dữ liệu phải đủ để điền vào: Bảng 1 (Kết quả Regression Test) và Bảng 2 (Ngoại lệ và bảo mật).
+
+- [x] **TASK-32.4: Cập nhật file `report/main.typ`**
+  - Đọc file `report/main.typ`, tìm đến phần **Bảng 4.1: Tổng hợp kết quả Regression Test toàn hệ thống** và **Bảng 4.2: Tóm tắt kết quả xử lý ngoại lệ và bảo mật**.
+  - Thay thế các con số giả định bằng số liệu thực tế đã tổng hợp được từ báo cáo.
+  - Đảm bảo cú pháp Typst không bị vỡ. Mở sẵn file để User có thể biên dịch ra PDF.

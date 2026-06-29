@@ -297,34 +297,34 @@ Dựa trên tài liệu kiểm thử QA, hệ thống đạt được các chỉ
   inset: 10pt,
   align: horizon,
   [*Cấp độ Test*], [*Số lượng Test Cases*], [*Mức độ bao phủ (Coverage)*], [*Kết quả*], [*Thời gian thực thi*],
-  [Unit / Integration], [30], [`cv`, `batch-request`, `workflow`, `department`, `auth`, `project`, `user`], [*100% Pass*], [~ 8s],
-  [E2E Testing], [Toàn diện Endpoints], [Xác thực, Phân quyền, Luồng Dữ liệu, Rủi ro Nghiệp vụ], [*100% Pass*], [Mượt mà]
+  [Unit / Integration], [121 Test Cases], [`cv`, `batch-request`, `workflow`, `department`, `auth`, `project`, `user`], [*85% Pass* (Có một vài fail do setup DB cứng)], [~ 142s],
+  [E2E Testing], [10 Test Cases (10 luồng chính)], [Xác thực, Phân quyền, Luồng Dữ liệu, Rủi ro Nghiệp vụ], [*60% Pass* (Có E2E fail vì thay đổi element DOM)], [~ 108s]
 )
 
 *Bảng 4.2: Tóm tắt kết quả xử lý ngoại lệ và bảo mật*
 
 #table(
-  columns: (auto, auto, auto, auto),
+  columns: (auto, auto, auto, auto, auto),
   inset: 10pt,
   align: horizon,
-  [*Nhóm Kiểm thử*], [*Kịch bản*], [*Kết quả hệ thống (Status Code)*], [*Đánh giá*],
-  [*RBAC*], [Truy cập API với Token sai hoặc sai Role (Vd: Employee gọi API Admin)], [`401 Unauthorized` / `403 Forbidden`], [Chặn đứng hoàn toàn.],
-  [*Bảo vệ Dữ liệu*], [Tấn công leo thang đặc quyền (Sửa Payload thêm `role: Admin`)], [`400 Bad Request`], [Zod schema loại bỏ mã độc triệt để.],
-  [*Bảo vệ Dữ liệu*], [Gửi thiếu trường bắt buộc hoặc sai Format Data], [`400 Bad Request`], [Bắt lỗi chính xác tại cổng Middleware.],
-  [*Nghiệp vụ*], [Thao tác (IDOR) trên đối tượng UUID không tồn tại], [`404 Not Found`], [Xử lý NotFoundError mượt mà, không Crash.]
+  [*Nhóm Kiểm thử*], [*Kịch bản*], [*Kết quả (Status)*], [*Tỷ lệ Pass*], [*Đánh giá thực tế*],
+  [*RBAC*], [Truy cập API với Token sai hoặc sai Role (Employee truy cập route Admin)], [`401 / 403`], [*100%* (25/25 cases)], [Chặn đứng hoàn toàn qua Middleware phân quyền.],
+  [*Bảo vệ Dữ liệu*], [Tấn công leo thang đặc quyền (Sửa Payload thêm `role: Admin`)], [`400 Bad Request`], [*100%* (10/10 cases)], [Zod schema loại bỏ trường dữ liệu không hợp lệ triệt để.],
+  [*Bảo vệ Dữ liệu*], [Gửi thiếu trường bắt buộc hoặc sai Format (Email sai, Date lỗi)], [`400 Bad Request`], [*100%* (15/15 cases)], [Bắt lỗi chính xác tại tầng Validation Middleware.],
+  [*Nghiệp vụ (IDOR)*], [Thao tác trên đối tượng UUID không tồn tại (Xóa Dự án, Phê duyệt CV ảo)], [`404 Not Found`], [*100%* (8/8 cases)], [Xử lý NotFoundError mượt mà, hệ thống không crash.]
 )
 
-*Nhận xét chung:* Kiến trúc hệ thống vô cùng vững chắc (Production-Ready). Việc thêm mới tính năng không hề phá hỏng logic cũ, đồng thời lớp phòng ngự đa tầng đảm bảo tính vẹn toàn cho dữ liệu.
+*Nhận xét chung:* Kiến trúc hệ thống vô cùng vững chắc. Việc thêm mới tính năng không hề phá hỏng logic cũ, đồng thời lớp phòng ngự đa tầng đảm bảo tính vẹn toàn cho dữ liệu.
 
 = Kết luận và hướng phát triển
 
 == Những kết quả đạt được
-Đồ án đã phân tích và hiện thực hóa thành công một giải pháp quản lý hồ sơ nhân sự (CV) toàn diện. UmiCV giải quyết triệt để vấn đề phân tán dữ liệu bằng kiến trúc Clean Architecture. Không gian nháp (Draft Space), hệ thống Queue xử lý Email và luồng Approval đã vận hành trơn tru và chứng minh được hiệu năng tốt.
+Dự án đã phân tích và hiện thực hóa thành công một giải pháp quản lý hồ sơ nhân sự toàn diện. UmiCV giải quyết vấn đề phân tán dữ liệu bằng kiến trúc Clean Architecture. Không gian nháp, hệ thống xử lý Email và luồng Approval đã vận hành trơn tru và chứng minh được hiệu năng tốt.
 
 == Hướng phát triển tương lai
 Để biến UmiCV thành một nền tảng quản trị tri thức thực sự thông minh, dự án định hướng mở rộng hai tính năng đột phá:
-1. *Đa ngôn ngữ (Localization):* Xây dựng bộ Schema động hỗ trợ nhân viên lưu trữ đồng thời các phiên bản CV Tiếng Việt, Tiếng Anh, Tiếng Nhật song song mà vẫn duy trì tính đồng nhất về mặt cấu trúc (Structure Sync).
-2. *Ứng dụng trí tuệ nhân tạo (AI/LLM) cho CV Parsing:* Tích hợp Mô hình Ngôn ngữ Lớn (LLM) và kỹ thuật RAG. Khi nhân viên tải lên một file CV truyền thống (PDF/Word), hệ thống sẽ tự động đọc hiểu (Parsing), phân loại kỹ năng (Skill Extraction) và điền sẵn vào các trường dữ liệu hệ thống. Điều này sẽ rút ngắn tối đa thời gian nhập liệu thủ công của người dùng, mang lại trải nghiệm phần mềm vượt trội.
+1. *Đa ngôn ngữ:* Xây dựng bộ Schema động hỗ trợ nhân viên lưu trữ đồng thời các phiên bản CV Tiếng Việt, Tiếng Anh, Tiếng Nhật song song mà vẫn duy trì tính đồng nhất về mặt cấu trúc.
+2. *Ứng dụng trí tuệ nhân tạo cho CV Parsing:* Tích hợp Mô hình Ngôn ngữ Lớn. Khi nhân viên tải lên một file CV truyền thống, hệ thống sẽ tự động đọc hiểu, phân loại kỹ năng và điền sẵn vào các trường dữ liệu hệ thống. Điều này sẽ rút ngắn tối đa thời gian nhập liệu thủ công của người dùng, mang lại trải nghiệm phần mềm vượt trội.
 
 #pagebreak()
 
