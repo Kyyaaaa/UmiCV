@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Reference projects
 reference/
+
+# Docker
+docker-compose.yml
