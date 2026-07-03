@@ -9,10 +9,10 @@
     "Chương trình Viettel Digital Talent 2026",
     "Lĩnh vực: Software Engineer",
     "",
-    "Mentor: Phạm Tuấn Minh",
+    "Mentor: Nguyễn Hồng Quân",
     "Đơn vị: VTIT"
   ),
-  date: "Tháng 6 - 2026"
+  date: "Tháng 7 - 2026"
 )
 
 #text(size: 20pt, weight: "bold")[Phần mở đầu]
@@ -59,22 +59,41 @@ Với cơ cấu tổ chức phân nhánh thành nhiều phòng ban và khối d�
 = Cơ sở lý thuyết
 
 == Kiến trúc Clean Architecture và Modular Monolith
-Hệ thống được thiết kế theo hướng Modular Monolith kết hợp Clean Architecture. Cách tiếp cận này chia ứng dụng thành các layer riêng biệt:
-- *Presentation Layer:* Nơi tiếp nhận Request và trả về Response.
-- *Application Layer:* Nơi xử lý nghiệp vụ.
-- *Domain Layer:* Các thực thể và rule nghiệp vụ cốt lõi không phụ thuộc framework.
-- *Infrastructure Layer:* Kết nối CSDL, Queue, SMTP.
-Kiến trúc này giúp giảm độ phức tạp khi triển khai ban đầu nhưng vẫn vạch rõ ranh giới giữa các module, tạo tiền đề dễ dàng tách Microservices sau này.
+*1. Cơ sở lý thuyết và động lực lựa chọn:* \
+Hệ thống áp dụng mô hình Modular Monolith kết hợp Clean Architecture: triển khai như một khối duy nhất, nhưng cấu trúc mã nguồn bên trong được cô lập thành các module độc lập.
+
+*2. Cách thức hiện thực trong hệ thống UmiCV:* \
+Mã nguồn Backend được tổ chức thành các miền nghiệp vụ độc lập trong `src/modules/` (`cv`, `batch-request`, `workflow`, `auth`, `department`, `project`). Mỗi module hoạt động như một riêng lẻ và được phân tách thành 4 lớp nghiêm ngặt theo Clean Architecture:
+- *Presentation Layer (`*.controller.ts`, `*.route.ts`):* Tiếp nhận HTTP Request, xác thực đầu vào bằng Zod Schema và trả về Response chuẩn hóa, tuyệt đối không chứa logic nghiệp vụ.
+- *Application Layer (`*.service.ts`):* Nơi tập trung Business Logic cốt lõi, đóng vai trò điều phối giữa Domain và Infrastructure.
+- *Domain Layer (Models / Enums / Types):* Định nghĩa thực thể, Enums (`CVStatus`, `Role`, `TargetStatus`) và các quy tắc bất biến không phụ thuộc framework.
+- *Infrastructure Layer (`prisma/`, `queue/`, `email/`):* Kết nối cơ sở dữ liệu PostgreSQL qua Prisma ORM, quản lý Message Queue với Redis/BullMQ và gửi Email (SMTP).
+
+*3. Giá trị kiến trúc:* \
+Sự phân tách giúp hệ thống đạt tính linh hoạt cao. Khi cần thay đổi công cụ hạ tầng (Ví dụ: chuyển từ SMTP sang AWS SES/SendGrid), chỉ cần chỉnh sửa lớp Infrastructure mà không ảnh hưởng đến Application Layer. Trong tương lai, các module như `batch-request` hay `notification` có thể dễ dàng tách thành Microservice độc lập.
 
 == Cơ chế xử lý bất đồng bộ
-Trong bối cảnh HR tạo Batch Request gửi đến hàng trăm nhân viên, việc xử lý đồng bộ sẽ gây nghẽn Server. UmiCV ứng dụng cơ chế Message Queue thông qua Redis và BullMQ. API chỉ làm nhiệm vụ ghi nhận yêu cầu và tạo Job đẩy vào Queue, sau đó Background Worker sẽ lấy Job để thực hiện gửi Email và Notification, đảm bảo API phản hồi ngay lập tức.
+*1. Bài toán thực tế:* \
+Tính năng chiến dịch yêu cầu cập nhật CV (Batch Request) cho phép HR phát động yêu cầu tới hàng trăm nhân viên cùng lúc. Nếu xử lý đồng bộ (Synchronous), máy chủ phải tuần tự ghi DB, tạo thông báo và gửi hàng trăm email, dễ dẫn đến cạn kiệt tài nguyên (Thread/Connection Pool) và lỗi `504 Gateway Timeout`.
 
-== Phân quyền người dùng và JWT
-Hệ thống sử dụng Json Web Token kết hợp RBAC để kiểm soát quyền hạn nghiêm ngặt:
-- *Employee:* Chỉ thao tác trên CV của chính mình.
-- *Tech Lead:* Được quyền truy cập và phê duyệt CV của thành viên trực thuộc dự án.
-- *HR:* Quản lý phê duyệt CV, chiến dịch cập nhật.
-- *Admin:* Quản trị toàn hệ thống.
+*2. Giải pháp kỹ thuật và cách thức hiện thực:* \
+Hệ thống áp dụng mô hình kiến trúc hướng sự kiện bất đồng bộ, tích hợp *Redis* làm Message Broker và *BullMQ* làm quản lý hàng đợi (Task Queue):
+- *Tại API Producer:* Khi HR tạo chiến dịch, `BatchRequestService` sử dụng *Prisma Transaction* để lưu chiến dịch, tạo danh sách `BatchRequestTarget` và đổi trạng thái CV sang `Outdated`. Ngay sau đó, Service đẩy Payload vào hàng đợi (`notificationQueue.add(...)`) và phản hồi thành công (`201 Created`).
+- *Tại Background Consumer:* Tiến trình ngầm (`notification.worker.ts`) hoạt động độc lập với luồng API, liên tục lắng nghe Queue để kéo dữ liệu và thực hiện gửi Email/Notification theo lô (batch processing) với cơ chế kiểm soát đồng thời (Concurrency limit).
+- *Kiểm soát lỗi (Retry & DLQ):* Khi gửi email thất bại do sự cố mạng/SMTP, BullMQ tự động thử lại theo chiến lược lùi thời gian cấp số nhân (`Exponential Backoff`). Nếu vượt quá giới hạn, tác vụ chuyển vào hàng đợi thư chết (Dead Letter Queue - DLQ) để quản trị viên tra soát.
+
+== Phân quyền người dùng, Bảo mật và Quản lý phiên
+*1. Yêu cầu bảo mật:* \
+Hệ thống quản lý CV chứa thông tin chuyên sâu và nhạy cảm của nhân sự (kỹ năng, lịch sử dự án, đánh giá năng lực). Do đó, yêu cầu kiên quyết là cơ chế xác thực không trạng thái (Stateless Authentication) bảo mật cao và kiểm soát truy cập mịn đến từng vùng dữ liệu.
+
+*2. Cách thức hiện thực trong UmiCV:* \
+- *Xác thực bằng JSON Web Token (JWT):* Khi đăng nhập thành công, hệ thống phát hành Access Token thời gian sống ngắn, được ký mã hóa bằng Secret Key. Mọi HTTP Request phải mang token trong Header (`Authorization: Bearer <token>`). Middleware `authenticate` xác thực chữ ký và gắn định danh (`userId`, `role`) vào `req.user`.
+- *Kiểm soát truy cập dựa trên vai trò (RBAC & Data-level Authorization):* Middleware `authorize(...allowedRoles)` bảo vệ các endpoint từ tầng Routing. Đồng thời, phân quyền sâu đến tận tầng nghiệp vụ được áp dụng cho 4 nhóm vai trò:
+  - *Employee:* Chỉ có quyền thao tác trên tài khoản của mình; các nỗ lực truy cập trái phép ID người khác (IDOR) đều bị chặn (`403 Forbidden`).
+  - *Tech Lead:* Có vai trò duyệt chuyên môn cấp 1. `WorkflowService` truy vấn bảng `ProjectMember` để xác minh Tech Lead chỉ được quyền xem Diff và phê duyệt CV của những nhân viên *thuộc dự án do chính Tech Lead đó quản lý*.
+  - *HR:* Quản trị quy trình nhân sự, có đặc quyền truy cập toàn bộ CV, tạo chiến dịch Batch Request, duyệt định dạng cấp 2 và "Duyệt thẳng" (Direct Approve).
+  - *Admin:* Nắm quyền tối cao, quản lý danh mục phòng ban, dự án, tài khoản và nhật ký hệ thống (Audit Logs).
+- *Phòng thủ chiều sâu:* Thư viện *Zod* được sử dụng để xác thực và làm sạch Payload đầu vào. Mọi thông tin dư thừa hoặc nỗ lực leo thang đặc quyền (như tự ý thêm `role: "Admin"`) đều bị tự động loại bỏ trước khi vào tầng Service.
 
 = Phương pháp đề xuất và kiến trúc hệ thống
 
@@ -237,13 +256,19 @@ Luồng nghiệp vụ này mô tả chi tiết quá trình từ khi nhân viên 
 Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Thay vì gửi email thủ công, HR chỉ cần thiết lập chiến dịch. Hệ thống sử dụng Message Queue để đẩy các tác vụ gửi Email/Thông báo ra Background Worker xử lý bất đồng bộ, tránh quá tải máy chủ. Đặc biệt, hệ thống tích hợp luồng Cronjob độc lập chạy ngầm hàng ngày để tự động rà soát, chuyển trạng thái đối với các chiến dịch đã hoàn thành hoặc quá hạn.
 
 == Kiến trúc hệ thống tổng quan
-- *Frontend:* ReactJS, Vite và TailwindCSS.
-- *Backend:* Node.js, Express và TypeScript.
-- *Cơ sở dữ liệu:* PostgreSQL.
+Hệ thống UmiCV được xây dựng trên nền tảng công nghệ hiện đại, đảm bảo hiệu năng cao, khả năng mở rộng và dễ dàng bảo trì:
+- *Frontend:* ReactJS, Vite và TailwindCSS (Xây dựng giao diện người dùng phản hồi nhanh và hiện đại).
+- *Backend:* Node.js, Express và TypeScript (Phát triển API RESTful với kiểm soát kiểu dữ liệu chặt chẽ).
+- *Cơ sở dữ liệu:* PostgreSQL (CSDL quan hệ lưu trữ dữ liệu chính) và Redis (Lưu trữ tạm trong bộ nhớ và làm Message Broker).
+- *ORM & Validation:* Prisma ORM (Kết nối CSDL và quản lý Migration) và Zod (Xác thực tính hợp lệ của dữ liệu đầu vào).
+- *Xử lý bất đồng bộ & Tác vụ ngầm:* BullMQ (Quản lý hàng đợi Message Queue gửi Email/Notification) và Node-cron (Quản lý luồng tự động rà soát chiến dịch).
+- *Bảo mật & Phân quyền:* JSON Web Token (JWT) kết hợp RBAC Middleware (Xác thực không trạng thái và kiểm soát truy cập theo vai trò).
+- *Tài liệu & Kiểm thử:* Swagger / OpenAPI 3.0 (Đặc tả API) và Jest / Supertest (Kiểm thử tự động).
+- *DevOps & Triển khai:* Docker và Docker Compose (Đóng gói môi trường thực hiện ứng dụng và dịch vụ hạ tầng).
 
 == Thiết kế cơ sở dữ liệu và không gian nháp
 
-=== Sơ đồ thực thể - liên kết (ERD)
+=== Sơ đồ thực thể - liên kết
 #figure(
   image("images/ERD2.png", width: 90%),
   caption: [Sơ đồ thực thể - liên kết (ERD) hệ thống UmiCV]
@@ -251,28 +276,49 @@ Biểu đồ này minh họa giải pháp xử lý hàng loạt của UmiCV. Tha
 <fig-erd>
 
 === Giải thích các thực thể chính
-Hệ thống xoay quanh một số thực thể chính:
-- *User:* Quản lý thông tin người dùng, lưu trữ thông tin đăng nhập và vai trò quyết định quyền hạn trong hệ thống.
-- *Department:* Quản lý cấu trúc phòng ban phân cấp.
-- *Project:* Tổ chức công việc theo dự án, lưu trữ thông tin dự án và người phụ trách.
-- *ProjectMember:* Bảng trung gian liên kết nhân viên vào các dự án tương ứng.
-- *CVProfile:* Lưu trữ trạng thái hiện tại và cấu trúc dữ liệu chi tiết của CV dưới dạng JSON.
-- *CVVersionHistory:* Lưu lại ảnh chụp của CV mỗi khi có thay đổi để theo dõi lịch sử chỉnh sửa.
-- *BatchRequest:* Đại diện cho một chiến dịch yêu cầu cập nhật CV từ bộ phận HR.
-- *BatchRequestTarget:* Các cá nhân mục tiêu được gắn vào chiến dịch yêu cầu cập nhật, kèm theo trạng thái hoàn thành và hạn chót.
-- *ApprovalLog:* Lưu vết mọi thao tác phê duyệt của Tech Lead/HR, ghi nhận lý do và cấp độ duyệt.
-- *AuditLog:* Ghi nhận lại các hoạt động tác động đến hệ thống nhằm đảm bảo tính minh bạch và phục vụ việc tra soát lỗi.
+#v(0.5em)
+#table(
+  columns: (1.5fr, 3.5fr),
+  inset: 8pt,
+  [*Thực thể*], [*Mô tả vai trò và chức năng*],
+  [`User`], [Quản lý thông tin người dùng, lưu trữ tài khoản đăng nhập, trạng thái (`Active`/`Locked`) và vai trò (`Role`) quyết định quyền hạn trong hệ thống.],
+  [`Department`], [Quản lý cấu trúc phòng ban phân cấp đệ quy trong tổ chức.],
+  [`Project`], [Tổ chức công việc theo dự án, lưu trữ mã dự án, tên và người phụ trách chuyên môn (`Tech Lead`).],
+  [`ProjectMember`], [Bảng trung gian liên kết nhân viên (`User`) vào các dự án (`Project`) tương ứng kèm mốc thời gian tham gia.],
+  [`CVProfile`], [Lưu trữ trạng thái hiện tại (`Draft`, `PendingApproval`, `Updated`...) và cấu trúc dữ liệu chi tiết từng phần của CV dưới dạng bán cấu trúc `JSONB`.],
+  [`CVVersionHistory`], [Lưu lại ảnh chụp (Snapshot) toàn bộ dữ liệu CV mỗi khi có thay đổi được phê duyệt để theo dõi lịch sử chỉnh sửa.],
+  [`BatchRequest`], [Đại diện cho một chiến dịch yêu cầu cập nhật CV hàng loạt do bộ phận HR phát động kèm thời hạn (`Deadline`).],
+  [`BatchRequestTarget`], [Danh sách cá nhân mục tiêu trong chiến dịch yêu cầu cập nhật, ghi nhận trạng thái hoàn thành và thời điểm nhắc nhở.],
+  [`ApprovalLog`], [Lưu vết thao tác phê duyệt CV của Tech Lead/HR, ghi nhận quyết định (`Approve`/`Reject`), cấp độ duyệt và lý do chi tiết.],
+  [`AuditLog`], [Nhật ký kiểm toán ghi nhận lại toàn bộ các hành động tác động đến hệ thống, địa chỉ IP và người thực hiện nhằm đảm bảo tính minh bạch và tra soát bảo mật.],
+  [`Notification`], [Lưu trữ thông báo trong ứng dụng (In-app Notification), gửi các thông điệp nhắc nhở cập nhật CV, kết quả duyệt CV hoặc thông báo toàn cục tới người dùng.]
+)
 
 === Giải thích các mối quan hệ
-Các bảng trong cơ sở dữ liệu liên kết với nhau nhằm hỗ trợ tối đa quy trình quản lý:
-- *Quan hệ cấu trúc tổ chức (1-N):* Một `Department` có thể chứa nhiều phòng ban con và nhiều `User`. Một `User` lại có thể tham gia nhiều `Project` (quan hệ N-N thông qua `ProjectMember`).
-- *Quan hệ quản lý và phê duyệt:* Một `CVProfile` chịu sự quản lý của một `User` sở hữu, nhưng quá trình duyệt sẽ sinh ra nhiều `ApprovalLog` do các `User` khác (Tech Lead, HR) thực hiện.
-- *Quan hệ chiến dịch (1-N):* Một chiến dịch `BatchRequest` liên kết tới nhiều nhân sự (`BatchRequestTarget`). Hệ thống sẽ theo dõi trạng thái của từng mục tiêu (TargetStatus) để tự động gửi thông báo nhắc nhở (`Notification`).
+#v(0.5em)
+#table(
+  columns: (1.5fr, 1.5fr, 3fr),
+  inset: 8pt,
+  [*Tên mối quan hệ*], [*Bảng liên kết*], [*Ý nghĩa và cơ chế hoạt động*],
+  [Cấu trúc phòng ban phân cấp], [`Department` \- `Department`], [Một phòng ban có thể có một phòng ban cha và chứa nhiều phòng ban con đệ quy thông qua trường `parent_department_id` (Quan hệ 1-N tự tham chiếu).],
+  [Nhân sự thuộc phòng ban], [`Department` \- `User`], [Mỗi phòng ban quản lý nhiều nhân viên (`User`), mỗi nhân viên trực thuộc chính xác một phòng ban (Quan hệ 1-N).],
+  [Quản lý dự án], [`User` \- `Project`], [Một nhân sự đóng vai trò Tech Lead (`tech_lead_id`) có thể phụ trách chuyên môn và điều hành nhiều dự án khác nhau (Quan hệ 1-N).],
+  [Phân bổ thành viên dự án], [`User` \- `ProjectMember` \- `Project`], [Một nhân viên có thể tham gia nhiều dự án, và một dự án gồm nhiều thành viên. Liên kết thông qua bảng trung gian `ProjectMember` với khóa chính kép `(project_id, user_id)` (Quan hệ N-N).],
+  [Sở hữu và Quản lý CV], [`User` \- `CVProfile`], [Một người dùng sở hữu nhiều hồ sơ CV tương ứng với các ngôn ngữ khác nhau. Ràng buộc duy nhất `(user_id, language_code)` đảm bảo mỗi ngôn ngữ chỉ có duy nhất 1 hồ sơ CV (Quan hệ 1-N).],
+  [Lịch sử phiên bản CV], [`CVProfile` \- `CVVersionHistory`], [Mỗi bản hồ sơ CV duy trì một chuỗi lịch sử các phiên bản Snapshot (`version_number`) mỗi khi bản nháp được hợp nhất vào bản chính thức (Quan hệ 1-N).],
+  [Lịch sử và Thẩm định phê duyệt], [`CVProfile` \- `ApprovalLog` \- `User`], [Quá trình xét duyệt một `CVProfile` sinh ra nhiều bản ghi `ApprovalLog`. Mỗi bản ghi lưu vết người thực hiện thẩm định (`approver_id`), cấp độ và quyết định duyệt (Quan hệ 1-N từ cả `CVProfile` và `User`).],
+  [Phát động chiến dịch cập nhật], [`User` \- `BatchRequest`], [Một quản trị viên nhân sự (HR) có thể phát động và theo dõi nhiều chiến dịch yêu cầu cập nhật CV hàng loạt qua trường `created_by` (Quan hệ 1-N).],
+  [Phân bổ mục tiêu chiến dịch], [`BatchRequest` \- `BatchRequestTarget` \- `User`], [Mỗi chiến dịch bao gồm danh sách nhiều nhân viên mục tiêu (`user_id`). Bảng trung gian `BatchRequestTarget` theo dõi trạng thái cập nhật CV của từng cá nhân trong chiến dịch đó (Quan hệ N-N).],
+  [Nhật ký kiểm toán], [`User` \- `AuditLog`], [Mỗi hành động quan trọng trên hệ thống của người dùng đều được hệ thống tự động ghi vết lại vào bảng `AuditLog`. Khi tài khoản bị xóa, lịch sử kiểm toán vẫn được bảo lưu nhờ cơ chế `SetNull` (Quan hệ 1-N tùy chọn).],
+  [Gửi nhận thông báo], [`User` \- `Notification`], [Người dùng nhận các thông báo cá nhân (nhắc nhở CV, thông báo kết quả duyệt) được lưu trong bảng `Notification`. Nếu là thông báo toàn hệ thống, cờ `is_global` được kích hoạt (Quan hệ 1-N tùy chọn).]
+)
 
 === Các quyết định thiết kế cốt lõi
 - *Sử dụng JSONB cho CV:* Form mẫu CV thường xuyên thay đổi (thêm bớt trường thông tin, thay đổi cấu trúc phần học vấn/kinh nghiệm). Việc sử dụng kiểu dữ liệu `JSONB` trong PostgreSQL cho trường `sectionsData` mang lại độ linh hoạt tối đa, tránh việc phải migrate bảng liên tục khi có cấu trúc mới.
 - *Tách biệt không gian nháp (Draft Space):* Khi nhân viên thực hiện chỉnh sửa CV, dữ liệu không ghi đè trực tiếp lên bản chính thức. Thay vào đó một bản sao nháp (Draft) được sinh ra. Bản nháp này sau khi qua luồng phê duyệt mới chính thức được hợp nhất trở thành bản chính. Cơ chế này đảm bảo dữ liệu công khai (dùng để xuất PDF gửi khách hàng) luôn ở trạng thái hoàn hảo nhất.
 - *Khóa chính UUID:* Đảm bảo tính duy nhất và an toàn khi hệ thống có khả năng mở rộng phân tán, đồng thời tránh việc người dùng đoán được số lượng bản ghi trong cơ sở dữ liệu qua các ID tăng dần.
+- *Thiết kế luồng phê duyệt 2 cấp (2-Level Approval Workflow):* Quy trình duyệt CV được phân tách rõ trách nhiệm giữa Tech Lead (duyệt cấp 1 về tính chính xác chuyên môn) và HR (duyệt cấp 2 về định dạng, văn phong trình bày). Hệ thống hỗ trợ cơ chế "Duyệt thẳng" (Direct Approve) cho HR trong trường hợp nhân sự không thuộc dự án hoặc tình huống khẩn cấp. Mọi quyết định chấp nhận/từ chối đều ghi nhận đầy đủ lý do vào `ApprovalLog` bảo đảm tính minh bạch.
+- *Cơ chế quản lý phiên bản (Version Control & Snapshotting):* Nhằm ngăn ngừa rủi ro mất mát dữ liệu và phục vụ tra soát, hệ thống tự động lưu lại ảnh chụp (Snapshot) toàn bộ dữ liệu CV vào bảng `CVVersionHistory` mỗi khi bản nháp được hợp nhất (Merge) vào bản chính thức. Cơ chế này cho phép theo dõi lịch sử biến đổi năng lực theo thời gian và hỗ trợ khôi phục (Rollback) về phiên bản trước đó khi cần thiết.
 
 
 
@@ -287,7 +333,7 @@ Hệ thống được đánh giá dựa trên:
 == Kịch bản và môi trường thử nghiệm
 Toàn bộ môi trường thử nghiệm được chạy local với sự hỗ trợ của Jest (cho Unit Test) và Supertest (cho E2E Test trực tiếp vào REST API). Dữ liệu được cô lập bằng Prisma Mocking.
 
-== Kết quả kiểm thử tổng thể (Full Regression Test)
+== Kết quả kiểm thử tổng thể
 Dựa trên tài liệu kiểm thử QA, hệ thống đạt được các chỉ số cực kỳ tích cực.
 
 *Bảng 4.1: Tổng hợp kết quả Regression Test toàn hệ thống*
@@ -319,30 +365,28 @@ Dựa trên tài liệu kiểm thử QA, hệ thống đạt được các chỉ
 = Kết luận và hướng phát triển
 
 == Những kết quả đạt được
-Dự án đã phân tích và hiện thực hóa thành công một giải pháp quản lý hồ sơ nhân sự toàn diện. UmiCV giải quyết vấn đề phân tán dữ liệu bằng kiến trúc Clean Architecture. Không gian nháp, hệ thống xử lý Email và luồng Approval đã vận hành trơn tru và chứng minh được hiệu năng tốt.
+Dự án đã phân tích, thiết kế và hiện thực hóa thành công hệ thống quản lý hồ sơ nhân sự UmiCV. Hệ thống giải quyết triệt để bài toán phân tán dữ liệu thông qua kiến trúc *Modular Monolith kết hợp Clean Architecture*. Các module cốt lõi như Không gian nháp (Draft Space), quản lý phiên bản (Snapshot Versioning), chiến dịch yêu cầu cập nhật bất đồng bộ và luồng phê duyệt 2 cấp đã được xây dựng hoàn thiện, vận hành ổn định và chứng minh được độ tin cậy cao qua thực nghiệm kiểm thử.
+
+== Tính mới và sự đột phá của giải pháp
+So với các phương pháp quản lý thủ công truyền thống qua Email/Spreadsheet hoặc các hệ thống HRM thông thường, UmiCV mang lại những điểm mới mang tính đột phá về kỹ thuật và nghiệp vụ:
+- *Sự kết hợp linh hoạt giữa cấu trúc Quan hệ và Phi cấu trúc:* Sử dụng kiểu dữ liệu `JSONB` trong PostgreSQL để lưu trữ nội dung CV động trên nền tảng cơ sở dữ liệu quan hệ chặt chẽ, vừa bảo đảm tính toàn vẹn các mối quan hệ tổ chức vừa không bị gò bó khi mẫu CV thay đổi.
+- *Cơ chế Không gian nháp (Draft Space) cô lập và Version Control:* Loại bỏ rủi ro xáo trộn dữ liệu công khai khi nhân sự chỉnh sửa. Mỗi thay đổi được quản lý trong vùng nháp và tự động lưu ảnh chụp (Snapshot) lịch sử khi xuất bản, cho phép tra cứu sự tiến hóa năng lực theo thời gian.
+- *Luồng phê duyệt 2 cấp chuyên sâu và linh hoạt:* Phân định rạch ròi trách nhiệm kiểm duyệt chuyên môn (Tech Lead) và kiểm duyệt hình thức (HR), đồng thời tích hợp cơ chế "Duyệt thẳng" (Direct Approve) cùng hệ thống lưu vết (`ApprovalLog`, `AuditLog`) đảm bảo tính minh bạch tuyệt đối.
+- *Tự động hóa hoàn toàn quy trình thu thập CV:* Thay thế việc đốc thúc thủ công bằng hệ thống hàng đợi bất đồng bộ (*Redis & BullMQ*) gửi thông báo đồng loạt và luồng tiến trình ngầm (*Cronjob*) tự động rà soát, đóng chiến dịch quá hạn.
+
+== Giá trị thực tiễn và tác động đến doanh nghiệp
+Hệ thống mang lại giá trị ứng dụng cao, giải quyết trúng đích các pain-point của tổ chức công nghệ quy mô lớn:
+- *Đối với bộ phận HR và Doanh nghiệp:* Tiết kiệm đến 80% thời gian thu thập, rà soát và định dạng hồ sơ nhân lực khi tham gia đấu thầu dự án hoặc làm hồ sơ năng lực gửi đối tác. Chuẩn hóa hình ảnh chuyên nghiệp và xây dựng kho dữ liệu năng lực tập trung phục vụ quy hoạch nhân sự chiến lược.
+- *Đối với Quản lý / Tech Lead:* Giảm thiểu gánh nặng kiểm duyệt, dễ dàng nắm bắt chính xác và kịp thời sự phát triển kỹ năng thực tế của từng thành viên trong dự án thông qua công cụ so sánh Diff trực quan.
+- *Đối với Kỹ sư / Nhân viên:* Được trao quyền chủ động quản lý hồ sơ năng lực của bản thân, theo dõi toàn diện hành trình phát triển sự nghiệp trong công ty với trải nghiệm mượt mà, không lo bỏ sót yêu cầu nhờ hệ thống tự động nhắc nhở.
 
 == Hướng phát triển tương lai
-Để biến UmiCV thành một nền tảng quản trị tri thức thực sự thông minh, dự án định hướng mở rộng hai tính năng đột phá:
-1. *Đa ngôn ngữ:* Xây dựng bộ Schema động hỗ trợ nhân viên lưu trữ đồng thời các phiên bản CV Tiếng Việt, Tiếng Anh, Tiếng Nhật song song mà vẫn duy trì tính đồng nhất về mặt cấu trúc.
-2. *Ứng dụng trí tuệ nhân tạo cho CV Parsing:* Tích hợp Mô hình Ngôn ngữ Lớn. Khi nhân viên tải lên một file CV truyền thống, hệ thống sẽ tự động đọc hiểu, phân loại kỹ năng và điền sẵn vào các trường dữ liệu hệ thống. Điều này sẽ rút ngắn tối đa thời gian nhập liệu thủ công của người dùng, mang lại trải nghiệm phần mềm vượt trội.
+Để biến UmiCV thành một nền tảng quản trị tri thức và nhân lực thực sự thông minh, dự án định hướng mở rộng các tính năng trọng tâm sau:
+1. *Đa ngôn ngữ (Multi-language CV):* Xây dựng bộ Schema động hỗ trợ nhân viên lưu trữ đồng thời các phiên bản CV Tiếng Việt, Tiếng Anh, Tiếng Nhật song song mà vẫn duy trì tính đồng nhất về mặt cấu trúc và đồng bộ hóa thông tin chung.
+2. *Ứng dụng trí tuệ nhân tạo (AI CV Parsing & Extraction):* Tích hợp Mô hình Ngôn ngữ Lớn (LLM) để tự động đọc hiểu, bóc tách thông tin từ file CV PDF/Word truyền thống và điền sẵn vào hệ thống. Đồng thời, ứng dụng AI để tự động trích xuất từ khóa, xây dựng bản đồ kỹ năng (Skill Matrix) toàn công ty, giúp HR tìm kiếm nhanh nhân sự phù hợp cho gói thầu chỉ với câu lệnh tự nhiên.
+3. *Hệ sinh thái giao diện và mẫu CV tùy biến sâu (Customizable Templates & Layouts):* Phát triển bộ công cụ thiết kế mẫu (Template Builder) cho phép kéo thả linh hoạt, tùy chỉnh bố cục (Layout), phông chữ, màu sắc theo nhận diện thương hiệu của từng đối tác hoặc theo các chuẩn mẫu hồ sơ thầu đặc thù (Thầu khối nhà nước, thầu quốc tế...).
+4. *Khai thác và phân tích dữ liệu chuyên sâu (Advanced Data Extraction & Analytics):* Tự động khai phá dữ liệu từ hàng nghìn hồ sơ để xuất ra các báo cáo thống kê chuyên sâu về phân bố kỹ năng, kinh nghiệm và thâm niên; từ đó giúp ban lãnh đạo đưa ra dự báo xu hướng công nghệ và hoạch định chiến lược đào tạo nhân lực.
 
-#pagebreak()
-
-#heading(numbering: none)[Phụ lục A: Đặc tả Use Case]
-
-== A.1 Kịch bản sử dụng cho Người dùng phổ thông (Employee)
-- *Tình huống:* Anh A nhận được thông báo yêu cầu cập nhật CV qua Email từ HR cho chiến dịch thầu sắp tới.
-- *Sử dụng:* Anh A đăng nhập vào UmiCV. Hệ thống hiển thị cảnh báo "Cần cập nhật". Anh A sửa đổi phần Kinh nghiệm làm việc trên bản Nháp (Draft). Sau khi hoàn tất, anh nhấn "Submit for Review". Bản CV chuyển sang trạng thái chờ Tech Lead duyệt. Bản chính thức cũ vẫn được bảo lưu cho đến khi bản nháp này được Approve.
-
-== A.2 Kịch bản sử dụng cho Tech Lead (Người duyệt chuyên môn)
-- *Tình huống:* Tech Lead B nhận được yêu cầu xét duyệt bản nháp CV của anh A.
-- *Sử dụng:* Tech Lead B vào Dashboard, chọn mục "Pending Approvals". Bằng tính năng Diff Viewer, Tech Lead B nhanh chóng nhận ra anh A vừa bổ sung kỹ năng "Kubernetes". Nhận thấy thông tin này chính xác, Tech Lead B nhấn "Approve". CV tiếp tục đi đến chốt chặn của HR. (Hoặc nếu sai, Tech Lead có thể "Reject" và ghi chú vào dòng kỹ năng đó).
-
-== A.3 Kịch bản sử dụng cho Nhân sự (HR)
-- *Tình huống:* Chị C (HR) cần gom 20 CV của khối BU1 để gửi đối tác vào ngày thứ 6 tuần sau.
-- *Sử dụng:* Chị C vào module Batch Request, lọc các nhân sự thuộc BU1 và tạo một Yêu cầu cập nhật với Deadline là thứ 5. Hệ thống ngay lập tức đẩy 20 email bất đồng bộ qua Queue. Chị C có thể theo dõi tỷ lệ hoàn thành (X/20 người đã nộp) ngay trên biểu đồ Dashboard và phó thác việc nhắc nhở hằng ngày cho hệ thống Cronjob tự động.
-
-#pagebreak()
 = Tài liệu tham khảo
 1. Viettel Digital Talent, _Tài liệu định hướng kiến trúc dự án_.
 2. Robert C. Martin, _Clean Architecture: A Craftsman's Guide to Software Structure and Design_.

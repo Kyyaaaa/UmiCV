@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import xss from 'xss-clean';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/error.middleware';
+import { env } from './config/env';
 
 const app: Express = express();
 
@@ -28,7 +29,7 @@ app.use(xss());
 // Global Rate Limiter
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: parseInt(env.RATE_LIMIT_GLOBAL_MAX, 10), // Limit each IP per windowMs
   message: { message: 'Too many requests from this IP, please try again after a minute' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,7 +41,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Auth Limiter
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: parseInt(env.RATE_LIMIT_AUTH_MAX, 10), // Limit each IP per windowMs
   message: { message: 'Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
   standardHeaders: true,
   legacyHeaders: false,

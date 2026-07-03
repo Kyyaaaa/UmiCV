@@ -11,6 +11,7 @@ import { emailQueue } from '../notification/notification.queue';
 import { getResetPasswordTemplate } from '../notification/mailer';
 import { BadRequestError } from '../../errors/AppError';
 import { AuditService } from '../audit/audit.service';
+import { env } from '../../config/env';
 
 const auditService = new AuditService();
 
@@ -120,7 +121,7 @@ export class AuthService {
       },
     });
 
-    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     const message = getResetPasswordTemplate(resetUrl);
 
     await emailQueue.add('forgot-password', {

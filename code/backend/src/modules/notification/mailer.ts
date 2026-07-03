@@ -62,7 +62,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
 export const getSubmitCVTemplate = (username: string, cvId: string) => `
   <h2>Có CV Mới Được Nộp</h2>
   <p>Nhân viên <strong>${username}</strong> vừa nộp một CV mới để chờ phê duyệt.</p>
-  <p><a href="http://localhost:5173/admin/cvs/${cvId}">Xem CV tại đây</a></p>
+  <p><a href="${env.FRONTEND_URL}/admin/cvs/${cvId}">Xem CV tại đây</a></p>
 `;
 
 export const getRejectCVTemplate = (reason: string) => `

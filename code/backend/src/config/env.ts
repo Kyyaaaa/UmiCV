@@ -17,6 +17,9 @@ const envSchema = z.object({
   SMTP_PORT: z.string().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  RATE_LIMIT_GLOBAL_MAX: z.string().default('100'),
+  RATE_LIMIT_AUTH_MAX: z.string().default('5'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
 const _env = envSchema.safeParse(process.env);
