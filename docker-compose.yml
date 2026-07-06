@@ -1,0 +1,73 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: umicv-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_DB: ${POSTGRES_DB:-umicv_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: umicv-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./code/backend
+      dockerfile: Dockerfile
+    container_name: umicv-backend
+    restart: always
+    environment:
+      # Database and Redis URL pointing to the services defined above
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-password123}@db:5432/${POSTGRES_DB:-umicv_db}?schema=public"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      # JWT Secrets (Cấu hình qua file .env trên Production)
+      JWT_SECRET: "${JWT_SECRET:-default_jwt_secret_dev_key_umicv_2026}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-1h}"
+      # Thông tin SMTP (Cấu hình qua file .env trên Production)
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      # Giới hạn Request Rate Limit (Cấu hình qua file .env trên Production)
+      RATE_LIMIT_GLOBAL_MAX: "${RATE_LIMIT_GLOBAL_MAX:-100}"
+      RATE_LIMIT_AUTH_MAX: "${RATE_LIMIT_AUTH_MAX:-5}"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./code/frontend
+      dockerfile: Dockerfile
+    container_name: umicv-frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: umicv-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@umicv.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

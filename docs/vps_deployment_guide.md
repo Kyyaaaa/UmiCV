@@ -87,39 +87,46 @@ git clone https://github.com/your-username/UmiCV.git
 cd UmiCV
 ```
 
-#### 3.2. Cấu hình biến môi trường bảo mật (`.env` & `docker-compose.yml`)
-Tại môi trường Production, **Tuyệt đối không sử dụng mật khẩu mặc định hay để Rate Limit cực đại**.
-1. Tạo file `.env` trong thư mục `code/backend/.env`:
+#### 3.2. Cấu hình biến môi trường bảo mật (`.env` tại Root Directory)
+Tại môi trường Production, **Tuyệt đối không sử dụng mật khẩu mặc định hay để Rate Limit cực đại**. Do file `docker-compose.yml` đã được chuẩn hóa bảo mật (không chứa secret hardcode), bạn chỉ cần tạo file `.env` ngay tại thư mục gốc của dự án:
+
+```bash
+# Copy từ file mẫu có sẵn tại thư mục gốc
+cp .env.example .env
+
+# Mở file .env để chỉnh sửa thông số thực tế
+nano .env
+```
+
+Nội dung file `.env` cần điền:
 ```env
-NODE_ENV=production
-PORT=3000
+# 1. Cấu hình Cơ sở dữ liệu PostgreSQL
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=YourStrongSecretDBPassword2026!
+POSTGRES_DB=umicv_db
 
-# Database & Redis (Trùng khớp với cấu hình trong docker-compose.yml)
-DATABASE_URL="postgresql://umicv_prod_user:StrongSecretPass2026!@db:5432/umicv_db?schema=public"
-REDIS_HOST="redis"
-REDIS_PORT="6379"
+# 2. Cấu hình pgAdmin (Giao diện web quản lý DB)
+PGADMIN_EMAIL=admin@umicv.com
+PGADMIN_PASSWORD=YourStrongPgAdminPassword!
 
-# Khóa bảo mật JWT (Sử dụng chuỗi ngẫu nhiên dài trên 32 ký tự)
-JWT_SECRET="P9k2vX8zQ1wY7rT4nM6bJ3cL5hF0dG8sA2mK4vN6xZ"
-JWT_EXPIRES_IN="2h"
-JWT_REFRESH_EXPIRES_IN="7d"
+# 3. Khóa bảo mật JWT (Sử dụng chuỗi ngẫu nhiên dài trên 32 ký tự)
+JWT_SECRET=P9k2vX8zQ1wY7rT4nM6bJ3cL5hF0dG8sA2mK4vN6xZ_Secret_Prod_2026
+JWT_EXPIRES_IN=2h
 
-# Thông tin gửi Email thật (Sử dụng Gmail App Password hoặc AWS SES / Mailtrap PROD)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="hr-notify@yourcompany.com"
-SMTP_PASS="xxxx xxxx xxxx xxxx"
+# 4. Cấu hình gửi Email thông báo (Gmail App Password hoặc AWS SES / Mailtrap PROD)
+SMTP_USER=hr-notify@yourdomain.com
+SMTP_PASS=xxxx_xxxx_xxxx_xxxx
 
-# Cấu hình đường dẫn Frontend thật (IP VPS hoặc Tên miền)
-FRONTEND_URL="http://<IP_CUA_VPS>:8080"
-# Nếu đã lắp tên miền HTTPS: FRONTEND_URL="https://umicv.yourdomain.com"
+# 5. QUAN TRỌNG: Đường dẫn Frontend (Thay thế localhost bằng IP của VPS hoặc Tên miền HTTPS)
+# Ví dụ VPS có IP 103.112.xxx.xxx
+FRONTEND_URL=http://103.112.xxx.xxx:8080
+# Nếu dùng tên miền: FRONTEND_URL=https://umicv.yourdomain.com
 
-# Kích hoạt lại bảo mật Rate Limit tiêu chuẩn
+# 6. Cấu hình Rate Limit (Chống tấn công DDoS / Brute-force)
 RATE_LIMIT_GLOBAL_MAX=100
 RATE_LIMIT_AUTH_MAX=5
 ```
-
-2. Cập nhật lại mật khẩu PostgreSQL trong `docker-compose.yml` (ở service `db` và `POSTGRES_PASSWORD`).
+*(Để lưu file trong `nano`: Bấm tổ hợp phím **`Ctrl + O`** -> Bấm **`Enter`** -> Bấm **`Ctrl + X`** để thoát).*
 
 ---
 

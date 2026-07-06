@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -146,4 +146,4 @@ vite.config.ts.timestamp-*
 reference/
 
 # Docker
-docker-compose.yml
+# docker-compose.yml (Đã chuẩn hóa bảo mật, cho phép public lên Git)
