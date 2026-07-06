@@ -1,72 +1,303 @@
 import prisma from '../../config/db';
 import { Prisma, CVStatus } from '@prisma/client';
-import { UpsertDraftInput, SearchInput } from './cv.dto';
+import { SearchInput, CreateCVInput, UpdateDraftInput } from './cv.dto';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../errors/AppError';
+import { MESSAGES } from '../../constants/messages';
+import { generateDiff } from './cv.diff';
+import { emailQueue } from '../notification/notification.queue';
+import { getSubmitCVTemplate } from '../notification/mailer';
 
 export class CVService {
-  async getDraft(userId: string, languageCode: string) {
-    const cv = await prisma.cVProfile.findUnique({
-      where: {
-        userId_languageCode: {
-          userId,
-          languageCode,
-        },
+  async getMyCVs(userId: string) {
+    return prisma.cVProfile.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        languageCode: true,
+        status: true,
+        versionNumber: true,
+        updatedAt: true,
       },
     });
-
-    if (!cv) {
-      throw new NotFoundError('CV Profile not found');
-    }
-
-    return cv;
   }
 
-  async upsertDraft(userId: string, data: UpsertDraftInput) {
-    // If it exists, we update. If not, we create with Draft status.
-    // However, if it exists and is PendingApproval, we might not allow editing,
-    // according to typical workflow rules. Let's enforce that.
-    
+  async createCV(userId: string, data: CreateCVInput) {
     const existing = await prisma.cVProfile.findUnique({
       where: {
-        userId_languageCode: {
-          userId,
-          languageCode: data.languageCode,
-        },
+        userId_languageCode: { userId, languageCode: data.languageCode },
       },
     });
 
-    if (existing && existing.status === CVStatus.PendingApproval) {
-      throw new BadRequestError('Cannot edit CV while it is pending approval');
+    if (existing) {
+      throw new BadRequestError(MESSAGES.CV.DUPLICATE_LANGUAGE);
     }
 
-    const cv = await prisma.cVProfile.upsert({
-      where: {
-        userId_languageCode: {
-          userId,
-          languageCode: data.languageCode,
-        },
-      },
-      update: {
-        sectionsData: data.sectionsData,
-        // If it was Outdated or Cancelled, it goes back to Draft? 
-        // According to docs, Employee works on Draft. Let's just set it to Draft.
-        status: CVStatus.Draft,
-      },
-      create: {
+    return prisma.cVProfile.create({
+      data: {
         userId,
         languageCode: data.languageCode,
-        sectionsData: data.sectionsData,
         status: CVStatus.Draft,
+        sectionsData: {},
       },
     });
+  }
+
+  async getCVById(id: string, userId: string, role?: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id } });
+
+    if (!cv) {
+      throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    }
+
+    // IDOR protection
+    if ((!role || role === 'Employee') && cv.userId !== userId) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    if (role === 'TechLead' && cv.userId !== userId) {
+      const projects = await prisma.project.findMany({
+        where: { techLeadId: userId },
+        include: { members: true },
+      });
+      const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
+      if (!memberIds.includes(cv.userId)) {
+        throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
+
     return cv;
   }
 
-  async searchCVs(query: SearchInput) {
-    const { keyword, departmentId, status, page, limit } = query;
+  async updateDraftById(id: string, userId: string, role: string, data: UpdateDraftInput) {
+    const existing = await prisma.cVProfile.findUnique({ where: { id } });
+
+    if (!existing) {
+      throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    }
+
+    if (existing.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    if (existing.status === CVStatus.PendingApproval) {
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
+    }
+
+    return prisma.cVProfile.update({
+      where: { id },
+      data: {
+        sectionsData: data.sectionsData,
+        status: CVStatus.Draft,
+      },
+    });
+  }
+
+  async getCVVersions(cvId: string, userId: string, role: string, params: { page?: number, limit?: number } = {}) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
+
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [total, versions] = await Promise.all([
+      prisma.cVVersionHistory.count({ where: { cvProfileId: cvId } }),
+      prisma.cVVersionHistory.findMany({
+        where: { cvProfileId: cvId },
+        orderBy: { versionNumber: 'desc' },
+        select: {
+          id: true,
+          versionNumber: true,
+          createdAt: true,
+        },
+        skip,
+        take: limit,
+      })
+    ]);
+
+    return { total, page, limit, data: versions };
+  }
+
+  async getCVVersionById(cvId: string, versionId: string, userId: string, role: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
+
+    const version = await prisma.cVVersionHistory.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version || version.cvProfileId !== cvId) {
+      throw new NotFoundError(MESSAGES.CV.VERSION_NOT_FOUND);
+    }
+
+    return version;
+  }
+
+  async getLatestApprovedCV(cvId: string, userId: string, role: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    
+    // RBAC similar to getCVById
+    if (cv.userId !== userId) {
+      if (!['HR', 'Admin', 'TechLead'].includes(role)) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      if (role === 'TechLead') {
+        const isLead = await prisma.projectMember.findFirst({
+          where: { userId: cv.userId, project: { techLeadId: userId } }
+        });
+        if (!isLead) throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+      }
+    }
+
+    if (cv.versionNumber === 0) {
+      throw new NotFoundError(MESSAGES.CV.NOT_APPROVED_YET);
+    }
+
+    const version = await prisma.cVVersionHistory.findFirst({
+      where: { cvProfileId: cvId },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    if (!version) {
+      throw new NotFoundError(MESSAGES.CV.NOT_APPROVED_YET);
+    }
+
+    return version;
+  }
+
+  async restoreCVVersion(cvId: string, versionId: string, userId: string, role: string) {
+    const cv = await prisma.cVProfile.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    if (cv.status === CVStatus.PendingApproval) {
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
+    }
+
+    const version = await prisma.cVVersionHistory.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version || version.cvProfileId !== cvId) {
+      throw new NotFoundError(MESSAGES.CV.VERSION_NOT_FOUND);
+    }
+
+    return prisma.cVProfile.update({
+      where: { id: cvId },
+      data: {
+        sectionsData: version.snapshotData as any,
+        status: CVStatus.Draft,
+      },
+    });
+  }
+
+  async publishCV(cvId: string, userId: string, role: string) {
+    const cv = await prisma.cVProfile.findUnique({
+      where: { id: cvId },
+      include: {
+        histories: {
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+        },
+        user: true,
+      },
+    });
+
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (cv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    if (cv.status === CVStatus.PendingApproval) {
+      throw new BadRequestError(MESSAGES.CV.CANNOT_EDIT_PENDING);
+    }
+
+    // Bug-04 Fix: Check for empty changes
+    const draftJson = JSON.stringify(cv.sectionsData);
+    const originalJson = cv.histories.length > 0 ? JSON.stringify(cv.histories[0].snapshotData) : '{}';
+
+    if (draftJson === originalJson) {
+      throw new BadRequestError(MESSAGES.CV.NO_CHANGES_TO_PUBLISH);
+    }
+
+    // TASK-20.3: Server-side validation
+    const personalInfo = (cv.sectionsData as any)?.personalInfo || {};
+    if (!personalInfo.name || !personalInfo.email || !personalInfo.role) {
+      throw new BadRequestError(MESSAGES.CV.MISSING_REQUIRED_INFO);
+    }
+
+    const updatedCv = await prisma.cVProfile.update({
+      where: { id: cvId },
+      data: {
+        status: CVStatus.PendingApproval,
+        submittedAt: new Date(),
+      },
+    });
+
+    // Notify HR
+    const hrUsers = await prisma.user.findMany({ where: { role: 'HR' } });
+    for (const hr of hrUsers) {
+      await emailQueue.add('submit-cv', {
+        to: hr.email,
+        subject: `Có CV mới được gửi từ ${cv.user.username}`,
+        body: getSubmitCVTemplate(cv.user.username, cvId),
+      });
+    }
+
+    return updatedCv;
+  }
+
+  async searchCVs(query: SearchInput, requestUserId: string, requestUserRole: string) {
+    const { keyword, departmentId, status, slaStatus, page, limit } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.CVProfileWhereInput = {};
+
+    // RBAC: Data Scope Isolation
+    if (requestUserRole === 'Employee') {
+      where.userId = requestUserId;
+    } else if (requestUserRole === 'TechLead') {
+      const projects = await prisma.project.findMany({
+        where: { techLeadId: requestUserId },
+        include: { members: true },
+      });
+      const memberIds = projects.flatMap((p) => p.members.map((m) => m.userId));
+      where.userId = { in: memberIds };
+      
+      if (status === 'PendingApproval') {
+        const excludedRows = await prisma.$queryRaw<{id: string}[]>`
+          SELECT DISTINCT cv.id 
+          FROM cv_profiles cv
+          JOIN approval_logs al ON cv.id = al.cv_profile_id
+          WHERE al.level = 1 
+            AND cv.submitted_at IS NOT NULL
+            AND al.created_at >= cv.submitted_at
+        `;
+        const excludedIds = excludedRows.map(r => r.id);
+        if (excludedIds.length > 0) {
+          where.id = { notIn: excludedIds };
+        }
+      }
+    }
 
     if (status) {
       where.status = status;
@@ -86,8 +317,28 @@ export class CVService {
       
       where.OR = [
         { user: { username: { contains: keyword, mode: 'insensitive' } } },
+        { user: { fullName: { contains: keyword, mode: 'insensitive' } } },
         { id: { in: matchingIds.map(r => r.id) } }
       ];
+    }
+
+    if (slaStatus) {
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+      where.status = CVStatus.PendingApproval;
+
+      if (slaStatus === 'Safe') {
+        where.submittedAt = { gt: twentyFourHoursAgo };
+      } else if (slaStatus === 'Warning') {
+        where.submittedAt = {
+          lte: twentyFourHoursAgo,
+          gt: fortyEightHoursAgo
+        };
+      } else if (slaStatus === 'Overdue') {
+        where.submittedAt = { lte: fortyEightHoursAgo };
+      }
     }
 
     const [total, data] = await Promise.all([
@@ -97,12 +348,25 @@ export class CVService {
         skip,
         take: limit,
         include: {
-          user: { select: { id: true, username: true, department: true } },
+          user: { select: { id: true, username: true, fullName: true, department: true } },
         },
       }),
     ]);
 
-    return { total, page, data };
+    const dataWithSLA = data.map((cv) => {
+      let slaStatus = 'Safe';
+      if (cv.status === CVStatus.PendingApproval && cv.submittedAt) {
+        const diffHours = (new Date().getTime() - new Date(cv.submittedAt).getTime()) / (1000 * 60 * 60);
+        if (diffHours >= 48) {
+          slaStatus = 'Overdue';
+        } else if (diffHours >= 24) {
+          slaStatus = 'Warning';
+        }
+      }
+      return { ...cv, slaStatus };
+    });
+
+    return { total, page, limit, data: dataWithSLA };
   }
 
   async diffCV(cvId: string, requestUserId: string, requestUserRole: string) {
@@ -116,7 +380,7 @@ export class CVService {
       },
     });
 
-    if (!cv) throw new NotFoundError('CV not found');
+    if (!cv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
 
     // Fix C2: IDOR protection
     let hasAccess = false;
@@ -135,13 +399,58 @@ export class CVService {
     }
 
     if (!hasAccess) {
-      throw new ForbiddenError('You do not have permission to view this CV diff');
+      throw new ForbiddenError(MESSAGES.CV.FORBIDDEN_DIFF);
     }
 
-    const draft = cv.sectionsData;
-    const original = cv.histories.length > 0 ? cv.histories[0].snapshotData : null;
+    const draft = cv.sectionsData || {};
+    const original = cv.histories.length > 0 ? cv.histories[0].snapshotData : {};
 
-    // Fix M3: Removing diff field computation per API contract update.
-    return { original, draft };
+    const diffChanges = generateDiff(original, draft);
+
+    return diffChanges;
+  }
+
+  async copyLocalization(sourceCvId: string, targetLanguageCode: string, userId: string, role: string) {
+    const sourceCv = await prisma.cVProfile.findUnique({ where: { id: sourceCvId } });
+    if (!sourceCv) throw new NotFoundError(MESSAGES.CV.NOT_FOUND);
+    if (sourceCv.userId !== userId && !['HR', 'Admin'].includes(role)) {
+      throw new ForbiddenError(MESSAGES.RBAC.FORBIDDEN);
+    }
+
+    let targetCv = await prisma.cVProfile.findUnique({
+      where: {
+        userId_languageCode: {
+          userId,
+          languageCode: targetLanguageCode,
+        },
+      },
+    });
+
+    if (!targetCv) {
+      // Create new CV with copied sectionsData
+      targetCv = await prisma.cVProfile.create({
+        data: {
+          userId,
+          languageCode: targetLanguageCode,
+          status: CVStatus.Draft,
+          sectionsData: sourceCv.sectionsData as any,
+        },
+      });
+    } else {
+      // Overwrite existing CV
+      if (targetCv.status === CVStatus.PendingApproval) {
+        throw new BadRequestError(MESSAGES.CV.CANNOT_OVERWRITE_PENDING);
+      }
+
+      targetCv = await prisma.cVProfile.update({
+        where: { id: targetCv.id },
+        data: {
+          sectionsData: sourceCv.sectionsData as any,
+          status: CVStatus.Draft,
+        },
+      });
+    }
+
+    return targetCv;
   }
 }

@@ -36,7 +36,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
       {/* Modal */}
       <div 
         className={cn(
-          "relative z-50 flex w-full flex-col gap-4 rounded-xl border bg-white p-6 shadow-lg animate-in zoom-in-95 duration-200",
+          "relative z-50 flex w-full flex-col gap-4 rounded-xl border bg-white p-6 shadow-lg animate-in zoom-in-95 duration-200 max-h-[90vh]",
           {
             'max-w-sm': size === 'sm',
             'max-w-lg': size === 'md',
@@ -45,7 +45,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
           }
         )}
       >
-        <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+        <div className="flex flex-col space-y-1.5 text-center sm:text-left shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold leading-none tracking-tight text-slate-900">{title}</h2>
             <button
@@ -57,7 +57,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
           </div>
         </div>
         
-        <div className="py-4">
+        <div className="py-4 overflow-y-auto overflow-x-hidden pr-2 -mr-2">
           {children}
         </div>
         

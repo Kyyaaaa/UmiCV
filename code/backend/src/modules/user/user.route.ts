@@ -9,6 +9,8 @@ import {
   userIdParamSchema,
   resetPasswordSchema,
   changeRoleSchema,
+  updateMeSchema,
+  changeMyPasswordSchema,
 } from './user.dto';
 
 const router = Router();
@@ -21,9 +23,72 @@ const userController = new UserController();
  *   description: Administrator user management operations
  */
 
-// All endpoints require authentication and Admin role
+// All endpoints require authentication
 router.use(authenticate);
-router.use(authorize(['Admin']));
+
+/**
+ * @openapi
+ * /api/users/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [User Profile]
+ *     responses:
+ *       200:
+ *         description: Current user details
+ */
+router.get('/me', userController.getMe);
+
+/**
+ * @openapi
+ * /api/users/me:
+ *   put:
+ *     summary: Update current user profile
+ *     tags: [User Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
+router.put('/me', validate(updateMeSchema), userController.updateMe);
+
+/**
+ * @openapi
+ * /api/users/me/password:
+ *   put:
+ *     summary: Change current user password
+ *     tags: [User Profile]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Incorrect current password
+ */
+router.put('/me/password', validate(changeMyPasswordSchema), userController.changeMyPassword);
 
 /**
  * @openapi
@@ -58,7 +123,7 @@ router.use(authorize(['Admin']));
  *       200:
  *         description: A list of users
  */
-router.get('/', validate(queryUsersSchema), userController.getUsers);
+router.get('/', authorize(['Admin', 'HR', 'TechLead']), validate(queryUsersSchema), userController.getUsers);
 
 /**
  * @openapi
@@ -100,7 +165,7 @@ router.get('/', validate(queryUsersSchema), userController.getUsers);
  *       400:
  *         description: Invalid input or duplicate username/email
  */
-router.post('/', validate(createUserSchema), userController.createUser);
+router.post('/', authorize(['Admin']), validate(createUserSchema), userController.createUser);
 
 /**
  * @openapi
@@ -121,7 +186,7 @@ router.post('/', validate(createUserSchema), userController.createUser);
  *       404:
  *         description: User not found
  */
-router.get('/:id', validate(userIdParamSchema), userController.getUserById);
+router.get('/:id', authorize(['Admin', 'HR', 'TechLead']), validate(userIdParamSchema), userController.getUserById);
 
 /**
  * @openapi
@@ -160,7 +225,7 @@ router.get('/:id', validate(userIdParamSchema), userController.getUserById);
  *       404:
  *         description: User not found
  */
-router.put('/:id', validate(updateUserSchema), userController.updateUser);
+router.put('/:id', authorize(['Admin']), validate(updateUserSchema), userController.updateUser);
 
 /**
  * @openapi
@@ -181,7 +246,7 @@ router.put('/:id', validate(updateUserSchema), userController.updateUser);
  *       404:
  *         description: User not found
  */
-router.patch('/:id/lock', validate(userIdParamSchema), userController.lockUser);
+router.patch('/:id/lock', authorize(['Admin']), validate(userIdParamSchema), userController.lockUser);
 
 /**
  * @openapi
@@ -202,7 +267,7 @@ router.patch('/:id/lock', validate(userIdParamSchema), userController.lockUser);
  *       404:
  *         description: User not found
  */
-router.patch('/:id/unlock', validate(userIdParamSchema), userController.unlockUser);
+router.patch('/:id/unlock', authorize(['Admin']), validate(userIdParamSchema), userController.unlockUser);
 
 /**
  * @openapi
@@ -235,7 +300,7 @@ router.patch('/:id/unlock', validate(userIdParamSchema), userController.unlockUs
  *       404:
  *         description: User not found
  */
-router.post('/:id/reset-password', validate(resetPasswordSchema), userController.resetPassword);
+router.post('/:id/reset-password', authorize(['Admin']), validate(resetPasswordSchema), userController.resetPassword);
 
 /**
  * @openapi
@@ -268,6 +333,29 @@ router.post('/:id/reset-password', validate(resetPasswordSchema), userController
  *       404:
  *         description: User not found
  */
-router.patch('/:id/role', validate(changeRoleSchema), userController.changeRole);
+router.patch('/:id/role', authorize(['Admin']), validate(changeRoleSchema), userController.changeRole);
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Soft delete a user
+ *     tags: [User Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       403:
+ *         description: Forbidden (Cannot delete self or Admin)
+ *       404:
+ *         description: User not found
+ */
+router.delete('/:id', authorize(['Admin']), validate(userIdParamSchema), userController.deleteUser);
 
 export default router;

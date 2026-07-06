@@ -73,20 +73,6 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      {/* Pagination Mock */}
-      <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3">
-        <span className="text-sm text-slate-500">
-          Hiển thị 1 đến {data.length} của {data.length} bản ghi
-        </span>
-        <div className="flex space-x-2">
-          <button className="rounded-md border border-slate-300 px-3 py-1 text-sm disabled:opacity-50" disabled>
-            Trước
-          </button>
-          <button className="rounded-md border border-slate-300 px-3 py-1 text-sm disabled:opacity-50" disabled>
-            Sau
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

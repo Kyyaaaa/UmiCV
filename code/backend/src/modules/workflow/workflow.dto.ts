@@ -1,14 +1,21 @@
 import { z } from 'zod';
 
 export const approveSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
   body: z.object({
     level: z.number().int().min(1).max(2),
+    bypass: z.boolean().optional(),
   }),
 });
 
 export const rejectSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
   body: z.object({
-    reason: z.string().min(1, 'Reason is required'),
+    reason: z.string().min(1),
     sectionId: z.string().optional(),
   }),
 });

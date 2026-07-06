@@ -1,5 +1,9 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+
+// Providers & Guards
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './routes/ProtectedRoute';
 
 // Layouts
 import { PublicLayout } from './layouts/PublicLayout';
@@ -14,58 +18,102 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { DashboardOverview } from './pages/dashboard/DashboardOverview';
 
 // CV Management
-import { CVListPage } from './pages/cv/CVListPage';
-import { CVDetailPage } from './pages/cv/CVDetailPage';
-import { CVFormPage } from './pages/cv/CVFormPage';
+import { CVDashboard } from './pages/cv/CVDashboard';
+import { CVWorkspace } from './pages/cv/CVWorkspace';
+import { DiffViewerPage } from './pages/cv/DiffViewerPage';
+import { PublishReviewPage } from './pages/cv/PublishReviewPage';
+import { QuickCVMockup } from './pages/cv/QuickCVMockup';
+import { CVViewerPage } from './pages/cv/CVViewerPage';
 
 // Workflow
 import { ApprovalRequestListPage } from './pages/workflow/ApprovalRequestListPage';
 import { ApprovalDetailPage } from './pages/workflow/ApprovalDetailPage';
+import { RoleRoute } from './routes/RoleRoute';
 
 // User Management
 import { UserListPage } from './pages/users/UserListPage';
+import { DepartmentListPage } from './pages/departments/DepartmentListPage';
+import { ProjectListPage } from './pages/projects/ProjectListPage';
 
 // Notifications & Profile
 import { NotificationCenterPage } from './pages/notifications/NotificationCenterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
+import { ApprovalLogListPage } from './pages/admin/ApprovalLogListPage';
+import { AuditLogListPage } from './pages/admin/AuditLogListPage';
+
+// Batch Request
+import { BatchRequestListPage } from './pages/batch-requests/BatchRequestListPage';
+import { BatchRequestDetailPage } from './pages/batch-requests/BatchRequestDetailPage';
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <PrivateLayout />,
+        children: [
+          { index: true, element: <DashboardOverview /> },
+          
+          { path: "cv", element: <CVDashboard /> },
+          { path: "cv/:id/workspace", element: <CVWorkspace /> },
+          { path: "cv/:id/diff", element: <DiffViewerPage /> },
+          { path: "cv/:id/publish", element: <PublishReviewPage /> },
+          { path: "cv/:id/view", element: <CVViewerPage /> },
+          { path: "mockup/edit-cv", element: <QuickCVMockup /> },
+          
+          {
+            element: <RoleRoute allowedRoles={['TechLead', 'HR', 'Admin']} />,
+            children: [
+              { path: "workflow", element: <ApprovalRequestListPage /> },
+              { path: "workflow/:id", element: <ApprovalDetailPage /> },
+            ]
+          },
+          
+          {
+            element: <RoleRoute allowedRoles={['HR', 'Admin']} />,
+            children: [
+              { path: "hr/batch-requests", element: <BatchRequestListPage /> },
+              { path: "hr/batch-requests/:id", element: <BatchRequestDetailPage /> },
+              { path: "admin/approval-logs", element: <ApprovalLogListPage /> },
+              { path: "projects", element: <ProjectListPage /> },
+            ]
+          },
+          
+          {
+            element: <RoleRoute allowedRoles={['Admin']} />,
+            children: [
+              { path: "users", element: <UserListPage /> },
+              { path: "departments", element: <DepartmentListPage /> },
+              { path: "admin/audit-logs", element: <AuditLogListPage /> },
+            ]
+          },
+          
+          { path: "notifications", element: <NotificationCenterPage /> },
+          { path: "profile", element: <UserProfilePage /> }
+        ]
+      }
+    ]
+  },
+  {
+    element: <PublicLayout />,
+    children: [
+      { path: "/login", element: <LoginPage /> },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
+      { path: "/reset-password", element: <ResetPasswordPage /> }
+    ]
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />
+  }
+]);
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-        </Route>
-
-        {/* Private Routes */}
-        <Route element={<PrivateLayout />}>
-          <Route path="/" element={<DashboardOverview />} />
-          
-          {/* CV Management */}
-          <Route path="/cv" element={<CVListPage />} />
-          <Route path="/cv/create" element={<CVFormPage />} />
-          <Route path="/cv/:id" element={<CVDetailPage />} />
-          <Route path="/cv/:id/edit" element={<CVFormPage />} />
-          
-          {/* Workflow & Approval */}
-          <Route path="/workflow" element={<ApprovalRequestListPage />} />
-          <Route path="/workflow/:id" element={<ApprovalDetailPage />} />
-          
-          {/* User Management */}
-          <Route path="/users" element={<UserListPage />} />
-          
-          {/* Notifications & Profile */}
-          <Route path="/notifications" element={<NotificationCenterPage />} />
-          <Route path="/profile" element={<UserProfilePage />} />
-        </Route>
-
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   );
 }
 

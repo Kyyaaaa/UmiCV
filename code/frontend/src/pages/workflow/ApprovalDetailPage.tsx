@@ -1,39 +1,201 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
-import { mockCVs } from '../../mocks/cvs.mock';
-import { mockApprovalLogs } from '../../mocks/workflows.mock';
-import { ArrowLeft, Check, X, Clock } from 'lucide-react';
-import { Input } from '../../components/ui/Input';
+import { Modal } from '../../components/ui/Modal';
+import { ArrowLeft, Check, X, Download, ZoomIn, ZoomOut, Diff } from 'lucide-react';
+import { CVPreviewPanel } from '../../components/cv-workspace/CVPreviewPanel';
+import { CVPdfDocument } from '../../components/cv-workspace/CVPdfDocument';
+import { ApprovalTimeline } from '../../components/workflow/ApprovalTimeline';
+import { workflowService } from '../../services/workflow.service';
+import { cvService } from '../../services/cv.service';
+import { CVProfile, ApprovalLog } from '../../types';
+import { DiffChange } from '../../types/cv';
+import { useAuth } from '../../hooks/useAuth';
+import { pdf } from '@react-pdf/renderer';
+
+const formatDiffValue = (val: any) => {
+  if (val === null || val === undefined) return 'null';
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch {
+      return String(val);
+    }
+  }
+  return String(val);
+};
 
 export function ApprovalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const cv = mockCVs.find(c => c.id === id) || mockCVs[0];
-  const logs = mockApprovalLogs.filter(l => l.cvProfileId === cv.id);
+  const { user } = useAuth();
+  const [cv, setCv] = useState<CVProfile | null>(null);
+  const [logs, setLogs] = useState<ApprovalLog[]>([]);
+  const [diffData, setDiffData] = useState<DiffChange[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // UI States
+  const [scale, setScale] = useState(100);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+
+  // Approval Modal States
   const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [approveError, setApproveError] = useState('');
+  const [toastMessage, setToastMessage] = useState<{ title: string; type: 'error' | 'success' } | null>(null);
 
-  const handleApprove = () => {
-    // Mock approve API call
-    setIsApproveOpen(false);
-    navigate('/workflow');
+  const fetchData = async (cvId: string) => {
+    try {
+      setIsLoading(true);
+      const [cvRes, logsRes, diffRes] = await Promise.all([
+        cvService.getCVById(cvId),
+        workflowService.getApprovalLogs(cvId).catch(() => ({ data: [] })),
+        cvService.getDiff(cvId).catch(() => ({ data: [] }))
+      ]);
+      setCv(cvRes.data);
+      setLogs(logsRes.data);
+      setDiffData(diffRes.data || []);
+    } catch (err) {
+      console.error('Failed to fetch approval detail', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReject = () => {
-    // Mock reject API call
-    setIsRejectOpen(false);
-    navigate('/workflow');
+  useEffect(() => {
+    if (id) {
+      fetchData(id);
+    }
+  }, [id]);
+
+  const handleDownloadPdf = async () => {
+    if (!cv) return;
+    setIsDownloadingPdf(true);
+    try {
+      const doc = <CVPdfDocument data={cv.sectionsData} />;
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `CV_${cv.sectionsData.personalInfo?.name || 'Applicant'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+      console.error('Lỗi tạo PDF:', err);
+      setToastMessage({ title: 'Lỗi khi tải PDF. Vui lòng thử lại.', type: 'error' });
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
+
+  const showRaceConditionToast = () => {
+    setToastMessage({ title: 'Thao tác thất bại: CV này đã được xử lý trước đó.', type: 'error' });
+    setTimeout(() => {
+      setToastMessage(null);
+      navigate('/workflow');
+    }, 2500);
+  };
+
+  const handleApprove = async () => {
+    if (!id || !user) return;
+    try {
+      setIsSubmitting(true);
+      setApproveError('');
+      let level = 2;
+      let bypass = false;
+      const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+
+      if (user.role === 'TechLead') {
+        level = 1;
+      } else if (user.role === 'HR' || user.role === 'Admin') {
+        if (!hasLevel1) {
+          bypass = true;
+        }
+        level = 2;
+      }
+      
+      await workflowService.approveCV(id, level, bypass);
+      setIsApproveOpen(false);
+      navigate('/workflow');
+    } catch (err: any) {
+      console.error('Approve failed', err);
+      const msg = err.response?.data?.message || '';
+      if (err.response?.status === 400 && (msg.includes('được duyệt') || msg.includes('khác xử lý') || msg.includes('trạng thái'))) {
+        setIsApproveOpen(false);
+        showRaceConditionToast();
+      } else {
+        setApproveError(msg || 'Có lỗi xảy ra khi phê duyệt.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id) return;
+    if (!rejectReason.trim()) {
+      setError('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await workflowService.rejectCV(id, rejectReason);
+      setIsRejectOpen(false);
+      navigate('/workflow');
+    } catch (err: any) {
+      console.error('Reject failed', err);
+      const msg = err.response?.data?.message || '';
+      if (err.response?.status === 400 && (msg.includes('được duyệt') || msg.includes('khác xử lý') || msg.includes('trạng thái'))) {
+        setIsRejectOpen(false);
+        showRaceConditionToast();
+      } else {
+        setError(msg || 'Có lỗi xảy ra khi từ chối');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading || !cv) {
+    return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu...</div>;
+  }
+
+  let slaStatus = 'Safe';
+  let slaMessage = '';
+  if (cv.status === 'PendingApproval' && cv.submittedAt) {
+    const diffHours = (new Date().getTime() - new Date(cv.submittedAt).getTime()) / (1000 * 60 * 60);
+    if (diffHours >= 48) {
+      slaStatus = 'Overdue';
+      slaMessage = 'CV này đã quá hạn xử lý (trên 48h). Yêu cầu ưu tiên phê duyệt ngay lập tức!';
+    } else if (diffHours >= 24) {
+      slaStatus = 'Warning';
+      slaMessage = 'CV này sắp hết hạn xử lý (trên 24h). Vui lòng kiểm tra và phê duyệt sớm.';
+    }
+  }
 
   return (
-    <div>
-      <div className="mb-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 rounded-md shadow-lg p-4 max-w-sm ${toastMessage.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
+          <div className="flex items-start">
+            {toastMessage.type === 'error' ? <X className="h-5 w-5 mr-2 text-red-400" /> : <Check className="h-5 w-5 mr-2 text-green-400" />}
+            <p className="text-sm font-medium">{toastMessage.title}</p>
+          </div>
+        </div>
+      )}
+      
+      <div className="mb-2 shrink-0">
         <button 
           onClick={() => navigate('/workflow')}
           className="flex items-center text-sm font-medium text-slate-500 hover:text-slate-900"
@@ -42,113 +204,209 @@ export function ApprovalDetailPage() {
         </button>
       </div>
 
-      <PageHeader 
-        title={`Xét duyệt CV: ${cv.sectionsData.personalInfo.fullName}`}
-        description={`Phiên bản v${cv.versionNumber} - ${cv.languageCode.toUpperCase()}`}
-        actions={
-          <>
-            <Button variant="danger" onClick={() => setIsRejectOpen(true)}>
-              <X size={16} className="mr-2" /> Từ chối
-            </Button>
-            <Button variant="primary" onClick={() => setIsApproveOpen(true)}>
-              <Check size={16} className="mr-2" /> Phê duyệt
-            </Button>
-          </>
-        }
-      />
+      <div className="shrink-0">
+        {(() => {
+          const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+          const isBypass = (user?.role === 'HR' || user?.role === 'Admin') && !hasLevel1;
+          const approveButtonText = isBypass ? 'Duyệt thẳng (Bypass)' : 'Phê duyệt';
+          return (
+            <PageHeader 
+              title={`Xét duyệt CV: ${cv.sectionsData.personalInfo?.name || 'Không rõ tên'}`}
+              description={`Phiên bản v${cv.versionNumber} - Ngôn ngữ: ${cv.languageCode.toUpperCase()}`}
+              actions={
+                <div className="flex gap-2">
+                  <Button variant="danger" onClick={() => setIsRejectOpen(true)}>
+                    <X size={16} className="mr-2" /> Từ chối
+                  </Button>
+                  <Button variant="primary" onClick={() => setIsApproveOpen(true)}>
+                    <Check size={16} className="mr-2" /> {approveButtonText}
+                  </Button>
+                </div>
+              }
+            />
+          );
+        })()}
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Main Content (CV Preview Mock) */}
-        <div className="md:col-span-2 space-y-6">
-          <Card>
+      {slaStatus === 'Overdue' && (
+        <div className="mb-4 mx-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center shrink-0">
+          <span className="font-bold mr-2">CẢNH BÁO QUÁ HẠN (SLA):</span> {slaMessage}
+        </div>
+      )}
+      {slaStatus === 'Warning' && (
+        <div className="mb-4 mx-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 flex items-center shrink-0">
+          <span className="font-bold mr-2">CHÚ Ý SLA:</span> {slaMessage}
+        </div>
+      )}
+
+      <div className="flex-1 flex overflow-hidden gap-6 pb-6 px-4">
+        {/* Main Content (CV Preview Panel) */}
+        <div className="flex-1 flex flex-col bg-slate-50 border border-slate-200 rounded-lg overflow-hidden relative shadow-sm">
+          {/* Preview Toolbar */}
+          <div className="h-12 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-700">Chế độ xem trước</span>
+              <div className="h-4 w-px bg-slate-300 mx-2"></div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setScale(Math.max(50, scale - 10))} className="h-8 w-8 p-0">
+                  <ZoomOut size={16} />
+                </Button>
+                <span className="text-sm text-slate-600 w-12 text-center">{scale}%</span>
+                <Button variant="ghost" size="sm" onClick={() => setScale(Math.min(200, scale + 10))} className="h-8 w-8 p-0">
+                  <ZoomIn size={16} />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {diffData && diffData.length > 0 && (
+                <Button 
+                  variant={showDiff ? "primary" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowDiff(!showDiff)}
+                  className={`h-8 ${showDiff ? 'bg-blue-600 text-white' : ''}`}
+                >
+                  <Diff size={16} className="mr-2" /> {showDiff ? 'Đang bật Diff' : 'Xem Diff'}
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadPdf} 
+                disabled={isDownloadingPdf}
+                className="h-8"
+              >
+                <Download size={16} className="mr-2" />
+                {isDownloadingPdf ? 'Đang tạo...' : 'Tải PDF'}
+              </Button>
+            </div>
+          </div>
+          
+          {/* Scrollable Preview Area */}
+          <div className="flex-1 overflow-y-auto bg-slate-200">
+            <CVPreviewPanel data={cv.sectionsData} scale={scale} />
+          </div>
+        </div>
+
+        {/* Sidebar (Info & Timeline) */}
+        <div className="w-96 shrink-0 flex flex-col gap-6 overflow-y-auto pr-1">
+          {showDiff && diffData && diffData.length > 0 && (
+            <Card className="border-blue-200 shadow-sm shrink-0">
+              <CardHeader className="bg-blue-50/50 pb-3 border-b border-blue-100">
+                <CardTitle className="text-blue-800 text-sm flex items-center">
+                  <Diff size={16} className="mr-2" /> Có {diffData.length} điểm thay đổi
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 text-sm max-h-60 overflow-y-auto custom-scrollbar">
+                <ul className="space-y-3">
+                  {diffData.map((d, i) => (
+                    <li key={i} className="border-l-2 pl-3 py-1 text-slate-600 border-slate-300 bg-slate-50">
+                      <span className="font-medium text-slate-900 block mb-1">
+                        [{d.type === 'added' ? 'Thêm mới' : d.type === 'removed' ? 'Đã xóa' : 'Chỉnh sửa'}] {d.path}
+                      </span>
+                      {d.type === 'modified' && (
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(d.oldValue)}</pre>
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(d.newValue)}</pre>
+                        </div>
+                      )}
+                      {d.type === 'added' && (
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-green-700 bg-green-50 p-2 rounded whitespace-pre-wrap font-mono border border-green-100">+ {formatDiffValue(d.newValue)}</pre>
+                        </div>
+                      )}
+                      {d.type === 'removed' && (
+                        <div className="text-xs space-y-1 mt-2">
+                          <pre className="text-red-600 bg-red-50 p-2 rounded whitespace-pre-wrap font-mono border border-red-100">- {formatDiffValue(d.oldValue)}</pre>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="shrink-0">
             <CardHeader>
-              <CardTitle>Nội dung CV</CardTitle>
+              <CardTitle>Thông tin tổng quan</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-8 min-h-[500px]">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold">{cv.sectionsData.personalInfo.fullName}</h2>
-                  <p className="text-blue-600 font-medium mt-1">{cv.sectionsData.personalInfo.title}</p>
-                  <p className="text-sm text-slate-500 mt-2">{cv.sectionsData.personalInfo.email} • {cv.sectionsData.personalInfo.phone}</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Mã NV:</span>
+                  <span className="font-medium">{cv.userId.substring(0, 8).toUpperCase()}</span>
                 </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">TÓM TẮT</h3>
-                  <p className="text-sm text-slate-700">{cv.sectionsData.personalInfo.summary}</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Trạng thái:</span>
+                  <span className="font-medium text-amber-600">Đang chờ duyệt</span>
                 </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-bold text-slate-800 border-b pb-2 mb-3">KINH NGHIỆM</h3>
-                  {cv.sectionsData.experience.map((exp, i) => (
-                    <div key={i} className="mb-4">
-                      <div className="flex justify-between font-medium text-slate-900">
-                        <span>{exp.role}</span>
-                        <span className="text-sm text-slate-500">{exp.startDate} - {exp.endDate}</span>
-                      </div>
-                      <p className="text-sm font-medium text-blue-600">{exp.company}</p>
-                      <p className="text-sm text-slate-700 mt-1">{exp.description}</p>
-                    </div>
-                  ))}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Ngày nộp:</span>
+                  <span className="font-medium">{cv.submittedAt ? new Date(cv.submittedAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Sidebar (Timeline) */}
-        <div className="space-y-6">
-          <Card>
+          <Card className="shrink-0">
             <CardHeader>
               <CardTitle>Lịch sử phê duyệt</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {logs.length > 0 ? logs.map((log, idx) => (
-                  <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-2 before:h-2 before:w-2 before:rounded-full before:bg-slate-300">
-                    <p className="text-sm font-medium text-slate-900">
-                      {log.action === 'Approve' ? 'Đã duyệt (Cấp 1)' : 'Đã từ chối'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">{new Date(log.createdAt).toLocaleString('vi-VN')}</p>
-                    {log.reason && (
-                      <div className="mt-2 rounded-md bg-red-50 p-2 text-sm text-red-700">
-                        {log.reason}
-                      </div>
-                    )}
-                  </div>
-                )) : (
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Clock size={16} /> Chưa có lịch sử duyệt
-                  </div>
-                )}
-                
-                <div className="relative pl-6 before:absolute before:left-0 before:top-2 before:h-2 before:w-2 before:rounded-full before:bg-blue-500">
-                  <p className="text-sm font-medium text-blue-600">Đang chờ duyệt (Cấp {logs.length + 1})</p>
-                  <p className="text-xs text-slate-500 mt-1">Hiện tại</p>
-                </div>
-              </div>
+              <ApprovalTimeline logs={logs} />
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <ConfirmModal
-        isOpen={isApproveOpen}
-        onClose={() => setIsApproveOpen(false)}
-        onConfirm={handleApprove}
-        title="Xác nhận phê duyệt CV"
-        description="Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt."
-        confirmText="Phê duyệt"
-      />
+      {(() => {
+        const hasLevel1 = logs.some(l => l.level === 1 && l.action === 'Approve');
+        const isBypass = (user?.role === 'HR' || user?.role === 'Admin') && !hasLevel1;
+        const approveButtonText = isBypass ? 'Duyệt thẳng (Bypass)' : 'Phê duyệt';
+        const description = isBypass 
+          ? "Bạn đang duyệt thẳng CV này mà không qua bước duyệt của TechLead (Bypass Level 1). Bạn có chắc chắn muốn thực hiện không?" 
+          : "Bạn có chắc chắn muốn phê duyệt phiên bản CV này không? Hệ thống sẽ ghi nhận lịch sử duyệt.";
+        
+        return (
+          <ConfirmModal
+            isOpen={isApproveOpen}
+            onClose={() => {
+              setIsApproveOpen(false);
+              setApproveError('');
+            }}
+            onConfirm={handleApprove}
+            title={`Xác nhận ${approveButtonText}`}
+            description={description}
+            confirmText={isSubmitting ? "Đang xử lý..." : approveButtonText}
+            isLoading={isSubmitting}
+            error={approveError}
+          />
+        );
+      })()}
 
-      <ConfirmModal
-        isOpen={isRejectOpen}
-        onClose={() => setIsRejectOpen(false)}
-        onConfirm={handleReject}
-        title="Từ chối CV"
-        description="Vui lòng cung cấp lý do từ chối để nhân sự có thể chỉnh sửa lại."
-        confirmText="Từ chối"
-        type="danger"
-      />
+      <Modal isOpen={isRejectOpen} onClose={() => setIsRejectOpen(false)} title="Từ chối CV">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">Vui lòng cung cấp lý do từ chối để nhân sự có thể chỉnh sửa lại.</p>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Lý do từ chối <span className="text-red-500">*</span></label>
+            <textarea 
+              className={`w-full rounded-md border ${error ? 'border-red-500 ring-red-500' : 'border-slate-300'} px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]`}
+              placeholder="VD: Thiếu kinh nghiệm phần ReactJS..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>Hủy</Button>
+            <Button variant="danger" onClick={handleReject} disabled={isSubmitting}>
+              {isSubmitting ? 'Đang xử lý...' : 'Từ chối CV'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CVController } from './cv.controller';
 import { authenticate, authorize } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { getDraftSchema, upsertDraftSchema, searchSchema } from './cv.dto';
+import { getCVByIdSchema, getCVVersionsSchema, updateDraftSchema, searchSchema, createCVSchema, cvVersionParamsSchema, publishCVSchema, copyLocalizationSchema } from './cv.dto';
 
 const router = Router();
 const cvController = new CVController();
@@ -19,32 +19,23 @@ router.use(authenticate);
 
 /**
  * @openapi
- * /api/cvs/draft:
+ * /api/cvs/me:
  *   get:
- *     summary: Get user's CV draft
+ *     summary: Get list of current user's CVs
  *     tags: [CV Management]
- *     parameters:
- *       - in: query
- *         name: languageCode
- *         schema:
- *           type: string
- *           enum: [vi, en, jp]
- *           default: vi
  *     responses:
  *       200:
- *         description: CV Draft retrieved
+ *         description: List of CVs retrieved
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Draft not found
  */
-router.get('/draft', authorize(['Employee']), validate(getDraftSchema), cvController.getDraft);
+router.get('/me', authorize(['Employee', 'TechLead', 'HR', 'Admin']), cvController.getMyCVs);
 
 /**
  * @openapi
- * /api/cvs/draft:
- *   put:
- *     summary: Upsert user's CV draft
+ * /api/cvs:
+ *   post:
+ *     summary: Create a new CV draft
  *     tags: [CV Management]
  *     requestBody:
  *       required: true
@@ -56,16 +47,13 @@ router.get('/draft', authorize(['Employee']), validate(getDraftSchema), cvContro
  *               languageCode:
  *                 type: string
  *                 enum: [vi, en, jp]
- *                 default: vi
- *               sectionsData:
- *                 type: object
  *     responses:
- *       200:
- *         description: CV Draft updated
+ *       201:
+ *         description: CV Created
  *       400:
- *         description: Bad request (cannot edit pending CV)
+ *         description: Bad request
  */
-router.put('/draft', authorize(['Employee']), validate(upsertDraftSchema), cvController.upsertDraft);
+router.post('/', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(createCVSchema), cvController.createCV);
 
 /**
  * @openapi
@@ -105,6 +93,80 @@ router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSch
 
 /**
  * @openapi
+ * /api/cvs/{id}:
+ *   get:
+ *     summary: Get CV details by ID
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV retrieved
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Not found
+ */
+router.get('/:id', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getCVById);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/draft:
+ *   put:
+ *     summary: Update CV draft (Auto-save)
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sectionsData:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: CV Draft updated
+ *       400:
+ *         description: Bad request
+ */
+router.put('/:id/draft', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(updateDraftSchema), cvController.updateDraftById);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/publish:
+ *   post:
+ *     summary: Publish a CV draft for approval
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV submitted for approval
+ *       400:
+ *         description: Bad request (No changes to publish)
+ */
+router.post('/:id/publish', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(publishCVSchema), cvController.publish);
+
+/**
+ * @openapi
  * /api/cvs/{id}/diff:
  *   get:
  *     summary: Get CV diff between original and draft
@@ -124,6 +186,129 @@ router.get('/search', authorize(['TechLead', 'HR', 'Admin']), validate(searchSch
  *       404:
  *         description: CV not found
  */
-router.get('/:id/diff', cvController.diff);
+router.get('/:id/diff', authorize(['Employee', 'TechLead', 'HR', 'Admin']), cvController.diff);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions:
+ *   get:
+ *     summary: Get CV version history
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of versions retrieved
+ */
+router.get('/:id/versions', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVVersionsSchema), cvController.getCVVersions);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/latest-approved:
+ *   get:
+ *     summary: Get the latest approved version of a CV
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Latest approved version details retrieved
+ *       404:
+ *         description: CV has never been approved
+ */
+router.get('/:id/latest-approved', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(getCVByIdSchema), cvController.getLatestApprovedCV);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions/{versionId}:
+ *   get:
+ *     summary: Get specific CV version details
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: versionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Version details retrieved
+ */
+router.get('/:id/versions/:versionId', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(cvVersionParamsSchema), cvController.getCVVersionById);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/versions/{versionId}/restore:
+ *   post:
+ *     summary: Restore a CV draft from a version snapshot
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: versionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: CV version restored
+ *       400:
+ *         description: Cannot edit pending CV
+ */
+router.post('/:id/versions/:versionId/restore', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(cvVersionParamsSchema), cvController.restoreCVVersion);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/localizations/copy:
+ *   post:
+ *     summary: Copy CV sectionsData to another language draft
+ *     tags: [CV Management]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetLanguageCode:
+ *                 type: string
+ *                 enum: [vi, en, jp]
+ *     responses:
+ *       200:
+ *         description: CV draft copied successfully
+ *       400:
+ *         description: Cannot overwrite pending CV
+ */
+router.post('/:id/localizations/copy', authorize(['Employee', 'TechLead', 'HR', 'Admin']), validate(copyLocalizationSchema), cvController.copyLocalization);
 
 export default router;

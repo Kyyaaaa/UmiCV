@@ -29,11 +29,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "username": "testHR",
-  "email": "testhr@umicv.local",
-  "fullName": "Test HR",
+  "username": "techlead2",
+  "email": "techlead2@umicv.local",
+  "fullName": "Test Techlead 2",
   "password": "123456",
-  "role": "HR",
+  "role": "TechLead",
   "departmentId": "99ea9735-d2eb-4b85-833c-228924815930" 
 }
 

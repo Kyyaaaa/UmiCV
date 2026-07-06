@@ -1,71 +1,86 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { authService } from '../../services/auth.service';
 
 export function ForgotPasswordPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSuccess(true);
-    }, 1000);
-  };
+    setError(null);
+    setSuccess(false);
 
-  if (isSuccess) {
-    return (
-      <Card className="w-full text-center py-6">
-        <CardContent className="flex flex-col items-center space-y-4">
-          <div className="rounded-full bg-green-100 p-3 text-green-600">
-            <CheckCircle2 size={32} />
-          </div>
-          <h3 className="text-xl font-semibold">Đã gửi liên kết khôi phục</h3>
-          <p className="text-sm text-slate-500 max-w-xs">
-            Chúng tôi đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn. Vui lòng kiểm tra hộp thư.
-          </p>
-          <Link to="/login" className="mt-4">
-            <Button variant="outline" className="w-full">
-              Quay lại trang đăng nhập
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
+    try {
+      await authService.forgotPassword(email);
+      setSuccess(true);
+    } catch (err: any) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Đã xảy ra lỗi kết nối tới máy chủ. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-2xl">Quên mật khẩu</CardTitle>
         <CardDescription>
-          Nhập email được liên kết với tài khoản của bạn để nhận liên kết khôi phục.
+          Nhập địa chỉ email của bạn để nhận liên kết đặt lại mật khẩu.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      
+      {success ? (
         <CardContent className="space-y-4">
-          <Input 
-            type="email"
-            label="Địa chỉ Email" 
-            placeholder="Ví dụ: employee@umicv.com" 
-            required 
-          />
+          <div className="rounded-md bg-green-50 p-4 text-sm text-green-700">
+            Chúng tôi đã gửi một liên kết đặt lại mật khẩu đến <strong>{email}</strong>. Vui lòng kiểm tra hộp thư đến (hoặc hộp thư rác) của bạn.
+          </div>
+          <div className="text-center mt-4">
+            <Link to="/login" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+              Quay lại màn hình đăng nhập
+            </Link>
+          </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" isLoading={isLoading}>
-            Gửi yêu cầu
-          </Button>
-          <Link to="/login" className="flex items-center text-sm font-medium text-slate-600 hover:text-slate-900">
-            <ArrowLeft size={16} className="mr-2" />
-            Quay lại trang đăng nhập
-          </Link>
-        </CardFooter>
-      </form>
+      ) : (
+        <form onSubmit={handleForgot}>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+            <Input 
+              type="email"
+              label="Địa chỉ Email" 
+              placeholder="Nhập email của bạn" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required 
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full" isLoading={isLoading}>
+              Gửi yêu cầu
+            </Button>
+            <div className="text-center w-full">
+              <Link to="/login" className="text-sm font-medium text-slate-500 hover:text-slate-800">
+                Quay lại màn hình đăng nhập
+              </Link>
+            </div>
+          </CardFooter>
+        </form>
+      )}
     </Card>
   );
 }

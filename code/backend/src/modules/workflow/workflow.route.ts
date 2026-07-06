@@ -44,6 +44,27 @@ router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema
 
 /**
  * @openapi
+ * /api/cvs/approval-logs/all:
+ *   get:
+ *     summary: Get all approval logs
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of all approval logs
+ */
+router.get('/approval-logs/all', authorize(['Admin', 'HR']), workflowController.getAllApprovalLogs);
+
+/**
+ * @openapi
  * /api/cvs/{id}/approve:
  *   post:
  *     summary: Approve a CV
@@ -75,7 +96,7 @@ router.post('/draft/submit', authorize(['Employee']), validate(submitDraftSchema
  *       404:
  *         description: CV not found
  */
-router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchema), workflowController.approveCV);
+router.post('/:id/approve', authorize(['TechLead', 'HR', 'Admin']), validate(approveSchema), workflowController.approveCV);
 
 /**
  * @openapi
@@ -111,6 +132,27 @@ router.post('/:id/approve', authorize(['TechLead', 'HR']), validate(approveSchem
  *       404:
  *         description: CV not found
  */
-router.post('/:id/reject', authorize(['TechLead', 'HR']), validate(rejectSchema), workflowController.rejectCV);
+router.post('/:id/reject', authorize(['TechLead', 'HR', 'Admin']), validate(rejectSchema), workflowController.rejectCV);
+
+/**
+ * @openapi
+ * /api/cvs/{id}/approval-logs:
+ *   get:
+ *     summary: Get approval logs for a CV
+ *     tags: [Workflow]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of approval logs
+ *       404:
+ *         description: CV not found
+ */
+router.get('/:id/approval-logs', authorize(['Employee', 'TechLead', 'HR', 'Admin']), workflowController.getApprovalLogs);
 
 export default router;

@@ -1,0 +1,34 @@
+@startuml
+left to right direction
+skin rose
+
+actor "HR" as HR
+actor "Employee" as Employee
+actor "System (Cronjob)" as System
+
+rectangle "Hệ thống UmiCV" {
+  usecase "Tạo chiến dịch cập nhật" as UC_CreateBatch
+  usecase "Cập nhật thông tin chiến dịch" as UC_UpdateBatch
+  usecase "Theo dõi tiến độ chiến dịch" as UC_TrackBatch
+  usecase "Gửi nhắc nhở thủ công" as UC_ManualRemind
+  usecase "Hủy / Xóa chiến dịch" as UC_CancelDeleteBatch
+  
+  usecase "Xem thông báo yêu cầu" as UC_ReceiveReq
+  usecase "Cập nhật CV theo chiến dịch" as UC_UpdateCV
+  
+  usecase "Nhắc nhở tự động (Cronjob)" as UC_SendReminders
+  usecase "Tự động đóng chiến dịch quá hạn" as UC_AutoCloseBatch
+
+  HR --> UC_CreateBatch #green
+  HR --> UC_UpdateBatch #green
+  HR --> UC_TrackBatch #green
+  HR --> UC_ManualRemind #green
+  HR --> UC_CancelDeleteBatch #green
+
+  Employee --> UC_ReceiveReq #blue
+  Employee --> UC_UpdateCV #blue
+
+  System --> UC_SendReminders #black
+  System --> UC_AutoCloseBatch #black
+}
+@enduml

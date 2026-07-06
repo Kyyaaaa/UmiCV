@@ -2,6 +2,15 @@ import { prismaMock } from '../../../__tests__/prismaMock';
 import { WorkflowService } from '../workflow.service';
 import { CVStatus, ApprovalAction } from '@prisma/client';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../../errors/AppError';
+import { MESSAGES } from '../../../constants/messages';
+
+jest.mock('../../audit/audit.service', () => {
+  return {
+    AuditService: jest.fn().mockImplementation(() => {
+      return { logAction: jest.fn() };
+    })
+  };
+});
 
 describe('WorkflowService', () => {
   let workflowService: WorkflowService;
@@ -13,12 +22,15 @@ describe('WorkflowService', () => {
 
   describe('submitDraft', () => {
     it('should submit draft successfully', async () => {
-      prismaMock.cVProfile.findMany.mockResolvedValue([{ id: 'cv-1' }] as any);
+      prismaMock.cVProfile.findMany.mockResolvedValue([{ 
+        id: 'cv-1', 
+        sectionsData: { personalInfo: { name: 'John', role: 'Dev', email: 'john@example.com' } } 
+      }] as any);
       prismaMock.cVProfile.updateMany.mockResolvedValue({ count: 1 } as any);
 
       const result = await workflowService.submitDraft('user-1', { languageCode: 'vi' });
 
-      expect(result).toEqual({ message: 'Drafts submitted successfully' });
+      expect(result).toEqual({ message: MESSAGES.WORKFLOW.SUBMIT_SUCCESS });
       expect(prismaMock.cVProfile.updateMany).toHaveBeenCalledWith({
         where: { id: { in: ['cv-1'] } },
         data: { status: CVStatus.PendingApproval, submittedAt: expect.any(Date) },
@@ -46,15 +58,39 @@ describe('WorkflowService', () => {
     it('should approve CV and publish if level 2 (HR)', async () => {
       prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval, versionNumber: 0 } as any);
       prismaMock.user.findUnique.mockResolvedValue({ id: 'hr-1', role: 'HR' } as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any); // has tech lead
+      prismaMock.batchRequestTarget.findMany.mockResolvedValue([]);
       prismaMock.$transaction.mockResolvedValue([] as any);
 
       const result = await workflowService.approveCV('cv-1', 'hr-1', { level: 2 });
 
-      expect(result).toEqual({ message: 'CV approved successfully' });
+      expect(result).toEqual({ message: MESSAGES.WORKFLOW.APPROVE_SUCCESS });
       expect(prismaMock.approvalLog.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ action: ApprovalAction.Approve, level: 2 }),
       }));
       expect(prismaMock.$transaction).toHaveBeenCalled();
+    });
+    it('should throw BadRequestError if another TechLead already processed CV (Race Condition)', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval, versionNumber: 0 } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'techlead-2', role: 'TechLead' } as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+
+      await expect(workflowService.approveCV('cv-1', 'techlead-2', { level: 1 }))
+        .rejects.toThrow('CV này đã được một Tech Lead khác xử lý.');
+    });
+  });
+
+  describe('rejectCV', () => {
+    it('should throw BadRequestError if another TechLead already processed CV (Race Condition)', async () => {
+      prismaMock.cVProfile.findUnique.mockResolvedValue({ id: 'cv-1', userId: 'user-1', status: CVStatus.PendingApproval } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'techlead-2', role: 'TechLead' } as any);
+      prismaMock.projectMember.findFirst.mockResolvedValue({} as any);
+      prismaMock.approvalLog.findMany.mockResolvedValue([{ level: 1, action: ApprovalAction.Approve }] as any);
+
+      await expect(workflowService.rejectCV('cv-1', 'techlead-2', { reason: 'Reject' }, 1))
+        .rejects.toThrow('CV này đã được một Tech Lead khác xử lý.');
     });
   });
 });

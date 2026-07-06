@@ -1,0 +1,217 @@
+@startuml UmiCV_ERD
+
+skinparam linetype ortho
+skinparam roundcorner 5
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+
+skinparam class {
+    BackgroundColor #F8F9FA
+    ArrowColor #2C3E50
+    BorderColor #BDC3C7
+    HeaderBackgroundColor #E9ECEF
+    FontSize 13
+    AttributeFontSize 11
+}
+
+skinparam enum {
+    BackgroundColor #FFF9E6
+    BorderColor #F1C40F
+    ArrowColor #D4AC0D
+}
+
+' ==================== ENUMS ====================
+enum UserRole {
+  Employee
+  TechLead
+  HR
+  Admin
+}
+
+enum UserStatus {
+  Active
+  Locked
+}
+
+enum CVStatus {
+  Draft
+  PendingApproval
+  Outdated
+  Updated
+  Cancelled
+}
+
+enum ApprovalAction {
+  Approve
+  Reject
+}
+
+enum TargetStatus {
+  Outdated
+  Updated
+}
+
+enum BatchRequestStatus {
+  Active
+  Cancelled
+  Completed
+}
+
+' ==================== ENTITIES ====================
+entity "Department\n(Phòng ban)" as departments {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * code : VARCHAR(50) <<UNIQUE>>
+    parent_department_id : UUID <<FK>>
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "User\n(Người dùng)" as users {
+  * id : UUID <<PK>>
+  --
+  * username : VARCHAR(100) <<UNIQUE>>
+  * email : VARCHAR(255) <<UNIQUE>>
+  * full_name : VARCHAR(255)
+  * password_hash : VARCHAR(255)
+  * role : UserRole
+  * status : UserStatus
+  * department_id : UUID <<FK>>
+    reset_password_token : VARCHAR(255)
+    reset_password_expires : DATETIME
+    locked_at : DATETIME
+    last_checked_notif_at : DATETIME
+  * token_version : INT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+    deleted_at : DATETIME
+}
+
+entity "Project\n(Dự án)" as projects {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR(255)
+  * code : VARCHAR(50) <<UNIQUE>>
+  * tech_lead_id : UUID <<FK>>
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "ProjectMember\n(Thành viên Dự án)" as project_members {
+  * project_id : UUID <<PK, FK>>
+  * user_id : UUID <<PK, FK>>
+  --
+  * joined_at : DATETIME
+}
+
+entity "CVProfile\n(Hồ sơ CV)" as cv_profiles {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  * language_code : VARCHAR(10)
+  * status : CVStatus
+  * version_number : INT
+  * sections_data : JSONB
+    submitted_at : DATETIME
+    published_at : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+  __
+  <<UNIQUE>> (user_id, language_code)
+}
+
+entity "CVVersionHistory\n(Lịch sử phiên bản CV)" as cv_version_histories {
+  * id : UUID <<PK>>
+  --
+  * cv_profile_id : UUID <<FK>>
+  * version_number : INT
+  * snapshot_data : JSONB
+  * created_at : DATETIME
+  __
+  <<UNIQUE>> (cv_profile_id, version_number)
+}
+
+entity "BatchRequest\n(Chiến dịch cập nhật)" as batch_requests {
+  * id : UUID <<PK>>
+  --
+  * created_by : UUID <<FK>>
+  * title : VARCHAR(255)
+    description : TEXT
+  * deadline : DATETIME
+  * status : BatchRequestStatus
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "BatchRequestTarget\n(Mục tiêu chiến dịch)" as batch_request_targets {
+  * batch_request_id : UUID <<PK, FK>>
+  * user_id : UUID <<PK, FK>>
+  --
+  * status : TargetStatus
+    notified_at : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "ApprovalLog\n(Lịch sử duyệt CV)" as approval_logs {
+  * id : UUID <<PK>>
+  --
+  * cv_profile_id : UUID <<FK>>
+  * approver_id : UUID <<FK>>
+  * action : ApprovalAction
+  * level : INT
+    reason : TEXT
+    section_id : VARCHAR(100)
+  * created_at : DATETIME
+}
+
+entity "AuditLog\n(Nhật ký kiểm toán)" as audit_logs {
+  * id : UUID <<PK>>
+  --
+  * action : VARCHAR(100)
+    user_id : UUID <<FK>>
+    resource_id : VARCHAR(255)
+    ip_address : VARCHAR(50)
+  * timestamp : DATETIME
+}
+
+entity "Notification\n(Thông báo)" as notifications {
+  * id : UUID <<PK>>
+  --
+  * title : VARCHAR(255)
+  * message : TEXT
+    type : VARCHAR(50)
+    link : VARCHAR(255)
+  * is_global : BOOLEAN
+    user_id : UUID <<FK>>
+  * created_at : DATETIME
+}
+
+' ==================== RELATIONSHIPS ====================
+' Tổ chức & Nhân sự
+departments ||--o{ departments : "parent_department\n(Cấu trúc phân cấp)"
+departments ||--o{ users : "has_employees\n(Thuộc phòng ban)"
+
+' Dự án & Phân bổ
+users ||--o{ projects : "managed_by_techlead\n(Quản lý dự án)"
+projects ||--o{ project_members : "includes\n(Có thành viên)"
+users ||--o{ project_members : "participates_in\n(Tham gia)"
+
+' Hồ sơ CV & Phê duyệt
+users ||--o{ cv_profiles : "owns\n(Sở hữu CV)"
+cv_profiles ||--o{ cv_version_histories : "retains_history\n(Lưu ảnh chụp Snapshot)"
+cv_profiles ||--o{ approval_logs : "has_review_logs\n(Lịch sử duyệt)"
+users ||--o{ approval_logs : "reviewed_by\n(Người duyệt)"
+
+' Chiến dịch cập nhật hàng loạt (HR)
+users ||--o{ batch_requests : "created_by_hr\n(HR phát động)"
+batch_requests ||--o{ batch_request_targets : "targets\n(Danh sách mục tiêu)"
+users ||--o{ batch_request_targets : "is_targeted\n(Nhân sự được yêu cầu)"
+
+' Hệ thống theo dõi & Thông báo
+users |o--o{ audit_logs : "creates_audit_trail\n(Ghi vết thao tác)"
+users |o--o{ notifications : "receives_notification\n(Nhận thông báo)"
+
+@enduml

@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '../../components/common/PageHeader';
-import { mockNotifications } from '../../mocks/notifications.mock';
-import { Button } from '../../components/ui/Button';
-import { Check, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
+import { notificationService } from '../../services/notification.service';
+import { CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 export function NotificationCenterPage() {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const navigate = useNavigate();
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-  };
+  const { data: notificationsData, isLoading, error } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationService.getNotifications().then(res => res.data.data),
+    refetchInterval: 30000 // 30 seconds
+  });
+
+  const notifications = notificationsData || [];
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -25,25 +30,29 @@ export function NotificationCenterPage() {
     <div className="max-w-4xl mx-auto">
       <PageHeader 
         title="Thông báo" 
-        description="Quản lý tất cả thông báo của bạn trong hệ thống" 
-        actions={
-          <Button variant="outline" onClick={markAllAsRead}>
-            <Check size={16} className="mr-2" />
-            Đánh dấu đã đọc tất cả
-          </Button>
-        }
+        description="Quản lý tất cả thông báo của bạn trong hệ thống"
       />
 
       <div className="space-y-4">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12 text-slate-500">Đang tải thông báo...</div>
+        ) : error ? (
+          <div className="text-center py-12 text-red-500">Lỗi khi tải thông báo</div>
+        ) : notifications.length === 0 ? (
           <div className="text-center py-12 text-slate-500">Bạn không có thông báo nào.</div>
         ) : (
           notifications.map(notification => (
             <div 
               key={notification.id}
+              onClick={() => {
+                if (notification.link) {
+                  navigate(notification.link);
+                }
+              }}
               className={cn(
                 "flex items-start gap-4 rounded-xl border p-4 transition-colors",
-                notification.isRead ? "border-slate-200 bg-white" : "border-blue-100 bg-blue-50"
+                "border-slate-200 bg-white",
+                notification.link ? "cursor-pointer hover:border-blue-300 hover:shadow-sm" : ""
               )}
             >
               <div className="mt-1 flex-shrink-0">
@@ -51,25 +60,17 @@ export function NotificationCenterPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h4 className={cn("font-semibold", notification.isRead ? "text-slate-700" : "text-slate-900")}>
+                  <h4 className="font-semibold text-slate-700">
                     {notification.title}
                   </h4>
                   <span className="text-xs text-slate-500">
                     {new Date(notification.createdAt).toLocaleString('vi-VN')}
                   </span>
                 </div>
-                <p className={cn("mt-1 text-sm", notification.isRead ? "text-slate-500" : "text-slate-700")}>
+                <p className="mt-1 text-sm text-slate-500">
                   {notification.message}
                 </p>
-                {notification.link && (
-                  <a href={notification.link} className="mt-2 inline-block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
-                    Xem chi tiết &rarr;
-                  </a>
-                )}
               </div>
-              {!notification.isRead && (
-                <div className="h-2 w-2 flex-shrink-0 rounded-full bg-blue-600 mt-2"></div>
-              )}
             </div>
           ))
         )}

@@ -1,7 +1,18 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export function PublicLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-50">Loading...</div>;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md">

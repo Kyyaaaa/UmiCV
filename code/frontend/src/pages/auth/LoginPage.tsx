@@ -1,21 +1,60 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { authService } from '../../services/auth.service';
+import { useAuth } from '../../hooks/useAuth';
+import { validatePassword } from '../../utils/validation';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('error') === 'locked') {
+      return 'Phiên đăng nhập đã hết hạn hoặc tài khoản của bạn đã bị khóa bởi Quản trị viên.';
+    }
+    return null;
+  });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const pwdError = validatePassword(password);
+    if (pwdError) {
+      setError(pwdError);
+      return;
+    }
+
     setIsLoading(true);
-    // Mock login delay
-    setTimeout(() => {
+    setError(null);
+    
+    try {
+      const response = await authService.login(username, password);
+      login(response.data.user, response.data.accessToken);
+      
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setError('Tên đăng nhập hoặc mật khẩu không chính xác.');
+      } else if (err.response?.status === 429) {
+        setError(err.response?.data?.message || 'Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau 15 phút.');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Đã xảy ra lỗi kết nối tới máy chủ. Vui lòng thử lại sau.');
+      }
+    } finally {
       setIsLoading(false);
-      navigate('/');
-    }, 1000);
+    }
   };
 
   return (
@@ -28,9 +67,16 @@ export function LoginPage() {
       </CardHeader>
       <form onSubmit={handleLogin}>
         <CardContent className="space-y-4">
+          {error && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
           <Input 
             label="Tên đăng nhập" 
             placeholder="Nhập tên đăng nhập" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required 
           />
           <div className="space-y-1">
@@ -38,26 +84,15 @@ export function LoginPage() {
               type="password" 
               label="Mật khẩu" 
               placeholder="Nhập mật khẩu" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required 
             />
             <div className="flex justify-end">
-              <Link 
-                to="/forgot-password" 
-                className="text-sm font-medium text-blue-600 hover:text-blue-500"
-              >
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                 Quên mật khẩu?
               </Link>
             </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <input 
-              type="checkbox" 
-              id="remember" 
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="remember" className="text-sm font-medium leading-none text-slate-700">
-              Ghi nhớ đăng nhập
-            </label>
           </div>
         </CardContent>
         <CardFooter>

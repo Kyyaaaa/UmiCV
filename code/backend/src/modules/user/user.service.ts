@@ -1,7 +1,11 @@
 import prisma from '../../config/db';
 import { UserRole, UserStatus, Prisma } from '@prisma/client';
-import { BadRequestError, NotFoundError } from '../../errors/AppError';
+import { BadRequestError, NotFoundError, ForbiddenError } from '../../errors/AppError';
 import bcrypt from 'bcrypt';
+import { MESSAGES } from '../../constants/messages';
+import { AuditService } from '../audit/audit.service';
+
+const auditService = new AuditService();
 
 // Helper to exclude fields
 function exclude<User, Key extends keyof User>(
@@ -22,13 +26,15 @@ export class UserService {
     keyword?: string;
     role?: UserRole;
     status?: UserStatus;
+    departmentId?: string;
   }) {
-    const { page, limit, keyword, role, status } = params;
+    const { page, limit, keyword, role, status, departmentId } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.UserWhereInput = {
       ...(role && { role }),
       ...(status && { status }),
+      ...(departmentId && { departmentId }),
       ...(keyword && {
         OR: [
           { email: { contains: keyword, mode: 'insensitive' } },
@@ -66,7 +72,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new NotFoundError(MESSAGES.USER.NOT_FOUND);
     }
 
     return exclude(user, ['passwordHash']);
@@ -83,7 +89,7 @@ export class UserService {
     });
 
     if (existing) {
-      throw new BadRequestError('Username or email already exists');
+      throw new BadRequestError(MESSAGES.USER.EXISTS);
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -104,68 +110,170 @@ export class UserService {
     return exclude(user, ['passwordHash']);
   }
 
-  async updateUser(id: string, data: any) {
+  async updateUser(id: string, data: any, executorId?: string) {
     // Ensure user exists
-    await this.getUserById(id);
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
+    
+    // Prevent Admin self-downgrade
+    if (executorId && id === executorId && targetUser.role === 'Admin' && data.role && data.role !== 'Admin') {
+      throw new ForbiddenError('Bạn không thể tự hạ quyền của chính mình.');
+    }
 
     try {
       const user = await prisma.user.update({
         where: { id },
         data,
       });
+
+      if (executorId) {
+        auditService.logAction('UPDATE_USER', executorId, id);
+      }
+
       return exclude(user, ['passwordHash']);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new BadRequestError('Email or username already exists');
+          throw new BadRequestError(MESSAGES.USER.EXISTS);
         }
       }
       throw error;
     }
   }
 
-  async lockUser(id: string) {
-    await this.getUserById(id);
-    const user = await prisma.user.update({
+  async lockUser(id: string, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
+    if (targetUser.role === 'Admin') {
+      throw new BadRequestError('Không thể khóa tài khoản Quản trị viên');
+    }
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: UserStatus.Locked,
+        status: 'Locked',
         lockedAt: new Date(),
+        tokenVersion: { increment: 1 },
       },
     });
-    return exclude(user, ['passwordHash']);
+
+    if (executorId) {
+      auditService.logAction('LOCK_USER', executorId, id);
+    }
+
+    return exclude(updatedUser, ['passwordHash']);
   }
 
-  async unlockUser(id: string) {
-    await this.getUserById(id);
-    const user = await prisma.user.update({
+  async unlockUser(id: string, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: {
-        status: UserStatus.Active,
+        status: 'Active',
         lockedAt: null,
       },
     });
-    return exclude(user, ['passwordHash']);
+
+    if (executorId) {
+      auditService.logAction('UNLOCK_USER', executorId, id);
+    }
+
+    return exclude(updatedUser, ['passwordHash']);
   }
 
-  async resetPassword(id: string, newPassword: string) {
-    await this.getUserById(id);
+  async resetPassword(id: string, newPassword: string, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
     const user = await prisma.user.update({
       where: { id },
-      data: { passwordHash },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
+
+    if (executorId) {
+      auditService.logAction('RESET_PASSWORD_MANUAL', executorId, id);
+    }
+
+    return exclude(user, ['passwordHash']);
+  }
+
+  async changeRole(id: string, role: UserRole, executorId?: string) {
+    const targetUser = await this.getUserById(id);
+    if (executorId && targetUser.role === 'Admin' && id !== executorId) {
+      throw new ForbiddenError('Bạn không có quyền chỉnh sửa tài khoản Quản trị viên khác.');
+    }
+    const user = await prisma.user.update({
+      where: { id },
+      data: { role, tokenVersion: { increment: 1 } },
+    });
+
+    if (executorId) {
+      auditService.logAction('CHANGE_ROLE', executorId, id);
+    }
+
+    return exclude(user, ['passwordHash']);
+  }
+
+  async updateMe(id: string, data: { fullName?: string; email?: string }) {
+    await this.getUserById(id);
+    if (data.email) {
+      const existing = await prisma.user.findUnique({ where: { email: data.email } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestError('Email đã được sử dụng bởi người khác');
+      }
+    }
+    const user = await prisma.user.update({
+      where: { id },
+      data,
     });
     return exclude(user, ['passwordHash']);
   }
 
-  async changeRole(id: string, role: UserRole) {
-    await this.getUserById(id);
+  async changeMyPassword(id: string, oldPassword: string, newPassword: string) {
+    const user = await prisma.user.findUnique({ where: { id, deletedAt: null } });
+    if (!user) throw new NotFoundError(MESSAGES.USER.NOT_FOUND);
+
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch) throw new BadRequestError('Mật khẩu hiện tại không chính xác');
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
+    return exclude(updated, ['passwordHash']);
+  }
+
+  async deleteUser(id: string, executorId: string) {
+    if (id === executorId) {
+      throw new ForbiddenError('Bạn không thể tự xóa tài khoản của chính mình.');
+    }
+    const targetUser = await this.getUserById(id);
+    if (targetUser.role === 'Admin') {
+      throw new ForbiddenError('Bạn không có quyền xóa tài khoản Quản trị viên khác.');
+    }
+
     const user = await prisma.user.update({
       where: { id },
-      data: { role },
+      data: { deletedAt: new Date() },
     });
+
+    if (executorId) {
+      auditService.logAction('DELETE_USER', executorId, id);
+    }
+
     return exclude(user, ['passwordHash']);
   }
 }

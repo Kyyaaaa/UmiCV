@@ -1,0 +1,38 @@
+@startuml
+left to right direction
+skin rose
+
+actor "HR" as HR
+actor "Tech Lead" as TechLead
+actor "Employee" as Employee
+
+rectangle "Hệ thống UmiCV" {
+  usecase "Xem CV chính thức" as UC_ViewCV
+  usecase "Cập nhật CV bản nháp" as UC_EditDraft
+  usecase "Nộp CV để phê duyệt" as UC_SubmitCV
+  
+  usecase "Xem danh sách CV dự án (Chờ duyệt cấp 1)" as UC_TL_Pending
+  usecase "Xem toàn bộ CV chờ duyệt" as UC_HR_Pending
+  
+  usecase "So sánh phiên bản CV (Diff)" as UC_ViewDiff
+  usecase "Phê duyệt cấp 1 (Chuyên môn)" as UC_TechApprove
+  usecase "Phê duyệt cấp 2 (Định dạng)" as UC_HRApprove
+  usecase "Duyệt thẳng CV (Bỏ qua cấp 1)" as UC_DirectApprove
+  usecase "Từ chối phê duyệt" as UC_Reject
+
+  Employee --> UC_ViewCV #blue
+  Employee --> UC_EditDraft #blue
+  Employee --> UC_SubmitCV #blue
+
+  TechLead --> UC_TL_Pending #purple
+  TechLead --> UC_ViewDiff #purple
+  TechLead --> UC_TechApprove #purple
+  TechLead --> UC_Reject #purple
+
+  HR --> UC_HR_Pending #green
+  HR --> UC_ViewDiff #green
+  HR --> UC_HRApprove #green
+  HR --> UC_DirectApprove #green
+  HR --> UC_Reject #green
+}
+@enduml

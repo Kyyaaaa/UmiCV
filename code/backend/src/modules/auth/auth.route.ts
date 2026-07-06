@@ -1,19 +1,12 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { validate } from '../../middleware/validate.middleware';
-import { loginSchema } from './auth.dto';
-import rateLimit from 'express-rate-limit';
+import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from './auth.dto';
+
 
 const router = Router();
 const authController = new AuthController();
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per `window`
-  message: { success: false, message: 'Too many login attempts, please try again after 15 minutes' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 /**
  * @openapi
@@ -59,7 +52,7 @@ const loginLimiter = rateLimit({
  *       429:
  *         description: Too many login attempts
  */
-router.post('/login', loginLimiter, validate(loginSchema), authController.login);
+router.post('/login', validate(loginSchema), authController.login);
 
 /**
  * @openapi
@@ -104,5 +97,60 @@ router.post('/refresh', authController.refresh);
  *                   type: string
  */
 router.post('/logout', authController.logout);
+
+/**
+ * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Reset email sent
+ *       400:
+ *         description: Validation error
+ */
+router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
 export default router;

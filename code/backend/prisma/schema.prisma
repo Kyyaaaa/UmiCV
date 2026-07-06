@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -35,6 +35,7 @@ enum TargetStatus {
 enum BatchRequestStatus {
   Active
   Cancelled
+  Completed
 }
 
 enum UserStatus {
@@ -66,10 +67,16 @@ model User {
   role         UserRole
   status       UserStatus @default(Active)
   departmentId String     @map("department_id") @db.Uuid
-  lockedAt     DateTime?  @map("locked_at")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
-  deletedAt    DateTime?  @map("deleted_at")
+
+  resetPasswordToken   String?   @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+
+  lockedAt           DateTime? @map("locked_at")
+  lastCheckedNotifAt DateTime? @map("last_checked_notif_at")
+  tokenVersion       Int       @default(0) @map("token_version")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
 
   department Department @relation(fields: [departmentId], references: [id])
 
@@ -81,6 +88,7 @@ model User {
   batchTargets  BatchRequestTarget[]
   approvalLogs  ApprovalLog[]        @relation("ApproverLogs")
   auditLogs     AuditLog[]
+  notifications Notification[]
 
   @@index([departmentId])
   @@map("users")
@@ -219,4 +227,21 @@ model AuditLog {
 
   @@index([userId])
   @@map("audit_logs")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String   @db.VarChar(255)
+  message   String
+  type      String?  @default("info")
+  link      String?
+  isGlobal  Boolean  @default(false) @map("is_global")
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isGlobal])
+  @@map("notifications")
 }

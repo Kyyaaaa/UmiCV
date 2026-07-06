@@ -1,11 +1,19 @@
 import prisma from '../../config/db';
-import { verifyPassword } from '../../utils/hash.util';
+import { verifyPassword, hashPassword } from '../../utils/hash.util';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../../utils/jwt.util';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError } from '../../errors/AppError';
 import { LoginInput } from './auth.dto';
 import { redisClient } from '../../config/redis';
+import { MESSAGES } from '../../constants/messages';
+import crypto from 'crypto';
+import { emailQueue } from '../notification/notification.queue';
+import { getResetPasswordTemplate } from '../notification/mailer';
+import { BadRequestError } from '../../errors/AppError';
+import { AuditService } from '../audit/audit.service';
 import { env } from '../../config/env';
+
+const auditService = new AuditService();
 
 export class AuthService {
   async login(data: LoginInput) {
@@ -15,21 +23,23 @@ export class AuthService {
     });
 
     if (!user || user.deletedAt) {
-      throw new UnauthorizedError('Invalid username or password');
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     if (user.status === 'Locked') {
-      throw new UnauthorizedError('Account is locked');
+      throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
     }
 
     const isMatch = await verifyPassword(data.password, user.passwordHash);
     if (!isMatch) {
-      throw new UnauthorizedError('Invalid username or password');
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
-    const payload = { userId: user.id, role: user.role };
+    const payload = { userId: user.id, role: user.role, tokenVersion: user.tokenVersion };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
+
+    auditService.logAction('LOGIN', user.id);
 
     return {
       user: {
@@ -47,7 +57,7 @@ export class AuthService {
     // Check blacklist
     const isBlacklisted = await redisClient.get(`bl_${token}`);
     if (isBlacklisted) {
-      throw new UnauthorizedError('Token has been revoked');
+      throw new UnauthorizedError(MESSAGES.AUTH.TOKEN_REVOKED);
     }
 
     try {
@@ -56,19 +66,20 @@ export class AuthService {
       // Ensure user still exists
       const user = await prisma.user.findUnique({ where: { id: payload.userId } });
       if (!user || user.deletedAt) {
-        throw new UnauthorizedError('User not found or inactive');
+        throw new UnauthorizedError(MESSAGES.AUTH.USER_NOT_FOUND_INACTIVE);
       }
 
       if (user.status === 'Locked') {
-        throw new UnauthorizedError('Account is locked');
+        throw new UnauthorizedError(MESSAGES.AUTH.ACCOUNT_LOCKED);
       }
 
-      const newPayload = { userId: user.id, role: user.role };
+      const newPayload = { userId: user.id, role: user.role, tokenVersion: user.tokenVersion };
       const accessToken = generateAccessToken(newPayload);
 
       return { accessToken };
     } catch (error) {
-      throw new UnauthorizedError('Invalid refresh token');
+      if (error instanceof UnauthorizedError) throw error;
+      throw new UnauthorizedError(MESSAGES.AUTH.INVALID_REFRESH_TOKEN);
     }
   }
 
@@ -76,7 +87,7 @@ export class AuthService {
     if (!refreshToken) return;
 
     try {
-      const payload = verifyToken(refreshToken);
+      verifyToken(refreshToken);
       const decoded = jwt.decode(refreshToken) as any;
       
       // Calculate remaining TTL in seconds
@@ -89,5 +100,65 @@ export class AuthService {
     } catch (error) {
       // Token already invalid or expired, no need to blacklist
     }
+  }
+
+  async forgotPassword(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.deletedAt) {
+      // Return success even if user not found to prevent email enumeration
+      return { message: MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: passwordResetToken,
+        resetPasswordExpires: passwordResetExpires,
+      },
+    });
+
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const message = getResetPasswordTemplate(resetUrl);
+
+    await emailQueue.add('forgot-password', {
+      to: user.email,
+      subject: 'Yêu cầu đặt lại mật khẩu',
+      body: message,
+    });
+
+    return { message: MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new BadRequestError(MESSAGES.AUTH.RESET_PASSWORD_INVALID);
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        tokenVersion: { increment: 1 },
+      },
+    });
+
+    return { message: MESSAGES.AUTH.RESET_PASSWORD_SUCCESS };
   }
 }

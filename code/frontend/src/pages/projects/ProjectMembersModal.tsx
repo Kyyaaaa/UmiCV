@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from 'react';
+import { Modal } from '../../components/common/Modal';
+import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
+import { Project, ProjectMember, User } from '../../types';
+import { projectService } from '../../services/project.service';
+import { userService } from '../../services/user.service';
+import { Trash2 } from 'lucide-react';
+
+interface ProjectMembersModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  project: Project | null;
+}
+
+export function ProjectMembersModal({ isOpen, onClose, project }: ProjectMembersModalProps) {
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState('');
+
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const fetchData = React.useCallback(async () => {
+    if (!project) return;
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      const [membersRes, usersRes] = await Promise.all([
+        projectService.getProjectMembers(project.id, { page, limit: 10 }),
+        userService.getUsers({ limit: 100 }) // In real app, might want server side search
+      ]);
+      
+      setMembers(membersRes.data);
+      setTotalItems(membersRes.total);
+      
+      // Filter out users who are already members
+      const memberUserIds = new Set(membersRes.data.map(m => m.userId));
+      const notMembers = (usersRes.data || []).filter(u => !memberUserIds.has(u.id));
+      setAvailableUsers(notMembers);
+    } catch (err) {
+      console.error(err);
+      setError('Lỗi khi tải dữ liệu thành viên');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [project, page]);
+
+  useEffect(() => {
+    if (isOpen && project) {
+      // eslint-disable-next-line
+      fetchData();
+    }
+  }, [isOpen, project, page, fetchData]);
+
+  const handleAddMember = async () => {
+    if (!project || !selectedUserId) return;
+    try {
+      setIsAdding(true);
+      await projectService.assignMembers(project.id, [selectedUserId]);
+      setSelectedUserId('');
+      await fetchData(); // Refresh lists
+    } catch (err: unknown) {
+      console.error(err);
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi thêm thành viên');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!project) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa thành viên này khỏi dự án?')) return;
+    
+    try {
+      await projectService.removeMember(project.id, userId);
+      await fetchData();
+    } catch (err: unknown) {
+      console.error(err);
+      setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Lỗi khi xóa thành viên');
+    }
+  };
+
+  if (!project) return null;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Thành viên dự án: ${project.name}`}
+      size="lg"
+      footer={
+        <Button variant="outline" onClick={onClose}>
+          Đóng
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+        
+        {/* Add new member section */}
+        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h4 className="font-medium text-sm text-slate-800 mb-3">Thêm thành viên mới</h4>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Select
+                value={selectedUserId}
+                onChange={e => setSelectedUserId(e.target.value)}
+                options={[
+                  { value: '', label: 'Tìm và chọn nhân viên...' },
+                  ...availableUsers.map(u => ({ value: u.id, label: `${u.fullName} (${u.email})` }))
+                ]}
+              />
+            </div>
+            <Button 
+              onClick={handleAddMember} 
+              disabled={!selectedUserId || isAdding}
+              isLoading={isAdding}
+            >
+              Thêm vào dự án
+            </Button>
+          </div>
+        </div>
+
+        {/* Members list section */}
+        <div>
+          <h4 className="font-medium text-sm text-slate-800 mb-3">Danh sách thành viên ({totalItems})</h4>
+          
+          <div className="bg-slate-50 border border-slate-200 rounded-md overflow-hidden max-h-96 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-8 text-center text-slate-500">Đang tải...</div>
+            ) : members.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">Dự án chưa có thành viên nào</div>
+            ) : (
+              <ul className="divide-y divide-slate-200">
+                {members.map(member => (
+                  <li key={member.id} className="p-3 flex items-center gap-3 hover:bg-white transition-colors">
+                    <img 
+                      src={member.user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.user?.fullName || 'User')}&background=random`} 
+                      alt={member.user?.fullName}
+                      className="w-8 h-8 rounded-full border border-slate-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{member.user?.fullName}</p>
+                      <p className="text-xs text-slate-500 truncate">{member.user?.email}</p>
+                    </div>
+                    <div className="text-xs text-slate-500 hidden sm:block">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded mr-2 font-medium">{member.user?.role}</span>
+                      Tham gia: {new Date(member.joinedAt).toLocaleDateString('vi-VN')}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleRemoveMember(member.userId)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {totalItems > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border border-t-0 border-slate-200 bg-white rounded-b-md">
+              <div className="text-xs text-slate-500">
+                Hiển thị <span className="font-medium">{(page - 1) * 10 + 1}</span> đến <span className="font-medium">{Math.min(page * 10, totalItems)}</span> / <span className="font-medium">{totalItems}</span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Trước
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page * 10 >= totalItems}
+                >
+                  Sau
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}

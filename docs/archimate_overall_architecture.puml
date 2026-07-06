@@ -1,0 +1,125 @@
+@startuml ArchiMateOverallArchitecture
+title Sơ đồ kiến trúc tổng thể hệ thống UmiCV theo tiêu chuẩn ArchiMate
+
+skinparam monochrome false
+skinparam shadowing false
+skin rose
+skinparam defaultFontName Arial
+skinparam roundcorner 8
+skinparam packageStyle rectangle
+
+skinparam rectangle {
+    BackgroundColor<<Business Actor>> #FFF0F5
+    BorderColor<<Business Actor>> #DB7093
+    BackgroundColor<<Business Service>> #FFE4E1
+    BorderColor<<Business Service>> #CD5C5C
+    
+    BackgroundColor<<Application Layer>> #F0F8FF
+    BorderColor<<Application Layer>> #4682B4
+    BackgroundColor<<Application Module>> #E6F2FF
+    BorderColor<<Application Module>> #1E90FF
+    BackgroundColor<<Application Component>> #D0E8FF
+    BorderColor<<Application Component>> #0077BE
+    
+    BackgroundColor<<Technology Layer>> #F0FFF0
+    BorderColor<<Technology Layer>> #2E8B57
+    BackgroundColor<<Technology Service>> #E0FFE0
+    BorderColor<<Technology Service>> #3CB371
+    BackgroundColor<<Data Store>> #F5F5DC
+    BorderColor<<Data Store>> #8B4513
+}
+
+package "Tầng nghiệp vụ Business Layer" <<rectangle>> {
+    rectangle "Employee" <<Business Actor>> as ActorEmployee
+    rectangle "Tech Lead" <<Business Actor>> as ActorTechLead
+    rectangle "HR" <<Business Actor>> as ActorHR
+    rectangle "Admin" <<Business Actor>> as ActorAdmin
+    
+    rectangle "Quản lý hồ sơ cá nhân và không gian nháp" <<Business Service>> as SvcCV
+    rectangle "Phê duyệt hồ sơ hai cấp chuyên môn và định dạng" <<Business Service>> as SvcApproval
+    rectangle "Phát động chiến dịch cập nhật hồ sơ hàng loạt" <<Business Service>> as SvcBatch
+    rectangle "Tra cứu và khai thác báo cáo dữ liệu nhân lực" <<Business Service>> as SvcReport
+}
+
+package "Tầng ứng dụng Application Layer" <<rectangle>> {
+    rectangle "Khối giao diện Frontend React Vite TailwindCSS" <<Application Component>> as UI
+    
+    rectangle "Khối dịch vụ API Gateway và Security Middleware" <<Application Component>> as Gateway {
+        rectangle "Xác thực không trạng thái JWT Auth" as AuthMiddleware
+        rectangle "Phân quyền theo vai trò RBAC" as RBACMiddleware
+        rectangle "Làm sạch dữ liệu đầu vào Zod Validation" as ZodMiddleware
+    }
+    
+    package "Khối dịch vụ cốt lõi Backend Modular Monolith" <<Application Layer>> {
+        rectangle "Mô-đun Auth và IAM" <<Application Module>> as ModAuth
+        rectangle "Mô-đun CV Management và Draft Space" <<Application Module>> as ModCV
+        rectangle "Mô-đun Workflow và Approval" <<Application Module>> as ModWorkflow
+        rectangle "Mô-đun Batch Request" <<Application Module>> as ModBatch
+        rectangle "Mô-đun Department và Project" <<Application Module>> as ModOrg
+        rectangle "Mô-đun Notification và Cronjob" <<Application Module>> as ModNotif
+        
+        rectangle "Cấu trúc phân lớp Clean Architecture" <<Application Component>> as CleanArch {
+            rectangle "Lớp Presentation Controller Route" as LayerPres
+            rectangle "Lớp Application Service UseCase" as LayerApp
+            rectangle "Lớp Domain Entity Rule Enum" as LayerDomain
+            rectangle "Lớp Infrastructure Adapter Query" as LayerInfra
+            
+            LayerPres ..> LayerApp : điều phối
+            LayerApp ..> LayerDomain : thực thi quy tắc
+            LayerApp ..> LayerInfra : gọi giao tiếp
+        }
+    }
+    
+    rectangle "Tiến trình ngầm Background Worker và Cron Engine" <<Application Component>> as Worker
+}
+
+package "Tầng công nghệ và hạ tầng Technology Layer" <<rectangle>> {
+    rectangle "Hệ quản trị cơ sở dữ liệu PostgreSQL" <<Data Store>> as DB {
+        rectangle "Bảng dữ liệu quan hệ tổ chức" as RelationalData
+        rectangle "Bảng dữ liệu cấu trúc động JSONB" as JSONBData
+    }
+    
+    rectangle "Hệ điều phối tin nhắn Redis và BullMQ" <<Technology Service>> as Queue
+    rectangle "Máy chủ gửi thư điện tử SMTP Server" <<Technology Service>> as SMTP
+    rectangle "Môi trường thực thi Docker Container" <<Technology Service>> as Docker
+}
+
+' Liên kết giữa Tầng Nghiệp vụ và Tầng Ứng dụng
+ActorEmployee --> UI : tương tác
+ActorTechLead --> UI : thẩm định
+ActorHR --> UI : điều hành
+ActorAdmin --> UI : quản trị
+
+UI --> Gateway : gửi yêu cầu HTTP RESTful
+Gateway --> ModAuth : kiểm soát quyền
+Gateway --> ModCV : truy xuất hồ sơ
+Gateway --> ModWorkflow : xử lý luồng duyệt
+Gateway --> ModBatch : tạo chiến dịch
+Gateway --> ModOrg : tra cứu cấu trúc
+
+ModCV ..> SvcCV : hiện thực
+ModWorkflow ..> SvcApproval : hiện thực
+ModBatch ..> SvcBatch : hiện thực
+ModOrg ..> SvcReport : hiện thực
+
+' Liên kết nội bộ Backend Modular Monolith
+ModAuth --> CleanArch : tuân thủ
+ModCV --> CleanArch : tuân thủ
+ModWorkflow --> CleanArch : tuân thủ
+ModBatch --> CleanArch : tuân thủ
+ModOrg --> CleanArch : tuân thủ
+ModNotif --> CleanArch : tuân thủ
+
+' Liên kết với Tầng Công nghệ
+LayerInfra --> DB : đọc ghi dữ liệu Prisma ORM
+ModBatch --> Queue : đẩy gói tin thông báo bất đồng bộ
+ModNotif --> Queue : quản lý hàng đợi tin nhắn
+Queue --> Worker : tiêu thụ gói tin theo lô
+Worker --> SMTP : phát hành thư điện tử nhắc nhở
+Worker --> DB : cập nhật trạng thái mục tiêu
+
+Docker ..> UI : đóng gói
+Docker ..> Gateway : đóng gói
+Docker ..> Worker : đóng gói
+
+@enduml

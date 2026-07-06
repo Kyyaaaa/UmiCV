@@ -5,32 +5,117 @@ import { AuthRequest } from '../../middleware/auth.middleware';
 const cvService = new CVService();
 
 export class CVController {
-  async getDraft(req: AuthRequest, res: Response) {
+  async getMyCVs(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
-    // Assume validation middleware parsed the query into req.query with default 'vi'
-    const languageCode = (req.query.languageCode as string) || 'vi'; 
-    const draft = await cvService.getDraft(userId, languageCode);
+    const list = await cvService.getMyCVs(userId);
 
     res.status(200).json({
       success: true,
-      data: draft,
+      data: list,
     });
   }
 
-  async upsertDraft(req: AuthRequest, res: Response) {
+  async createCV(req: AuthRequest, res: Response) {
     const userId = req.user!.userId;
     const data = req.body;
+    const cv = await cvService.createCV(userId, data);
 
-    const draft = await cvService.upsertDraft(userId, data);
+    res.status(201).json({
+      success: true,
+      data: cv,
+    });
+  }
+
+  async getCVById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const cvId = req.params.id;
+    const cv = await cvService.getCVById(cvId, userId, role);
 
     res.status(200).json({
       success: true,
-      data: draft,
+      data: cv,
+    });
+  }
+
+  async getLatestApprovedCV(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const cvId = req.params.id;
+    const version = await cvService.getLatestApprovedCV(cvId, userId, role);
+
+    res.status(200).json({
+      success: true,
+      data: version,
+    });
+  }
+
+  async updateDraftById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const cvId = req.params.id;
+    const data = req.body;
+
+    const cv = await cvService.updateDraftById(cvId, userId, role, data);
+
+    res.status(200).json({
+      success: true,
+      data: cv,
+    });
+  }
+
+  async getCVVersions(req: AuthRequest, res: Response) {
+    const { id: cvId } = req.params;
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const { page, limit } = req.query as any;
+
+    const versions = await cvService.getCVVersions(cvId, userId, role, { page, limit });
+    res.status(200).json({ success: true, ...versions });
+  }
+
+  async getCVVersionById(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const { id, versionId } = req.params;
+    const version = await cvService.getCVVersionById(id, versionId, userId, role);
+
+    res.status(200).json({
+      success: true,
+      data: version,
+    });
+  }
+
+  async restoreCVVersion(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const { id, versionId } = req.params;
+    const cv = await cvService.restoreCVVersion(id, versionId, userId, role);
+
+    res.status(200).json({
+      success: true,
+      data: cv,
+    });
+  }
+
+  async publish(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const cvId = req.params.id;
+    
+    const cv = await cvService.publishCV(cvId, userId, role);
+
+    res.status(200).json({
+      success: true,
+      message: 'CV submitted for approval',
+      data: cv,
     });
   }
 
   async search(req: AuthRequest, res: Response) {
-    const result = await cvService.searchCVs(req.query as any);
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const result = await cvService.searchCVs(req.query as any, userId, userRole);
     res.status(200).json({ success: true, ...result });
   }
 
@@ -40,5 +125,20 @@ export class CVController {
     const requestUserRole = req.user!.role;
     const result = await cvService.diffCV(cvId, requestUserId, requestUserRole);
     res.status(200).json({ success: true, data: result });
+  }
+
+  async copyLocalization(req: AuthRequest, res: Response) {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const sourceCvId = req.params.id;
+    const { targetLanguageCode } = req.body;
+
+    const result = await cvService.copyLocalization(sourceCvId, targetLanguageCode, userId, role);
+
+    res.status(200).json({
+      success: true,
+      message: `Đã đồng bộ nội dung sang bản tiếng ${targetLanguageCode.toUpperCase()}`,
+      data: result,
+    });
   }
 }

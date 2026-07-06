@@ -1,41 +1,89 @@
 import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
   CheckSquare, 
   Users, 
+  Building2,
+  FolderKanban,
   Bell, 
   User, 
   LogOut,
   Menu
 } from 'lucide-react';
-import { currentUser } from '../mocks/users.mock';
+import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/auth.service';
+import { notificationService } from '../services/notification.service';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/cv', icon: FileText, label: 'Quản lý CV' },
-  { to: '/workflow', icon: CheckSquare, label: 'Phê duyệt' },
-  { to: '/users', icon: Users, label: 'Nhân sự' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
+  { to: '/cv', icon: FileText, label: 'Quản lý CV', roles: ['Admin', 'HR', 'TechLead', 'Employee'] },
+  { to: '/workflow', icon: CheckSquare, label: 'Phê duyệt', roles: ['Admin', 'HR', 'TechLead'] },
+  { to: '/hr/batch-requests', icon: Users, label: 'Chiến dịch cập nhật', roles: ['Admin', 'HR'] },
+  { to: '/users', icon: Users, label: 'Nhân sự', roles: ['Admin'] },
+  { to: '/departments', icon: Building2, label: 'Phòng ban', roles: ['Admin'] },
+  { to: '/projects', icon: FolderKanban, label: 'Dự án', roles: ['Admin', 'HR'] },
+  { to: '/admin/approval-logs', icon: FileText, label: 'Lịch sử Phê duyệt', roles: ['Admin', 'HR'] },
+  { to: '/admin/audit-logs', icon: LayoutDashboard, label: 'Nhật ký Hệ thống', roles: ['Admin'] },
 ];
 
 export function PrivateLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  const isWorkspace = location.pathname.includes('/workspace');
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error', error);
+    } finally {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  };
+
+  const { data: newNotifData, refetch } = useQuery({
+    queryKey: ['notifications', 'checkNew'],
+    queryFn: () => notificationService.checkNew(),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+
+  const hasNewNotif = newNotifData?.data?.data?.hasNew || false;
+
+  const markCheckedMutation = useMutation({
+    mutationFn: () => notificationService.markChecked(),
+    onSuccess: () => {
+      refetch();
+    }
+  });
+
+  const handleNotificationClick = () => {
+    if (hasNewNotif) {
+      markCheckedMutation.mutate();
+    }
+    navigate('/notifications');
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-slate-200 bg-white transition-all duration-300 ease-in-out md:relative ${
+          isSidebarOpen ? 'translate-x-0 md:ml-0' : '-translate-x-full md:translate-x-0 md:-ml-64'
         }`}
       >
         <div className="flex h-16 items-center px-6 border-b border-slate-200">
           <h1 className="text-2xl font-bold tracking-tight text-blue-600">UmiCV</h1>
         </div>
         <nav className="flex flex-col gap-1 p-4">
-          {navItems.map((item) => (
+          {navItems.filter(item => !user || item.roles.includes(user.role)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -59,8 +107,9 @@ export function PrivateLayout() {
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6">
           <button 
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 md:hidden"
+            className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Thu gọn menu" : "Mở rộng menu"}
           >
             <Menu size={24} />
           </button>
@@ -68,16 +117,18 @@ export function PrivateLayout() {
           <div className="ml-auto flex items-center gap-4">
             <button 
               className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-              onClick={() => navigate('/notifications')}
+              onClick={handleNotificationClick}
             >
               <Bell size={20} />
-              <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500"></span>
+              {hasNewNotif && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+              )}
             </button>
             
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="hidden text-right md:block">
-                <p className="text-sm font-medium text-slate-900">{currentUser.fullName}</p>
-                <p className="text-xs text-slate-500">{currentUser.role}</p>
+                <p className="text-sm font-medium text-slate-900">{user?.fullName || user?.username}</p>
+                <p className="text-xs text-slate-500">{user?.role}</p>
               </div>
               <button 
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100"
@@ -87,7 +138,7 @@ export function PrivateLayout() {
               </button>
               <button 
                 className="rounded-md p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-                onClick={() => navigate('/login')}
+                onClick={handleLogout}
                 title="Đăng xuất"
               >
                 <LogOut size={20} />
@@ -97,8 +148,8 @@ export function PrivateLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="mx-auto max-w-6xl w-full">
+        <main className={`flex-1 overflow-y-auto ${isWorkspace ? 'p-0' : 'p-4 md:p-8'}`}>
+          <div className={`${isWorkspace ? 'w-full h-full' : 'mx-auto max-w-6xl w-full'}`}>
             <Outlet />
           </div>
         </main>
